@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <h3 class="mb-4">My orders</h3>
+
+    <div th:if="${#lists.isEmpty(orders)}" class="alert alert-secondary">
+        No orders yet. <a th:href="@{/student/menu}">Browse the menu</a>.
+    </div>
+
+    <div class="list-group" th:if="${!#lists.isEmpty(orders)}">
+        <a th:each="order : ${orders}" th:href="@{/student/orders/{id}(id=${order.id})}"
+           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+                <strong th:text="${order.tokenNo}">TOKEN</strong>
+                <span class="text-muted ms-2" th:text="'₹' + ${order.totalAmount}"></span>
+            </div>
+            <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
+        </a>
+    </div>
+</div>
+</body>
+</html>

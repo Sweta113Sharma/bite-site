@@ -1,34 +1,47 @@
 package com.bitesite.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class MenuItem {
-    private int itemId;
-    private String itemName;
+    private Long id;
+    private Long tenantId;
+    private Long outletId;
+    private String name;
     private String category;
-    private double price;
-    private boolean isAvailable;
+    private BigDecimal price;
+    private BigDecimal discountPrice;
+    private BigDecimal discountPercent;
+    private boolean available;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
-    public MenuItem() {}
-
-    public MenuItem(int itemId, String itemName, String category, double price, boolean isAvailable) {
-        this.itemId = itemId;
-        this.itemName = itemName;
-        this.category = category;
-        this.price = price;
-        this.isAvailable = isAvailable;
+    /**
+     * A flat discount price always wins over a percentage discount when both are set,
+     * since staff typically set one or the other, not both.
+     */
+    public BigDecimal effectivePrice() {
+        if (discountPrice != null) {
+            return discountPrice;
+        }
+        if (discountPercent != null && discountPercent.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal factor = BigDecimal.ONE.subtract(discountPercent.divide(BigDecimal.valueOf(100)));
+            return price.multiply(factor).setScale(2, RoundingMode.HALF_UP);
+        }
+        return price;
     }
 
-    public int getItemId() { return itemId; }
-    public void setItemId(int itemId) { this.itemId = itemId; }
-
-    public String getItemName() { return itemName; }
-    public void setItemName(String itemName) { this.itemName = itemName; }
-
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
-
-    public double getPrice() { return price; }
-    public void setPrice(double price) { this.price = price; }
-
-    public boolean isAvailable() { return isAvailable; }
-    public void setAvailable(boolean isAvailable) { this.isAvailable = isAvailable; }
+    public boolean hasDiscount() {
+        return effectivePrice().compareTo(price) < 0;
+    }
 }

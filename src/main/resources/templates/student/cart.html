@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <h3 class="mb-4">Your cart</h3>
+
+    <div class="alert alert-danger" th:if="${cartError}" th:text="${cartError}"></div>
+
+    <div th:if="${#lists.isEmpty(lines)}" class="alert alert-secondary">
+        Your cart is empty. <a th:href="@{/student/menu}">Browse the menu</a>.
+    </div>
+
+    <div th:if="${!#lists.isEmpty(lines)}">
+        <p class="text-muted" th:if="${outlet != null}">Ordering from <strong th:text="${outlet.name}">Outlet</strong></p>
+        <table class="table bg-white">
+            <thead>
+            <tr>
+                <th>Item</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th>Subtotal</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="line : ${lines}">
+                <td th:text="${line.item().name}">Item</td>
+                <td th:text="'₹' + ${line.item().effectivePrice()}"></td>
+                <td>
+                    <form method="post" th:action="@{/student/cart/update}" class="d-flex gap-2">
+                        <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
+                        <input type="number" name="quantity" th:value="${line.quantity()}" min="1"
+                               class="form-control form-control-sm" style="width: 4.5rem;"/>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Update</button>
+                    </form>
+                </td>
+                <td th:text="'₹' + ${line.lineTotal()}"></td>
+                <td>
+                    <form method="post" th:action="@{/student/cart/remove}">
+                        <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr>
+                <th colspan="3" class="text-end">Total</th>
+                <th th:text="'₹' + ${total}"></th>
+                <th></th>
+            </tr>
+            </tfoot>
+        </table>
+
+        <form method="post" th:action="@{/student/checkout}">
+            <button type="submit" class="btn btn-primary btn-lg w-100">Pay &amp; place order</button>
+        </form>
+        <p class="text-muted small mt-2 text-center">Payment is required to place your order — this keeps the
+            kitchen from prepping food for orders that never get paid for.</p>
+    </div>
+</div>
+</body>
+</html>

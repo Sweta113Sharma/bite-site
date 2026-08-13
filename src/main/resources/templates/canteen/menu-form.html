@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 480px;">
+    <h3 class="mb-4" th:text="${pageTitle}">Menu item</h3>
+
+    <form method="post" th:object="${form}"
+          th:action="${itemId != null} ? @{/canteen/menu/{id}(id=${itemId})} : @{/canteen/menu}">
+        <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" th:field="*{name}" class="form-control"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Category</label>
+            <input type="text" th:field="*{category}" class="form-control" placeholder="Snacks, Meals, Beverages..."/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Price (₹)</label>
+            <input type="number" step="0.01" th:field="*{price}" class="form-control"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('price')}" th:errors="*{price}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Flat discount price (₹, optional)</label>
+            <input type="number" step="0.01" th:field="*{discountPrice}" class="form-control"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('discountPrice')}" th:errors="*{discountPrice}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Or discount percent (%, optional)</label>
+            <input type="number" step="0.01" th:field="*{discountPercent}" class="form-control"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('discountPercent')}" th:errors="*{discountPercent}"></div>
+            <div class="form-text">A flat discount price wins if both are set.</div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Save</button>
+    </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container text-center" style="margin-top: 6rem;">
+    <h1 class="display-6">Access denied</h1>
+    <p class="text-muted">Your account doesn't have permission to view that page.</p>
+    <a class="btn btn-primary mt-3" href="/">Go home</a>
+</div>
+</body>
+</html>

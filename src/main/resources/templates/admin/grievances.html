@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <h3 class="mb-4">Grievances</h3>
+
+    <div th:if="${#lists.isEmpty(grievances)}" class="alert alert-secondary">No grievances raised across any college.</div>
+
+    <div class="list-group">
+        <div class="list-group-item" th:each="row : ${grievances}">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <div>
+                    <strong th:text="${row.grievance().subject}">Subject</strong>
+                    <span class="text-muted small ms-2" th:text="${row.collegeName} + ' · ' + ${row.raisedByName} + ' (' + ${row.raisedByEmail} + ')'"></span>
+                </div>
+                <span class="badge" th:classappend="${row.grievance().status.name() == 'RESOLVED'} ? 'bg-success' : 'bg-secondary'"
+                      th:text="${row.grievance().status}"></span>
+            </div>
+            <p class="mb-2" th:text="${row.grievance().message}">Message</p>
+
+            <p class="mb-2 small" th:if="${row.grievance().adminResponse != null}">
+                <strong>Response:</strong> <span th:text="${row.grievance().adminResponse}"></span>
+            </p>
+
+            <form method="post" th:if="${row.grievance().status.name() != 'RESOLVED'}"
+                  th:action="@{/admin/grievances/{id}/resolve(id=${row.grievance().id})}" class="d-flex gap-2">
+                <input type="text" name="response" class="form-control form-control-sm" placeholder="Your response" required="required"/>
+                <button type="submit" class="btn btn-sm btn-success">Resolve</button>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

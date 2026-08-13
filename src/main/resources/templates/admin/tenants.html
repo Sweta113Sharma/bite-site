@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">Colleges</h3>
+        <div>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/onboarding}">Onboarding pipeline</a>
+            <a class="btn btn-primary" th:href="@{/admin/tenants/new}">+ Onboard a college</a>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(tenants)}" class="alert alert-secondary">No colleges yet.</div>
+
+    <table class="table bg-white" th:if="${!#lists.isEmpty(tenants)}">
+        <thead><tr><th>Logo</th><th>Name</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="t : ${tenants}">
+            <td>
+                <img th:if="${t.logoPath != null}" th:src="@{'/uploads/logos/' + ${t.logoPath}}" height="32" alt="logo"/>
+            </td>
+            <td th:text="${t.name}">College</td>
+            <td>
+                <span class="badge" th:classappend="${t.status.name() == 'ACTIVE'} ? 'bg-success' : (${t.status.name() == 'PENDING'} ? 'bg-secondary' : 'bg-danger')"
+                      th:text="${t.status}"></span>
+            </td>
+            <td><a class="btn btn-sm btn-outline-secondary" th:href="@{/admin/tenants/{id}(id=${t.id})}">Manage</a></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

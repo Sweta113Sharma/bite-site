@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<span th:fragment="statusBadge(status)" class="badge"
+      th:classappend="${status.name() == 'AWAITING_PAYMENT'} ? 'bg-secondary' :
+                       (${status.name() == 'PAID'} ? 'bg-info text-dark' :
+                       (${status.name() == 'PREPARING'} ? 'bg-warning text-dark' :
+                       (${status.name() == 'READY_FOR_PICKUP'} ? 'bg-primary' :
+                       (${status.name() == 'COMPLETED'} ? 'bg-success' : 'bg-danger'))))"
+      th:text="${status.name().replace('_', ' ')}">STATUS</span>
+</body>
+</html>

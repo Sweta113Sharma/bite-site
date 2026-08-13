@@ -1,45 +1,32 @@
 package com.bitesite.model;
 
-import java.sql.Timestamp;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Order {
-    private int orderId;
-    private int userId;
+    private Long id;
+    private Long tenantId;
+    private Long outletId;
+    private Long userId;
     private String tokenNo;
-    private double totalAmount;
-    private String status; // PLACED, PREPARING, READY, COMPLETED, CANCELLED
-    private Timestamp createdAt;
-    private List<OrderItem> items;
+    private BigDecimal totalAmount;
+    private OrderStatus status;
+    private LocalDateTime createdAt;
+    private LocalDateTime paidAt;
+    private LocalDateTime readyAt;
+    private LocalDateTime completedAt;
 
-    public Order() {}
-
-    public Order(int userId, String tokenNo, double totalAmount, String status, List<OrderItem> items) {
-        this.userId = userId;
-        this.tokenNo = tokenNo;
-        this.totalAmount = totalAmount;
-        this.status = status;
-        this.items = items;
-    }
-
-    public int getOrderId() { return orderId; }
-    public void setOrderId(int orderId) { this.orderId = orderId; }
-
-    public int getUserId() { return userId; }
-    public void setUserId(int userId) { this.userId = userId; }
-
-    public String getTokenNo() { return tokenNo; }
-    public void setTokenNo(String tokenNo) { this.tokenNo = tokenNo; }
-
-    public double getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
-
-    public List<OrderItem> getItems() { return items; }
-    public void setItems(List<OrderItem> items) { this.items = items; }
+    @Builder.Default
+    private List<OrderItem> items = new ArrayList<>();
 }

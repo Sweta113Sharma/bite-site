@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 480px;">
+    <h3 class="mb-4" th:text="${pageTitle}">Add a lead</h3>
+    <form method="post" th:action="@{/admin/onboarding}" th:object="${form}">
+        <div class="mb-3">
+            <label class="form-label">College name</label>
+            <input type="text" th:field="*{collegeName}" class="form-control"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('collegeName')}" th:errors="*{collegeName}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Contact name</label>
+            <input type="text" th:field="*{contactName}" class="form-control"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('contactName')}" th:errors="*{contactName}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Contact email</label>
+            <input type="email" th:field="*{contactEmail}" class="form-control"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('contactEmail')}" th:errors="*{contactEmail}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Contact phone (optional)</label>
+            <input type="text" th:field="*{contactPhone}" class="form-control"/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Notes (optional)</label>
+            <textarea th:field="*{notes}" class="form-control" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Add lead</button>
+    </form>
+</div>
+</body>
+</html>

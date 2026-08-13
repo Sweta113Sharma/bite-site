@@ -1,0 +1,317 @@
+/* ============================================================
+   BiteSite design system — warm, appetizing, not generic-AI-blue.
+   Built as overrides on top of Bootstrap 5, so every existing
+   .btn / .card / .badge / .form-control class keeps working.
+   ============================================================ */
+
+:root {
+    --color-bg: #FBF8F3;
+    --color-surface: #FFFFFF;
+    --color-ink: #1F1B16;
+    --color-ink-muted: #6B6258;
+    --color-border: #E8E1D6;
+    --color-primary: #D9572C;
+    --color-primary-dark: #B8451F;
+    --color-primary-tint: #FCE9DF;
+    --color-success: #3F6B4A;
+    --color-success-tint: #E4EEE6;
+    --color-warning: #B5811B;
+    --color-warning-tint: #FBF0DA;
+    --color-info: #2B6E7A;
+    --color-info-tint: #E1EFF1;
+    --color-danger: #B8402A;
+    --color-danger-tint: #F8E4DF;
+    --color-nav: #1F1B16;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+
+    --shadow-sm: 0 1px 2px rgba(31, 27, 22, 0.06);
+    --shadow-md: 0 10px 30px -12px rgba(31, 27, 22, 0.22);
+
+    --font-display: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+}
+
+* {
+    text-wrap: pretty;
+}
+
+html, body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+}
+
+h3 { font-size: 1.65rem; }
+
+a {
+    color: var(--color-primary-dark);
+    text-decoration: none;
+}
+a:hover { color: var(--color-primary); }
+
+::selection {
+    background: var(--color-primary-tint);
+    color: var(--color-primary-dark);
+}
+
+/* ---------- Layout ---------- */
+
+.container {
+    max-width: 1100px;
+}
+
+/* ---------- Navbar ---------- */
+
+.navbar {
+    background: var(--color-nav) !important;
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.navbar-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    color: #FBF8F3 !important;
+}
+
+.navbar-brand img {
+    border-radius: 6px;
+}
+
+.navbar .nav-link {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: rgba(251, 248, 243, 0.72) !important;
+    padding: 0.4rem 0.7rem !important;
+    border-radius: var(--radius-sm);
+    transition: color 150ms ease, background-color 150ms ease;
+}
+.navbar .nav-link:hover {
+    color: #FBF8F3 !important;
+    background: rgba(251, 248, 243, 0.08);
+}
+
+.navbar .navbar-text {
+    font-size: 0.85rem;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+    font-weight: 600;
+    font-size: 0.92rem;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 1.1rem;
+    transition: transform 120ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+.btn-primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+    box-shadow: 0 8px 20px -8px rgba(217, 87, 44, 0.55);
+}
+
+.btn-outline-primary { color: var(--color-primary-dark); border-color: var(--color-primary); }
+.btn-outline-primary:hover { background: var(--color-primary); border-color: var(--color-primary); }
+
+.btn-outline-secondary { color: var(--color-ink-muted); border-color: var(--color-border); }
+.btn-outline-secondary:hover { background: var(--color-ink); border-color: var(--color-ink); }
+
+.btn-outline-light:hover { color: var(--color-nav); }
+
+.btn-success { background: var(--color-success); border-color: var(--color-success); }
+.btn-success:hover { background: #325a3c; border-color: #325a3c; }
+
+.btn-warning { background: var(--color-warning); border-color: var(--color-warning); color: #fff; }
+.btn-warning:hover { background: #96690f; border-color: #96690f; color: #fff; }
+
+.btn-danger, .btn-outline-danger:hover { background: var(--color-danger); border-color: var(--color-danger); }
+
+.btn-lg { border-radius: var(--radius-md); padding: 0.75rem 1.5rem; }
+
+/* ---------- Cards ---------- */
+
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 180ms ease, transform 180ms ease;
+}
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* ---------- Forms ---------- */
+
+.form-control, .form-select {
+    border-radius: var(--radius-sm);
+    border-color: var(--color-border);
+    padding: 0.55rem 0.85rem;
+    font-size: 0.95rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+.form-label {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--color-ink);
+    margin-bottom: 0.35rem;
+}
+
+/* ---------- Badges (status pills used across menu / queue / orders) ---------- */
+
+.badge {
+    font-family: var(--font-body);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 0.4em 0.75em;
+    border-radius: 999px;
+}
+
+.badge.bg-success { background: var(--color-success) !important; color: #fff !important; }
+.badge.bg-warning { background: var(--color-warning-tint) !important; color: var(--color-warning) !important; }
+.badge.bg-info { background: var(--color-info-tint) !important; color: var(--color-info) !important; }
+.badge.bg-primary { background: var(--color-primary) !important; color: #fff !important; }
+.badge.bg-secondary { background: #EFE9DF !important; color: var(--color-ink-muted) !important; }
+.badge.bg-danger { background: var(--color-danger-tint) !important; color: var(--color-danger) !important; }
+
+/* ---------- Tables ---------- */
+
+.table {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+.table thead th {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-muted);
+    border-bottom-width: 1px;
+    background: #F5F0E8;
+}
+.table td, .table th { vertical-align: middle; border-color: var(--color-border); }
+
+/* ---------- Alerts ---------- */
+
+.alert { border-radius: var(--radius-sm); border: 1px solid transparent; font-size: 0.92rem; }
+.alert-secondary { background: #F1ECE2; color: var(--color-ink-muted); }
+.alert-success { background: var(--color-success-tint); color: var(--color-success); }
+.alert-danger { background: var(--color-danger-tint); color: var(--color-danger); }
+.alert-warning { background: var(--color-warning-tint); color: var(--color-warning); }
+.alert-info { background: var(--color-info-tint); color: var(--color-info); }
+.alert-primary { background: var(--color-primary-tint); color: var(--color-primary-dark); }
+
+/* ---------- App-specific ---------- */
+
+.card-price {
+    font-family: var(--font-display);
+    font-weight: 600;
+}
+
+.price-strike {
+    text-decoration: line-through;
+    color: var(--color-ink-muted);
+    font-size: 0.85em;
+    margin-right: 0.4em;
+}
+
+.token-badge {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.list-group-item {
+    border-color: var(--color-border);
+}
+.list-group-item-action:hover {
+    background: var(--color-primary-tint);
+}
+
+/* ---------- Auth pages ---------- */
+
+.auth-shell {
+    min-height: calc(100dvh - 76px);
+    padding: 2rem 1rem;
+    background:
+        radial-gradient(circle at 15% 20%, var(--color-primary-tint) 0%, transparent 45%),
+        radial-gradient(circle at 85% 80%, var(--color-success-tint) 0%, transparent 40%);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 2.25rem 2rem;
+}
+
+/* ---------- Canteen queue ---------- */
+
+.live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--color-success);
+    display: inline-block;
+    box-shadow: 0 0 0 rgba(63, 107, 74, 0.5);
+    animation: live-pulse 2s infinite;
+}
+
+@keyframes live-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(63, 107, 74, 0.45); }
+    70%  { box-shadow: 0 0 0 8px rgba(63, 107, 74, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(63, 107, 74, 0); }
+}
+
+.auth-mark {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 1rem;
+    border-radius: 12px;
+    background: var(--color-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.3rem;
+}

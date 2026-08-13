@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">Menu</h3>
+        <a class="btn btn-primary" th:href="@{/canteen/menu/new}">+ Add item</a>
+    </div>
+
+    <div th:if="${#lists.isEmpty(items)}" class="alert alert-secondary">No menu items yet.</div>
+
+    <table class="table bg-white" th:if="${!#lists.isEmpty(items)}">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Discount</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${items}">
+            <td th:text="${item.name}">Item</td>
+            <td th:text="${item.category}">Category</td>
+            <td>
+                <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
+                <span th:text="'₹' + ${item.effectivePrice()}"></span>
+            </td>
+            <td>
+                <span th:if="${item.discountPrice != null}" th:text="'Flat ₹' + ${item.discountPrice}"></span>
+                <span th:if="${item.discountPercent != null}" th:text="${item.discountPercent} + '% off'"></span>
+            </td>
+            <td>
+                <span class="badge" th:classappend="${item.available} ? 'bg-success' : 'bg-secondary'"
+                      th:text="${item.available} ? 'Available' : 'Out of stock'"></span>
+            </td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" th:href="@{/canteen/menu/{id}/edit(id=${item.id})}">Edit</a>
+                <form class="d-inline" method="post" th:action="@{/canteen/menu/{id}/toggle(id=${item.id})}">
+                    <button class="btn btn-sm btn-outline-warning" type="submit"
+                            th:text="${item.available} ? 'Mark out of stock' : 'Mark available'"></button>
+                </form>
+                <form class="d-inline" method="post" th:action="@{/canteen/menu/{id}/delete(id=${item.id})}"
+                      onsubmit="return confirm('Delete this item?');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

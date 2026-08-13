@@ -1,1 +1,15 @@
-/target/
+target/
+*.class
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+.env
+application-local.yml
+*.log
+.flattened-pom.xml
+HELP.md
+uploads/*
+!uploads/.gitkeep

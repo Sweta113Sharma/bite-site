@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<body>
+<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+            <img th:if="${currentTenant != null and currentTenant.logoPath != null}"
+                 th:src="@{'/uploads/logos/' + ${currentTenant.logoPath}}" height="28" alt="logo"/>
+            <span th:text="${currentTenant != null ? currentTenant.name : 'BiteSite'}">BiteSite</span>
+        </a>
+        <div class="d-flex align-items-center gap-3">
+            <span sec:authorize="isAuthenticated()" class="navbar-text text-white-50 small" sec:authentication="name">user</span>
+            <a sec:authorize="hasRole('STUDENT')" class="nav-link text-white-50" th:href="@{/student/menu}">Menu</a>
+            <a sec:authorize="hasRole('STUDENT')" class="nav-link text-white-50" th:href="@{/student/cart}">Cart</a>
+            <a sec:authorize="hasRole('STUDENT')" class="nav-link text-white-50" th:href="@{/student/orders}">My Orders</a>
+            <a sec:authorize="hasRole('STUDENT')" class="nav-link text-white-50" th:href="@{/student/grievances}">Support</a>
+            <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link text-white-50" th:href="@{/canteen/queue}">Queue</a>
+            <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link text-white-50" th:href="@{/canteen/menu}">Menu</a>
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/tenants}">Colleges</a>
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/onboarding}">Pipeline</a>
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/grievances}">Grievances</a>
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/audit-log}">Audit log</a>
+            <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link text-white-50" th:href="@{/techmgr}">Colleges</a>
+            <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link text-white-50" th:href="@{/techmgr/health}">Health</a>
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="d-inline m-0">
+                <button class="btn btn-sm btn-outline-light" type="submit">Logout</button>
+            </form>
+            <a sec:authorize="!isAuthenticated()" class="btn btn-sm btn-outline-light" th:href="@{/login}">Login</a>
+        </div>
+    </div>
+</nav>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 560px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0 token-badge" th:text="${order.tokenNo}">TOKEN</h3>
+        <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
+    </div>
+
+    <div class="alert alert-info" th:if="${order.status.name() == 'PAID'}">
+        Your order is with the canteen — we'll update this page once they start preparing it.
+    </div>
+    <div class="alert alert-warning" th:if="${order.status.name() == 'PREPARING'}">
+        Your food is being prepared.
+    </div>
+    <div class="alert alert-primary" th:if="${order.status.name() == 'READY_FOR_PICKUP'}">
+        Ready! Show your token at the counter.
+    </div>
+    <div class="alert alert-success" th:if="${order.status.name() == 'COMPLETED'}">
+        Picked up. Enjoy!
+    </div>
+
+    <table class="table bg-white">
+        <thead><tr><th>Item</th><th>Qty</th><th>Subtotal</th></tr></thead>
+        <tbody>
+        <tr th:each="item : ${order.items}">
+            <td th:text="${item.itemNameSnapshot}">Item</td>
+            <td th:text="${item.quantity}">1</td>
+            <td th:text="'₹' + ${item.subtotal}"></td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr><th colspan="2" class="text-end">Total</th><th th:text="'₹' + ${order.totalAmount}"></th></tr>
+        </tfoot>
+    </table>
+
+    <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn btn-primary w-100"
+       th:href="@{/student/checkout/{id}(id=${order.id})}">Complete payment</a>
+</div>
+</body>
+</html>
