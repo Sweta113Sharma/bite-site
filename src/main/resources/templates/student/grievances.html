@@ -3,38 +3,69 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
-<div class="container" style="max-width: 700px;">
-    <h3 class="mb-4">Support</h3>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Raise an issue</h5>
+<!-- Mobile Bottom Nav -->
+<div th:replace="~{fragments/navbar :: bottomNav}"></div>
+
+<div class="container" style="max-width: 700px;">
+    <div class="text-center mb-3">
+        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-sm"
+             onerror="this.style.display='none'"/>
+    </div>
+    <h3 class="mb-4 text-center">We're listening</h3>
+
+    <div class="card mb-4" style="border-radius: var(--radius-lg);">
+        <div class="card-body p-4">
+            <h5 class="card-title mb-3 d-flex align-items-center gap-2">
+                <div class="icon-circle"><i class="ph ph-chat-teardrop-text"></i></div> Raise an issue
+            </h5>
+            <div class="alert alert-danger" th:if="${rateLimited}">
+                You've submitted several issues recently — please wait a bit before sending another.
+            </div>
             <form method="post" th:action="@{/student/grievances}" th:object="${form}">
-                <div class="mb-2">
-                    <input type="text" th:field="*{subject}" class="form-control" placeholder="Subject"/>
-                    <div class="text-danger small" th:if="${#fields.hasErrors('subject')}" th:errors="*{subject}"></div>
+                <div class="mb-3">
+                    <label class="form-label">Subject</label>
+                    <input type="text" th:field="*{subject}" class="form-control form-control-lg" placeholder="E.g. Food quality, Missing item"/>
+                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('subject')}" th:errors="*{subject}"></div>
                 </div>
-                <div class="mb-2">
-                    <textarea th:field="*{message}" class="form-control" rows="3" placeholder="Describe the issue"></textarea>
-                    <div class="text-danger small" th:if="${#fields.hasErrors('message')}" th:errors="*{message}"></div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea th:field="*{message}" class="form-control" rows="4" placeholder="Please describe what went wrong..."></textarea>
+                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('message')}" th:errors="*{message}"></div>
                 </div>
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <button type="submit" class="btn btn-primary btn-lg w-100"><i class="ph ph-paper-plane-tilt"></i> Submit Grievance</button>
             </form>
         </div>
     </div>
 
-    <h5 class="mb-3">Your past issues</h5>
-    <div th:if="${#lists.isEmpty(grievances)}" class="alert alert-secondary">Nothing raised yet.</div>
-    <div class="list-group">
-        <div class="list-group-item" th:each="g : ${grievances}">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <strong th:text="${g.subject}">Subject</strong>
-                <span class="badge" th:classappend="${g.status.name() == 'RESOLVED'} ? 'bg-success' : 'bg-secondary'" th:text="${g.status}"></span>
+    <h5 class="mb-3 d-flex justify-content-between align-items-end">
+        <span>Your past issues</span>
+        <span class="badge bg-secondary" th:text="${#lists.size(grievances)} + ' issues'">0 issues</span>
+    </h5>
+    
+    <div th:if="${#lists.isEmpty(grievances)}" class="state-panel p-0 pt-3">
+        <img th:src="@{/img/mascot/bito-celebrate.png}" alt="" class="mascot-img mascot-sm mb-2"/>
+        <p>No issues raised yet. That's a good thing!</p>
+    </div>
+    
+    <div class="row row-cols-1 g-3 mb-5" th:if="${!#lists.isEmpty(grievances)}">
+        <div class="col" th:each="g : ${grievances}">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <strong class="fs-6" th:text="${g.subject}">Subject</strong>
+                        <span class="badge" th:classappend="${g.status.name() == 'RESOLVED'} ? 'bg-success' : 'bg-secondary'" th:text="${g.status}"></span>
+                    </div>
+                    <p class="mb-2 text-muted" th:text="${g.message}">Message</p>
+                    <div th:if="${g.adminResponse != null}" class="alert alert-success p-2 small m-0 mt-2 d-flex align-items-start gap-2">
+                        <i class="ph ph-check-circle fs-5"></i>
+                        <div>
+                            <strong>Response from Admin:</strong><br/>
+                            <span th:text="${g.adminResponse}"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="mb-1 text-muted" th:text="${g.message}">Message</p>
-            <p class="mb-0 small" th:if="${g.adminResponse != null}">
-                <strong>Response:</strong> <span th:text="${g.adminResponse}"></span>
-            </p>
         </div>
     </div>
 </div>

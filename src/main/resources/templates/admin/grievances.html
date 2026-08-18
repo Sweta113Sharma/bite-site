@@ -6,7 +6,12 @@
 <div class="container">
     <h3 class="mb-4">Grievances</h3>
 
-    <div th:if="${#lists.isEmpty(grievances)}" class="alert alert-secondary">No grievances raised across any college.</div>
+    <div th:if="${#lists.isEmpty(grievances)}" class="state-panel">
+        <img th:src="@{/img/mascot/bito-hero.png}" alt="" class="mascot-img mascot-sm"
+             onerror="this.style.display='none'"/>
+        <h4>All clear</h4>
+        <p>No grievances raised across any college.</p>
+    </div>
 
     <div class="list-group">
         <div class="list-group-item" th:each="row : ${grievances}">
@@ -27,7 +32,7 @@
             <form method="post" th:if="${row.grievance().status.name() != 'RESOLVED'}"
                   th:action="@{/admin/grievances/{id}/resolve(id=${row.grievance().id})}" class="d-flex gap-2">
                 <input type="text" name="response" class="form-control form-control-sm" placeholder="Your response" required="required"/>
-                <button type="submit" class="btn btn-sm btn-success">Resolve</button>
+                <button type="submit" class="btn btn-sm btn-success"><i class="ph ph-check-circle"></i>Resolve</button>
             </form>
         </div>
     </div>

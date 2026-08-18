@@ -78,4 +78,19 @@ public class RazorpayPaymentGateway implements PaymentGateway {
             return false;
         }
     }
+
+    @Override
+    public void refund(String gatewayPaymentId, BigDecimal amountRupees) {
+        long amountPaise = amountRupees.multiply(BigDecimal.valueOf(100))
+                .setScale(0, RoundingMode.HALF_UP)
+                .longValueExact();
+        try {
+            JSONObject request = new JSONObject();
+            request.put("amount", amountPaise);
+            client().payments.refund(gatewayPaymentId, request);
+        } catch (RazorpayException e) {
+            log.error("Razorpay refund failed for payment {}", gatewayPaymentId, e);
+            throw new PaymentGatewayException("Could not process the refund — please try again.", e);
+        }
+    }
 }

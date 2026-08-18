@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">Platform users</h3>
+    </div>
+    <p class="text-muted" style="max-width: 640px;">
+        Super admin and tech manager accounts — not tied to any one college. A user can hold
+        both roles at once and switch between them from the navbar; each role can also be
+        revoked independently as long as it isn't their last one.
+    </p>
+
+    <div class="alert alert-danger" th:if="${error != null}" th:text="${error}"></div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title"><i class="ph ph-user-plus"></i>Create platform user</h5>
+            <form method="post" th:action="@{/admin/users}" th:object="${form}" class="row g-2 align-items-end">
+                <div class="col-sm-3">
+                    <label class="form-label">Name</label>
+                    <input type="text" th:field="*{name}" class="form-control"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" th:field="*{email}" class="form-control"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" th:field="*{password}" class="form-control"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label">Role</label>
+                    <select th:field="*{role}" class="form-select">
+                        <option value="" disabled selected>Choose</option>
+                        <option value="SUPER_ADMIN">Super admin</option>
+                        <option value="TECH_MANAGER">Tech manager</option>
+                    </select>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('role')}" th:errors="*{role}"></div>
+                </div>
+                <div class="col-sm-1">
+                    <button type="submit" class="btn btn-primary w-100"><i class="ph ph-plus"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(users)}" class="state-panel">
+        <h4>No platform users yet</h4>
+        <p>Create the first super admin or tech manager account above.</p>
+    </div>
+
+    <table class="table bg-white" th:if="${!#lists.isEmpty(users)}">
+        <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="u : ${users}">
+            <td th:text="${u.name}">Name</td>
+            <td th:text="${u.email}">Email</td>
+            <td>
+                <span th:each="r : ${u.roles}" class="badge bg-primary me-1 d-inline-flex align-items-center gap-1">
+                    <span th:text="${r.name().replace('_', ' ')}"></span>
+                    <form method="post" th:action="@{/admin/users/{id}/roles/revoke(id=${u.id})}" class="d-inline m-0"
+                          onsubmit="return confirm('Revoke this role?');">
+                        <input type="hidden" name="role" th:value="${r}"/>
+                        <button type="submit" class="btn btn-sm p-0 border-0 text-white" style="line-height:1;"
+                                th:title="'Revoke ' + ${r}"><i class="ph ph-x"></i></button>
+                    </form>
+                </span>
+                <form method="post" th:action="@{/admin/users/{id}/roles/grant(id=${u.id})}"
+                      class="d-inline-block mt-1" th:if="${u.roles.size() < 2}">
+                    <select name="role" class="form-select form-select-sm d-inline-block" style="width:auto;"
+                            onchange="this.form.submit()">
+                        <option value="" disabled selected>+ Grant role&hellip;</option>
+                        <option value="SUPER_ADMIN" th:if="${!u.roles.contains(T(com.bitesite.model.Role).SUPER_ADMIN)}">Super admin</option>
+                        <option value="TECH_MANAGER" th:if="${!u.roles.contains(T(com.bitesite.model.Role).TECH_MANAGER)}">Tech manager</option>
+                    </select>
+                </form>
+            </td>
+            <td>
+                <span class="badge" th:classappend="${u.active} ? 'bg-success' : 'bg-secondary'"
+                      th:text="${u.active} ? 'Active' : 'Disabled'"></span>
+            </td>
+            <td></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

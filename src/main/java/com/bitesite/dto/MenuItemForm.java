@@ -6,10 +6,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Data
-public class MenuItemForm {
+public class MenuItemForm implements Serializable {
 
     @NotBlank(message = "Name is required")
     private String name;

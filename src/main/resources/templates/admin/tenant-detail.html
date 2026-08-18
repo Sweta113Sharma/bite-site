@@ -6,7 +6,7 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center gap-3">
-            <img th:if="${tenant.logoPath != null}" th:src="@{'/uploads/logos/' + ${tenant.logoPath}}" height="40" alt="logo"/>
+            <img th:if="${tenant.logoPath != null}" th:src="@{${tenant.logoPath}}" height="40" alt="logo"/>
             <h3 class="m-0" th:text="${tenant.name}">College</h3>
         </div>
         <span class="badge fs-6" th:classappend="${tenant.status.name() == 'ACTIVE'} ? 'bg-success' : (${tenant.status.name() == 'PENDING'} ? 'bg-secondary' : 'bg-danger')"
@@ -19,29 +19,29 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">Status</h5>
+                    <h5 class="card-title"><i class="ph ph-toggle-left"></i>Status</h5>
                     <form method="post" th:action="@{/admin/tenants/{id}/status(id=${tenant.id})}" class="d-flex gap-2">
                         <select name="status" class="form-select">
                             <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == tenant.status}"></option>
                         </select>
-                        <button type="submit" class="btn btn-outline-primary">Update</button>
+                        <button type="submit" class="btn btn-outline-primary"><i class="ph ph-check"></i>Update</button>
                     </form>
                 </div>
             </div>
 
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">Logo</h5>
+                    <h5 class="card-title"><i class="ph ph-image"></i>Logo</h5>
                     <form method="post" th:action="@{/admin/tenants/{id}/logo(id=${tenant.id})}" enctype="multipart/form-data" class="d-flex gap-2">
                         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="form-control" required="required"/>
-                        <button type="submit" class="btn btn-outline-primary">Upload</button>
+                        <button type="submit" class="btn btn-outline-primary"><i class="ph ph-upload"></i>Upload</button>
                     </form>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Canteens</h5>
+                    <h5 class="card-title"><i class="ph ph-storefront"></i>Canteens</h5>
                     <ul class="list-group mb-3">
                         <li class="list-group-item d-flex justify-content-between" th:each="o : ${outlets}">
                             <span th:text="${o.name}">Canteen</span>
@@ -52,7 +52,7 @@
                     </ul>
                     <form method="post" th:action="@{/admin/tenants/{id}/outlets(id=${tenant.id})}" th:object="${outletForm}" class="d-flex gap-2">
                         <input type="text" th:field="*{name}" class="form-control" placeholder="e.g. Main Canteen"/>
-                        <button type="submit" class="btn btn-primary">+ Add canteen</button>
+                        <button type="submit" class="btn btn-primary"><i class="ph ph-plus"></i>Add canteen</button>
                     </form>
                     <div class="text-danger small" th:if="${#fields.hasErrors('outletForm.name')}" th:errors="${outletForm.name}"></div>
                 </div>
@@ -62,7 +62,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Canteen staff accounts</h5>
+                    <h5 class="card-title"><i class="ph ph-users-three"></i>Canteen staff accounts</h5>
                     <table class="table table-sm" th:if="${!#lists.isEmpty(staff)}">
                         <thead><tr><th>Name</th><th>Email</th></tr></thead>
                         <tbody>
@@ -96,7 +96,7 @@
                             <input type="password" th:field="*{password}" class="form-control" placeholder="Temporary password"/>
                             <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Create staff account</button>
+                        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-user-plus"></i>Create staff account</button>
                     </form>
                 </div>
             </div>

@@ -37,6 +37,7 @@ class OrderServiceTest {
     @Mock private MenuService menuService;
     @Mock private PaymentGateway paymentGateway;
     @Mock private AuditService auditService;
+    @Mock private PushNotificationService pushNotificationService;
 
     private OrderService orderService;
 
@@ -46,7 +47,8 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderService(orderDao, paymentDao, menuService, paymentGateway, auditService);
+        orderService = new OrderService(orderDao, paymentDao, menuService, paymentGateway, auditService,
+                pushNotificationService);
     }
 
     private MenuItem availableItem(long id, String name, BigDecimal price) {
@@ -219,5 +221,63 @@ class OrderServiceTest {
 
         verify(orderDao).updateStatus(42L, TENANT_ID, OrderStatus.PREPARING);
         verify(auditService).record(eq(USER_ID), eq(TENANT_ID), eq("Order"), eq(42L), eq("STATUS_PREPARING"), any(), any());
+    }
+
+    @Test
+    void cancelOrderRejectsATerminalOrder() {
+        Order completed = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
+                .tokenNo("BITE-1234").totalAmount(BigDecimal.TEN).status(OrderStatus.COMPLETED).build();
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(completed));
+
+        assertThatThrownBy(() -> orderService.cancelOrder(42L, TENANT_ID, USER_ID))
+                .isInstanceOf(InvalidOrderStateException.class);
+        verifyNoInteractions(paymentGateway);
+        verify(orderDao, never()).updateStatus(anyLong(), anyLong(), eq(OrderStatus.CANCELLED));
+    }
+
+    @Test
+    void cancelOrderRefundsThroughTheGatewayBeforeCancellingAPaidOrder() {
+        Order paid = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
+                .tokenNo("BITE-1234").totalAmount(new BigDecimal("60.00")).status(OrderStatus.PAID).build();
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paid));
+        Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
+                .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
+        when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
+
+        orderService.cancelOrder(42L, TENANT_ID, USER_ID);
+
+        verify(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
+        verify(paymentDao).updateStatus(1L, PaymentStatus.REFUNDED);
+        verify(orderDao).updateStatus(42L, TENANT_ID, OrderStatus.CANCELLED);
+        verify(auditService).record(eq(USER_ID), eq(TENANT_ID), eq("Order"), eq(42L), eq("STATUS_CANCELLED"), any(), any());
+    }
+
+    @Test
+    void cancelOrderDoesNotTouchTheOrderWhenTheRefundFails() {
+        Order paid = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
+                .tokenNo("BITE-1234").totalAmount(new BigDecimal("60.00")).status(OrderStatus.PAID).build();
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paid));
+        Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
+                .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
+        when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
+        doThrow(new RuntimeException("gateway down")).when(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
+
+        assertThatThrownBy(() -> orderService.cancelOrder(42L, TENANT_ID, USER_ID))
+                .isInstanceOf(RuntimeException.class);
+
+        verify(paymentDao, never()).updateStatus(anyLong(), eq(PaymentStatus.REFUNDED));
+        verify(orderDao, never()).updateStatus(anyLong(), anyLong(), eq(OrderStatus.CANCELLED));
+    }
+
+    @Test
+    void cancelOrderSkipsTheRefundCallWhenNoPaymentWasCaptured() {
+        Order awaitingPayment = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
+                .tokenNo("BITE-1234").totalAmount(BigDecimal.TEN).status(OrderStatus.AWAITING_PAYMENT).build();
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(awaitingPayment));
+
+        orderService.cancelOrder(42L, TENANT_ID, USER_ID);
+
+        verifyNoInteractions(paymentGateway, paymentDao);
+        verify(orderDao).updateStatus(42L, TENANT_ID, OrderStatus.CANCELLED);
     }
 }

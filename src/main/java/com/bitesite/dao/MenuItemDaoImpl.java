@@ -25,6 +25,7 @@ public class MenuItemDaoImpl implements MenuItemDao {
             .outletId(rs.getLong("outlet_id"))
             .name(rs.getString("name"))
             .category(rs.getString("category"))
+            .photoPath(rs.getString("photo_path"))
             .price(rs.getBigDecimal("price"))
             .discountPrice(rs.getBigDecimal("discount_price"))
             .discountPercent(rs.getBigDecimal("discount_percent"))
@@ -61,25 +62,26 @@ public class MenuItemDaoImpl implements MenuItemDao {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(
-                        "INSERT INTO menu_items (tenant_id, outlet_id, name, category, price, discount_price, "
-                                + "discount_percent, is_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO menu_items (tenant_id, outlet_id, name, category, photo_path, price, "
+                                + "discount_price, discount_percent, is_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         Statement.RETURN_GENERATED_KEYS);
                 ps.setLong(1, item.getTenantId());
                 ps.setLong(2, item.getOutletId());
                 ps.setString(3, item.getName());
                 ps.setString(4, item.getCategory());
-                ps.setBigDecimal(5, item.getPrice());
-                ps.setBigDecimal(6, item.getDiscountPrice());
-                ps.setBigDecimal(7, item.getDiscountPercent());
-                ps.setBoolean(8, item.isAvailable());
+                ps.setString(5, item.getPhotoPath());
+                ps.setBigDecimal(6, item.getPrice());
+                ps.setBigDecimal(7, item.getDiscountPrice());
+                ps.setBigDecimal(8, item.getDiscountPercent());
+                ps.setBoolean(9, item.isAvailable());
                 return ps;
             }, keyHolder);
             item.setId(keyHolder.getKey().longValue());
         } else {
             jdbcTemplate.update(
-                    "UPDATE menu_items SET name = ?, category = ?, price = ?, discount_price = ?, "
+                    "UPDATE menu_items SET name = ?, category = ?, photo_path = ?, price = ?, discount_price = ?, "
                             + "discount_percent = ?, is_available = ? WHERE id = ? AND tenant_id = ?",
-                    item.getName(), item.getCategory(), item.getPrice(), item.getDiscountPrice(),
+                    item.getName(), item.getCategory(), item.getPhotoPath(), item.getPrice(), item.getDiscountPrice(),
                     item.getDiscountPercent(), item.isAvailable(), item.getId(), item.getTenantId());
         }
         return findByIdAndTenantId(item.getId(), item.getTenantId()).orElseThrow();

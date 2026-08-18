@@ -19,6 +19,7 @@ public class MenuItem {
     private Long outletId;
     private String name;
     private String category;
+    private String photoPath;
     private BigDecimal price;
     private BigDecimal discountPrice;
     private BigDecimal discountPercent;

@@ -4,6 +4,7 @@ import lombok.Getter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.SessionScope;
 
+import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -14,11 +15,14 @@ import java.util.Objects;
  * {@code MenuService} at checkout time, so a stale or tampered client can never affect
  * what's actually charged. Also scoped to a single outlet at a time: switching outlets
  * empties the cart rather than mixing items from two different canteens into one order.
+ *
+ * <p>Serializable because Spring Session JDBC persists session-scoped bean instances as
+ * a serialized blob per session row.
  */
 @Component
 @SessionScope
 @Getter
-public class Cart {
+public class Cart implements Serializable {
 
     private Long outletId;
     private final Map<Long, Integer> quantities = new LinkedHashMap<>();

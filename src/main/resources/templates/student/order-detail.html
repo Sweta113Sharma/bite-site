@@ -3,41 +3,77 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- Mobile Bottom Nav -->
+<div th:replace="~{fragments/navbar :: bottomNav}"></div>
+
 <div class="container" style="max-width: 560px;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0 token-badge" th:text="${order.tokenNo}">TOKEN</h3>
+
+    <!-- Dynamic Status Illustration -->
+    <div class="text-center mb-4">
+        <img th:if="${order.status.name() == 'AWAITING_PAYMENT'}" th:src="@{/img/mascot/bito-listening.png}"
+             alt="" class="mascot-img mascot-md"/>
+        <img th:if="${order.status.name() == 'PAID'}" th:src="@{/img/mascot/bito-hero.png}"
+             alt="" class="mascot-img mascot-md"/>
+        <img th:if="${order.status.name() == 'PREPARING'}" th:src="@{/img/mascot/bito-cooking.png}"
+             alt="" class="mascot-img mascot-md"/>
+        <img th:if="${order.status.name() == 'READY_FOR_PICKUP'}" th:src="@{/img/mascot/bito-celebrate.png}"
+             alt="" class="mascot-img mascot-md"/>
+        <img th:if="${order.status.name() == 'COMPLETED'}" th:src="@{/img/mascot/bito-celebrate.png}"
+             alt="" class="mascot-img mascot-md"/>
+        <img th:if="${order.status.name() == 'CANCELLED' or order.status.name() == 'REFUNDED'}" th:src="@{/img/mascot/bito-lost.png}"
+             alt="" class="mascot-img mascot-md"/>
+    </div>
+
+    <!-- Header Details -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <p class="text-muted small mb-1">ORDER TOKEN</p>
+            <h3 class="m-0 token-badge" th:text="${order.tokenNo}">TOKEN</h3>
+        </div>
         <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
     </div>
 
-    <div class="alert alert-info" th:if="${order.status.name() == 'PAID'}">
-        Your order is with the canteen — we'll update this page once they start preparing it.
+    <!-- Live Status Banner -->
+    <div class="alert alert-info d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'PAID'}">
+        <div class="icon-circle bg-info text-white" style="background: var(--color-info) !important;"><i class="ph ph-hourglass-simple"></i></div>
+        <div>Your order is with the canteen — we'll update this page once they start preparing it.</div>
     </div>
-    <div class="alert alert-warning" th:if="${order.status.name() == 'PREPARING'}">
-        Your food is being prepared.
+    <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'PREPARING'}">
+        <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><i class="ph ph-cooking-pot"></i></div>
+        <div><strong>Preparing now!</strong> The kitchen is working on your food.</div>
     </div>
-    <div class="alert alert-primary" th:if="${order.status.name() == 'READY_FOR_PICKUP'}">
-        Ready! Show your token at the counter.
+    <div class="alert alert-primary d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'READY_FOR_PICKUP'}">
+        <div class="icon-circle bg-primary text-white" style="background: var(--color-primary) !important;"><i class="ph ph-bell-simple-ringing"></i></div>
+        <div><strong>Ready!</strong> Show your token at the counter to pick up your order.</div>
     </div>
-    <div class="alert alert-success" th:if="${order.status.name() == 'COMPLETED'}">
-        Picked up. Enjoy!
+    <div class="alert alert-success d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'COMPLETED'}">
+        <div class="icon-circle bg-success text-white" style="background: var(--color-success) !important;"><i class="ph ph-check-circle"></i></div>
+        <div><strong>Completed.</strong> Enjoy your meal!</div>
     </div>
 
-    <table class="table bg-white">
-        <thead><tr><th>Item</th><th>Qty</th><th>Subtotal</th></tr></thead>
-        <tbody>
-        <tr th:each="item : ${order.items}">
-            <td th:text="${item.itemNameSnapshot}">Item</td>
-            <td th:text="${item.quantity}">1</td>
-            <td th:text="'₹' + ${item.subtotal}"></td>
-        </tr>
-        </tbody>
-        <tfoot>
-        <tr><th colspan="2" class="text-end">Total</th><th th:text="'₹' + ${order.totalAmount}"></th></tr>
-        </tfoot>
-    </table>
+    <!-- Order Items Card -->
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <h6 class="card-title p-3 mb-0 border-bottom text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.04em; color: var(--color-ink-muted);">Order Summary</h6>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex justify-content-between align-items-center p-3" th:each="item : ${order.items}">
+                    <div>
+                        <div class="fw-bold" th:text="${item.itemNameSnapshot}">Item Name</div>
+                        <div class="text-muted small">Qty: <span th:text="${item.quantity}">1</span></div>
+                    </div>
+                    <div class="fw-bold" th:text="'₹' + ${item.subtotal}">₹0</div>
+                </div>
+                <div class="list-group-item bg-light d-flex justify-content-between align-items-center p-3">
+                    <span class="fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.04em; color: var(--color-ink-muted);">Total Paid</span>
+                    <strong class="fs-5" th:text="'₹' + ${order.totalAmount}">₹0</strong>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn btn-primary w-100"
-       th:href="@{/student/checkout/{id}(id=${order.id})}">Complete payment</a>
+    <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2"
+       th:href="@{/student/checkout/{id}(id=${order.id})}"><i class="ph ph-credit-card"></i> Complete payment</a>
 </div>
 </body>
 </html>

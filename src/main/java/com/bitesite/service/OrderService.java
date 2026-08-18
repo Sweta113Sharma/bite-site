@@ -35,6 +35,7 @@ public class OrderService {
     private final MenuService menuService;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
+    private final PushNotificationService pushNotificationService;
 
     /**
      * Builds the order from the cart (re-pricing every line from the database, never
@@ -175,6 +176,40 @@ public class OrderService {
         orderDao.updateStatus(orderId, tenantId, newStatus);
         auditService.record(actorUserId, tenantId, "Order", orderId, "STATUS_" + newStatus,
                 order.getStatus(), newStatus);
+        if (newStatus == OrderStatus.READY_FOR_PICKUP) {
+            pushNotificationService.notifyUser(order.getUserId(), "Order ready for pickup",
+                    "Your order " + order.getTokenNo() + " is ready — come grab it!");
+        }
+    }
+
+    /**
+     * Cancels an order, refunding it first if a payment was actually captured. The refund
+     * call must succeed before anything in our own database changes — never mark an order
+     * cancelled while leaving the customer's money uncollected from a refund that silently
+     * failed. Orders that never reached PAID (AWAITING_PAYMENT, PAYMENT_FAILED) have nothing
+     * captured, so those are cancelled directly with no refund call.
+     */
+    @Transactional
+    public void cancelOrder(Long orderId, Long tenantId, Long actorUserId) {
+        Order order = getForTenant(orderId, tenantId);
+        if (!order.getStatus().canTransitionTo(OrderStatus.CANCELLED)) {
+            throw new InvalidOrderStateException(
+                    "Cannot cancel an order in " + order.getStatus() + " status.");
+        }
+
+        if (order.getStatus() == OrderStatus.PAID) {
+            Payment payment = getPaymentForOrder(orderId, tenantId);
+            if (payment.getStatus() == PaymentStatus.CAPTURED) {
+                paymentGateway.refund(payment.getRazorpayPaymentId(), payment.getAmount());
+                paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
+            }
+        }
+
+        OrderStatus previous = order.getStatus();
+        orderDao.updateStatus(orderId, tenantId, OrderStatus.CANCELLED);
+        auditService.record(actorUserId, tenantId, "Order", orderId, "STATUS_CANCELLED", previous, OrderStatus.CANCELLED);
+        pushNotificationService.notifyUser(order.getUserId(), "Order cancelled",
+                "Your order " + order.getTokenNo() + " was cancelled" + (previous == OrderStatus.PAID ? " and refunded." : "."));
     }
 
     /** Sweeps unpaid orders past the payment timeout so they stop counting as pending

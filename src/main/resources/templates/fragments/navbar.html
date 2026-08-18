@@ -1,33 +1,114 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
 <body>
+
+<!-- ============================================================
+     TOP NAVBAR — brand, admin/staff links, logout
+     On mobile for USER role: only shows brand + logout (bottom nav handles the rest)
+     ============================================================ -->
 <nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="/">
             <img th:if="${currentTenant != null and currentTenant.logoPath != null}"
-                 th:src="@{'/uploads/logos/' + ${currentTenant.logoPath}}" height="28" alt="logo"/>
+                 th:src="@{${currentTenant.logoPath}}" height="28" alt="logo"/>
             <span th:text="${currentTenant != null ? currentTenant.name : 'BiteSite'}">BiteSite</span>
         </a>
+
+        <!-- Hamburger toggle — only relevant for staff/admin roles, which have no bottom-nav
+             fallback on mobile the way the student portal does. Plain vanilla-JS toggle
+             (see app.js initNavbarToggle), matching the rest of this app's hand-rolled JS —
+             no Bootstrap JS bundle is loaded here. -->
+        <button type="button" class="navbar-toggler-custom d-lg-none"
+                sec:authorize="hasAnyRole('CANTEEN_STAFF', 'SUPER_ADMIN', 'TECH_MANAGER')"
+                id="navbar-toggle-btn" aria-label="Toggle navigation" aria-expanded="false"
+                aria-controls="navbar-links-collapse">
+            <i class="ph ph-list"></i>
+        </button>
+
         <div class="d-flex align-items-center gap-3">
-            <span sec:authorize="isAuthenticated()" class="navbar-text text-white-50 small" sec:authentication="name">user</span>
-            <a sec:authorize="hasRole('STUDENT')" class="nav-link text-white-50" th:href="@{/student/menu}">Menu</a>
-            <a sec:authorize="hasRole('STUDENT')" class="nav-link text-white-50" th:href="@{/student/cart}">Cart</a>
-            <a sec:authorize="hasRole('STUDENT')" class="nav-link text-white-50" th:href="@{/student/orders}">My Orders</a>
-            <a sec:authorize="hasRole('STUDENT')" class="nav-link text-white-50" th:href="@{/student/grievances}">Support</a>
-            <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link text-white-50" th:href="@{/canteen/queue}">Queue</a>
-            <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link text-white-50" th:href="@{/canteen/menu}">Menu</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/tenants}">Colleges</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/onboarding}">Pipeline</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/grievances}">Grievances</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/audit-log}">Audit log</a>
-            <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link text-white-50" th:href="@{/techmgr}">Colleges</a>
-            <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link text-white-50" th:href="@{/techmgr/health}">Health</a>
+            <span sec:authorize="isAuthenticated()" class="navbar-text text-white-50 small d-none d-md-inline" sec:authentication="name">user</span>
+
+            <!-- USER links — hidden on mobile (bottom nav takes over) -->
+            <div sec:authorize="hasRole('USER')" class="top-nav-links d-flex align-items-center gap-2">
+                <a class="nav-link text-white-50" th:href="@{/student/menu}"><i class="ph ph-fork-knife"></i>Menu</a>
+                <a class="nav-link text-white-50" th:href="@{/student/cart}"><i class="ph ph-shopping-cart"></i>Cart</a>
+                <a class="nav-link text-white-50" th:href="@{/student/orders}"><i class="ph ph-receipt"></i>My Orders</a>
+                <a class="nav-link text-white-50" th:href="@{/student/grievances}"><i class="ph ph-lifebuoy"></i>Support</a>
+                <a class="nav-link text-white-50" th:href="@{/student/account}"><i class="ph ph-user-circle"></i>Account</a>
+            </div>
+
+            <!-- Staff/admin links + role switcher — collapse behind the hamburger on mobile,
+                 always inline on desktop (see .navbar-links-collapse in style.css). -->
+            <div id="navbar-links-collapse" class="navbar-links-collapse">
+                <!-- Role switcher — only rendered when this account holds more than one role
+                     valid on the portal it's currently viewing (see GlobalModelAttributes).
+                     Plain <select> + auto-submit, matching the outlet switcher elsewhere. -->
+                <form th:if="${switchableRoles != null and !#lists.isEmpty(switchableRoles)}"
+                      method="post" th:action="@{/api/role/switch}" class="d-inline">
+                    <select name="role" class="form-select form-select-sm" style="width:auto;"
+                            onchange="this.form.submit()" aria-label="Switch role">
+                        <option value="" disabled selected>Switch role&hellip;</option>
+                        <option th:each="r : ${switchableRoles}" th:value="${r}"
+                                th:text="${r.name().replace('_', ' ')}"></option>
+                    </select>
+                </form>
+
+                <!-- CANTEEN_STAFF links -->
+                <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link text-white-50" th:href="@{/canteen/queue}"><i class="ph ph-clock-countdown"></i>Queue</a>
+                <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link text-white-50" th:href="@{/canteen/menu}"><i class="ph ph-cooking-pot"></i>Menu</a>
+
+                <!-- ADMIN links -->
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/tenants}"><i class="ph ph-buildings"></i>Colleges</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/onboarding}"><i class="ph ph-funnel"></i>Pipeline</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/grievances}"><i class="ph ph-warning-circle"></i>Grievances</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/audit-log}"><i class="ph ph-clipboard-text"></i>Audit log</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/users}"><i class="ph ph-users-three"></i>Platform users</a>
+
+                <!-- TECH_MANAGER links -->
+                <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link text-white-50" th:href="@{/techmgr}"><i class="ph ph-buildings"></i>Colleges</a>
+                <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link text-white-50" th:href="@{/techmgr/health}"><i class="ph ph-heartbeat"></i>Health</a>
+            </div>
+
             <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="d-inline m-0">
-                <button class="btn btn-sm btn-outline-light" type="submit">Logout</button>
+                <button class="btn btn-sm btn-outline-light" type="submit"><i class="ph ph-sign-out"></i>Logout</button>
             </form>
-            <a sec:authorize="!isAuthenticated()" class="btn btn-sm btn-outline-light" th:href="@{/login}">Login</a>
+            <a sec:authorize="!isAuthenticated()" class="btn btn-sm btn-outline-light" th:href="@{/login}"><i class="ph ph-sign-in"></i>Login</a>
         </div>
     </div>
 </nav>
+
+<!-- ============================================================
+     BOTTOM TAB NAV — mobile only, USER role only
+     Swiggy-style persistent bottom bar with icons + labels.
+     The 'active' class is set via data-page attribute in JS.
+     ============================================================ -->
+<nav sec:authorize="hasRole('USER')" class="bottom-nav" id="bottom-nav" th:fragment="bottomNav">
+    <a th:href="@{/student/menu}" class="bottom-nav-item" data-page="menu">
+        <i class="ph ph-fork-knife"></i>
+        <span>Menu</span>
+    </a>
+    <a th:href="@{/student/cart}" class="bottom-nav-item" data-page="cart">
+        <i class="ph ph-shopping-cart"></i>
+        <span>Cart</span>
+        <!-- Cart badge — server-rendered with the current count so it's correct on first paint;
+             app.js updates it live (no reload) after an add-to-cart. -->
+        <span id="cart-badge" class="bottom-nav-badge"
+              th:text="${cartItemCount != null and cartItemCount > 99} ? '99+' : ${cartItemCount}"
+              th:style="${cartItemCount == null or cartItemCount == 0} ? 'display:none' : 'display:flex'"></span>
+    </a>
+    <a th:href="@{/student/orders}" class="bottom-nav-item" data-page="orders">
+        <i class="ph ph-receipt"></i>
+        <span>Orders</span>
+    </a>
+    <a th:href="@{/student/grievances}" class="bottom-nav-item" data-page="support">
+        <i class="ph ph-lifebuoy"></i>
+        <span>Support</span>
+    </a>
+    <a th:href="@{/student/account}" class="bottom-nav-item" data-page="account">
+        <i class="ph ph-user-circle"></i>
+        <span>Account</span>
+    </a>
+</nav>
+
 </body>
 </html>

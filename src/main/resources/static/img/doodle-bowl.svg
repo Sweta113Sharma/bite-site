@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- steam -->
+  <path d="M70 70 C 58 58, 82 46, 70 32 C 60 22, 78 12, 70 2" />
+  <path d="M100 76 C 88 64, 112 52, 100 38 C 90 28, 108 18, 100 8" />
+  <path d="M130 70 C 118 58, 142 46, 130 32 C 120 22, 138 12, 130 2" />
+  <!-- bowl -->
+  <path d="M20 108 C 20 108, 20 160, 100 160 C 180 160, 180 108, 180 108" />
+  <ellipse cx="100" cy="108" rx="80" ry="18" />
+  <!-- base -->
+  <path d="M70 178 C 70 178, 78 196, 100 196 C 122 196, 130 178, 130 178" />
+</svg>

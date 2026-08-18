@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 760px;">
+    <h3 class="mb-1">Privacy policy</h3>
+    <p class="text-muted mb-2" style="font-size:0.9rem;">
+        This is a draft policy describing what BiteSite actually collects and does today. It has not been
+        reviewed by a lawyer and should not be treated as final legal advice — get it reviewed before relying
+        on it for a real launch.
+    </p>
+    <p class="mb-4" style="font-size:0.85rem;">
+        <a th:href="@{/terms}">Terms of service</a> ·
+        <a th:href="@{/refund-policy}">Refund policy</a>
+    </p>
+
+    <h5 class="mt-4">What we collect</h5>
+    <ul>
+        <li><strong>Account details:</strong> name, email address, and password (stored only as a salted hash,
+            never in plain text). Phone number and roll number are optional and used only if you provide them.</li>
+        <li><strong>Order data:</strong> what you order, from which canteen, when, and its status through
+            preparation and pickup.</li>
+        <li><strong>Payment data:</strong> we never see or store your card, UPI, or bank details. Payments are
+            processed by Razorpay; we keep only the order amount, Razorpay's order/payment reference IDs, and the
+            payment status they report back to us.</li>
+        <li><strong>Support requests:</strong> the subject and message of any grievance you raise, and the
+            canteen's response.</li>
+        <li><strong>Operational logs:</strong> who changed what (e.g. menu prices, order status) and when, kept
+            for accountability and fraud investigation.</li>
+    </ul>
+
+    <h5 class="mt-4">Why we collect it</h5>
+    <p>Solely to run the canteen pre-ordering service: authenticate you, route your order to the right canteen,
+        confirm payment before it enters the kitchen queue, let the canteen staff prepare and hand it over, and
+        let you raise and track support issues.</p>
+
+    <h5 class="mt-4">Who we share it with</h5>
+    <p>Your college's canteen staff can see orders placed at their outlet. Razorpay processes payments on our
+        behalf under their own privacy policy. We do not sell or share your data with anyone else.</p>
+
+    <h5 class="mt-4">How long we keep it</h5>
+    <p>For as long as your account is active. Order and payment records are kept afterward for the canteen's
+        legitimate accounting needs, but with identifying details removed if you delete your account (see below).</p>
+
+    <h5 class="mt-4">Your rights</h5>
+    <p>You can view your account details and delete your account at any time from
+        <a th:href="@{/student/account}">My account</a>. Deleting your account removes your name, email, phone,
+        and roll number and signs you out immediately. Your order and payment history is kept, stripped of
+        anything that identifies you, because the canteen has a legitimate operational and accounting need to
+        keep those records. This reflects the approach expected under India's Digital Personal Data Protection
+        Act, 2025 — get it legally reviewed before treating it as compliant.</p>
+
+    <h5 class="mt-4">Contact</h5>
+    <p>Questions about this policy or your data can be raised through the in-app support form
+        (<a th:href="@{/student/grievances}">Support</a>) or directly with your college's BiteSite administrator.</p>
+</div>
+</body>
+</html>

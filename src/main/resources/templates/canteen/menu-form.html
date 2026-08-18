@@ -6,8 +6,22 @@
 <div class="container" style="max-width: 480px;">
     <h3 class="mb-4" th:text="${pageTitle}">Menu item</h3>
 
-    <form method="post" th:object="${form}"
+    <form method="post" th:object="${form}" enctype="multipart/form-data"
           th:action="${itemId != null} ? @{/canteen/menu/{id}(id=${itemId})} : @{/canteen/menu}">
+        <div class="mb-3">
+            <label class="form-label">Photo (optional)</label>
+            <label class="photo-dropzone">
+                <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"/>
+                <span class="photo-dropzone-preview">
+                    <img th:if="${currentPhotoPath != null}" th:src="@{${currentPhotoPath}}" alt=""/>
+                    <img th:if="${currentPhotoPath == null}" th:src="@{/img/plate-placeholder.svg}" alt="" class="is-placeholder-icon"/>
+                </span>
+                <span class="photo-dropzone-text">
+                    <strong th:text="${currentPhotoPath != null} ? 'Replace photo' : 'Add a photo'">Add a photo</strong>
+                    <span>PNG, JPEG, or WebP — under 2MB</span>
+                </span>
+            </label>
+        </div>
         <div class="mb-3">
             <label class="form-label">Name</label>
             <input type="text" th:field="*{name}" class="form-control"/>
@@ -34,8 +48,9 @@
             <div class="text-danger small" th:if="${#fields.hasErrors('discountPercent')}" th:errors="*{discountPercent}"></div>
             <div class="form-text">A flat discount price wins if both are set.</div>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Save</button>
+        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-check"></i>Save</button>
     </form>
 </div>
+<script th:src="@{/js/menu-photo-upload.js}"></script>
 </body>
 </html>

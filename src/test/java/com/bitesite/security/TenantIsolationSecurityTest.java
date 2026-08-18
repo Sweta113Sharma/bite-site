@@ -72,10 +72,10 @@ class TenantIsolationSecurityTest {
 
         studentA = userDao.save(User.builder()
                 .tenantId(collegeA.getId()).name("Student A").email("isolation-student-a-" + runId + "@test.local")
-                .passwordHash(passwordEncoder.encode("irrelevant")).role(Role.STUDENT).active(true).build());
+                .passwordHash(passwordEncoder.encode("irrelevant")).role(Role.USER).activeRole(Role.USER).active(true).build());
         studentB = userDao.save(User.builder()
                 .tenantId(collegeB.getId()).name("Student B").email("isolation-student-b-" + runId + "@test.local")
-                .passwordHash(passwordEncoder.encode("irrelevant")).role(Role.STUDENT).active(true).build());
+                .passwordHash(passwordEncoder.encode("irrelevant")).role(Role.USER).activeRole(Role.USER).active(true).build());
 
         menuItemInCollegeB = menuItemDao.save(MenuItem.builder()
                 .tenantId(collegeB.getId()).outletId(outletB.getId())

@@ -7,15 +7,21 @@ import com.bitesite.model.User;
 import com.bitesite.service.Cart;
 import com.bitesite.service.MenuService;
 import com.bitesite.service.OutletService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +35,7 @@ public class CartController {
     private final Cart cart;
     private final MenuService menuService;
     private final OutletService outletService;
+    private final ObjectMapper objectMapper;
 
     @GetMapping
     public String view(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
@@ -51,13 +58,24 @@ public class CartController {
 
     @PostMapping("/add")
     public String add(@AuthenticationPrincipal AppUserPrincipal principal, @RequestParam Long menuItemId,
-            @RequestParam(defaultValue = "1") int quantity, @RequestParam Long outletId) {
+            @RequestParam(defaultValue = "1") int quantity, @RequestParam Long outletId,
+            @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String accept,
+            HttpServletResponse response) throws IOException {
         User user = principal.getUser();
         // menuService.get enforces the tenant boundary — a menuItemId from another tenant 404s here.
         MenuItem item = menuService.get(menuItemId, user.getTenantId());
         if (item.isAvailable() && item.getOutletId().equals(outletId)) {
             cart.ensureOutlet(outletId);
             cart.add(menuItemId, Math.max(1, quantity));
+        }
+        // The menu page adds to cart via fetch() so it can update the badge/sticky bar without a
+        // page reload; it asks for JSON explicitly. A plain form post (no-JS fallback) still gets
+        // the redirect below.
+        if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
+            int count = cart.getQuantities().values().stream().mapToInt(Integer::intValue).sum();
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            objectMapper.writeValue(response.getWriter(), Map.of("count", count));
+            return null;
         }
         return "redirect:/student/menu?outletId=" + outletId;
     }

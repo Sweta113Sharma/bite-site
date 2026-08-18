@@ -6,8 +6,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.io.Serializable;
+
+// Serializable: this form gets flash-attributed across a redirect, which Spring Session
+// JDBC persists as a serialized blob rather than keeping in process memory.
 @Data
-public class StaffForm {
+public class StaffForm implements Serializable {
 
     @NotBlank(message = "Name is required")
     private String name;

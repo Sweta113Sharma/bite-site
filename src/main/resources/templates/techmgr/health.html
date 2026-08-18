@@ -7,8 +7,14 @@
     <h3 class="mb-4">System health</h3>
     <div class="card">
         <div class="card-body d-flex align-items-center gap-3">
-            <span class="badge fs-5" th:classappend="${up} ? 'bg-success' : 'bg-danger'" th:text="${status}">UP</span>
-            <span class="text-muted">Backed by Spring Boot Actuator</span>
+            <span class="icon-circle" th:classappend="${up} ? '' : 'text-danger'"
+                  th:style="${up} ? '' : 'background: var(--color-danger-tint); color: var(--color-danger);'">
+                <i class="ph ph-heartbeat"></i>
+            </span>
+            <div>
+                <span class="badge fs-6" th:classappend="${up} ? 'bg-success' : 'bg-danger'" th:text="${status}">UP</span>
+                <div class="text-muted small mt-1">Backed by Spring Boot Actuator</div>
+            </div>
         </div>
     </div>
     <p class="mt-3">

@@ -3,6 +3,7 @@ package com.bitesite.web;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.sentry.Sentry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -48,10 +50,20 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.FORBIDDEN, "You don't have permission to do that.", request, response);
     }
 
+    // A missing static file (image, css, js) is routine — not an application error. Without this,
+    // it falls through to generic() below and gets logged as ERROR + reported to Sentry on every hit.
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ModelAndView noStaticResource(NoResourceFoundException e, HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        return respond(HttpStatus.NOT_FOUND, "Not found.", request, response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ModelAndView generic(Exception e, HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         log.error("Unhandled exception on {}", request.getRequestURI(), e);
+        // No-ops when sentry.dsn is unset — see application.yml.
+        Sentry.captureException(e);
         return respond(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong on our end. Please try again.",
                 request, response);
     }

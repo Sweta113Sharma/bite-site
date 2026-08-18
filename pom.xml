@@ -20,6 +20,10 @@
     <properties>
         <java.version>21</java.version>
         <razorpay-java.version>1.4.8</razorpay-java.version>
+        <cloudinary.version>2.3.0</cloudinary.version>
+        <sentry.version>8.16.0</sentry.version>
+        <twilio.version>10.9.2</twilio.version>
+        <web-push.version>5.1.2</web-push.version>
     </properties>
 
     <dependencies>
@@ -72,11 +76,68 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- DB-backed HTTP sessions, so login state survives an app restart and works
+             correctly across more than one app instance behind a load balancer. -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-jdbc</artifactId>
+        </dependency>
+
+        <!-- Outbound email (verification links, etc.) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Payments -->
         <dependency>
             <groupId>com.razorpay</groupId>
             <artifactId>razorpay-java</artifactId>
             <version>${razorpay-java.version}</version>
+        </dependency>
+
+        <!-- Outbound SMS (phone OTP) -->
+        <dependency>
+            <groupId>com.twilio.sdk</groupId>
+            <artifactId>twilio</artifactId>
+            <version>${twilio.version}</version>
+        </dependency>
+
+        <!-- Web Push notifications (order-ready alerts). bcprov is an <optional> dependency
+             of web-push (declares it but doesn't pull it in for consumers), and web-push
+             needs it at runtime for the EC crypto — pinned to the exact version web-push
+             5.1.2 was built against to avoid a BouncyCastle API mismatch. -->
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>${web-push.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.70</version>
+        </dependency>
+        <!-- jose4j is runtime-scope in web-push's own POM, but PushService.send()'s throws
+             clause references JoseException directly, so javac needs it on the compile
+             classpath too, not just at runtime. -->
+        <dependency>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>0.7.9</version>
+        </dependency>
+
+        <!-- Cloud logo storage (optional — active only when app.uploads.storage-type=cloudinary) -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http5</artifactId>
+            <version>${cloudinary.version}</version>
+        </dependency>
+
+        <!-- Error tracking (optional — the SDK no-ops with no DSN set, see sentry.dsn) -->
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+            <version>${sentry.version}</version>
         </dependency>
 
         <!-- Lombok -->
@@ -120,6 +181,13 @@
                         </exclude>
                     </excludes>
                 </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

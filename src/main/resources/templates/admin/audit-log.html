@@ -13,7 +13,7 @@
         </select>
     </form>
 
-    <div th:if="${selectedTenantId != null and #lists.isEmpty(entries)}" class="alert alert-secondary">No activity recorded yet.</div>
+    <div th:if="${selectedTenantId != null and #lists.isEmpty(entries)}" class="alert alert-secondary"><i class="ph ph-clipboard-text"></i> No activity recorded yet.</div>
 
     <table class="table bg-white" th:if="${!#lists.isEmpty(entries)}">
         <thead><tr><th>When</th><th>Entity</th><th>Action</th><th>Before</th><th>After</th></tr></thead>

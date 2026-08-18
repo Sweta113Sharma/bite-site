@@ -20,9 +20,9 @@
     };
 
     const NEXT_ACTION = {
-        PAID: { label: 'Start preparing', next: 'PREPARING', btnClass: 'btn-warning' },
-        PREPARING: { label: 'Mark ready', next: 'READY_FOR_PICKUP', btnClass: 'btn-primary' },
-        READY_FOR_PICKUP: { label: 'Mark picked up', next: 'COMPLETED', btnClass: 'btn-success' }
+        PAID: { label: 'Start preparing', next: 'PREPARING', btnClass: 'btn-warning', icon: 'ph-cooking-pot' },
+        PREPARING: { label: 'Mark ready', next: 'READY_FOR_PICKUP', btnClass: 'btn-primary', icon: 'ph-bell-simple-ringing' },
+        READY_FOR_PICKUP: { label: 'Mark picked up', next: 'COMPLETED', btnClass: 'btn-success', icon: 'ph-check-circle' }
     };
 
     function escapeHtml(value) {
@@ -39,7 +39,13 @@
             <form method="post" action="/canteen/queue/${order.id}/status">
                 <input type="hidden" name="newStatus" value="${action.next}"/>
                 <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
-                <button type="submit" class="btn btn-sm ${action.btnClass} w-100">${action.label}</button>
+                <button type="submit" class="btn btn-sm ${action.btnClass} w-100"><i class="ph ${action.icon}"></i>${action.label}</button>
+            </form>` : '';
+        const cancelHtml = order.status === 'PAID' ? `
+            <form method="post" action="/canteen/queue/${order.id}/cancel"
+                  onsubmit="return confirm('Cancel this order and refund the customer in full?');">
+                <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
+                <button type="submit" class="btn btn-sm btn-outline-danger w-100 mt-2"><i class="ph ph-x-circle"></i>Cancel &amp; refund</button>
             </form>` : '';
 
         return `
@@ -52,10 +58,17 @@
                         </div>
                         <ul class="small text-muted mb-3">${items}</ul>
                         ${actionHtml}
+                        ${cancelHtml}
                     </div>
                 </div>
             </div>`;
     }
+
+    // Snapshot of what's currently rendered, so a poll that returns identical data doesn't
+    // touch the DOM at all — a full innerHTML replace every 5s would re-trigger the card
+    // entry animation on every card, forever, which reads as distracting flicker rather
+    // than motion with purpose.
+    let lastSnapshot = null;
 
     async function poll() {
         try {
@@ -64,6 +77,12 @@
                 return;
             }
             const orders = await response.json();
+            const snapshot = JSON.stringify(orders.map(o => [o.id, o.status]));
+            if (snapshot === lastSnapshot) {
+                return;
+            }
+            lastSnapshot = snapshot;
+
             if (emptyNotice) {
                 emptyNotice.style.display = orders.length === 0 ? '' : 'none';
             }

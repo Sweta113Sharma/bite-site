@@ -6,52 +6,52 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="m-0">Menu</h3>
-        <a class="btn btn-primary" th:href="@{/canteen/menu/new}">+ Add item</a>
+        <a class="btn btn-primary" th:href="@{/canteen/menu/new}"><i class="ph ph-plus"></i>Add item</a>
     </div>
 
-    <div th:if="${#lists.isEmpty(items)}" class="alert alert-secondary">No menu items yet.</div>
+    <div th:if="${#lists.isEmpty(items)}" class="state-panel">
+        <img th:src="@{/img/mascot/bito-cooking.png}" alt="" class="mascot-img mascot-sm"
+             onerror="this.style.display='none'"/>
+        <h4>No menu items yet</h4>
+        <p>Add your first item to start taking orders.</p>
+    </div>
 
-    <table class="table bg-white" th:if="${!#lists.isEmpty(items)}">
-        <thead>
-        <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Price</th>
-            <th>Discount</th>
-            <th>Status</th>
-            <th></th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="item : ${items}">
-            <td th:text="${item.name}">Item</td>
-            <td th:text="${item.category}">Category</td>
-            <td>
-                <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
-                <span th:text="'₹' + ${item.effectivePrice()}"></span>
-            </td>
-            <td>
-                <span th:if="${item.discountPrice != null}" th:text="'Flat ₹' + ${item.discountPrice}"></span>
-                <span th:if="${item.discountPercent != null}" th:text="${item.discountPercent} + '% off'"></span>
-            </td>
-            <td>
-                <span class="badge" th:classappend="${item.available} ? 'bg-success' : 'bg-secondary'"
-                      th:text="${item.available} ? 'Available' : 'Out of stock'"></span>
-            </td>
-            <td class="text-end">
-                <a class="btn btn-sm btn-outline-secondary" th:href="@{/canteen/menu/{id}/edit(id=${item.id})}">Edit</a>
-                <form class="d-inline" method="post" th:action="@{/canteen/menu/{id}/toggle(id=${item.id})}">
-                    <button class="btn btn-sm btn-outline-warning" type="submit"
-                            th:text="${item.available} ? 'Mark out of stock' : 'Mark available'"></button>
-                </form>
-                <form class="d-inline" method="post" th:action="@{/canteen/menu/{id}/delete(id=${item.id})}"
-                      onsubmit="return confirm('Delete this item?');">
-                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3" th:if="${!#lists.isEmpty(items)}">
+        <div class="col" th:each="item : ${items}">
+            <div class="card h-100">
+                <div class="menu-photo-frame" th:classappend="${item.photoPath == null} ? 'is-placeholder'">
+                    <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                    <img th:if="${item.photoPath == null}" th:src="@{/img/plate-placeholder.svg}" alt=""/>
+                    <div class="badge-unavailable" th:if="${!item.available}">Out of stock</div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="card-title mb-0" th:text="${item.name}">Item</h6>
+                        <span class="badge bg-secondary" th:text="${item.category}">Category</span>
+                    </div>
+                    <div class="card-price mb-1">
+                        <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
+                        <span th:text="'₹' + ${item.effectivePrice()}"></span>
+                    </div>
+                    <p class="mb-2 small text-muted" th:if="${item.discountPrice != null}" th:text="'Flat ₹' + ${item.discountPrice} + ' off'"></p>
+                    <p class="mb-2 small text-muted" th:if="${item.discountPercent != null}" th:text="${item.discountPercent} + '% off'"></p>
+                    <div class="d-flex gap-2 mt-3">
+                        <a class="btn btn-sm btn-outline-secondary" th:href="@{/canteen/menu/{id}/edit(id=${item.id})}"><i class="ph ph-pencil-simple"></i>Edit</a>
+                        <form method="post" th:action="@{/canteen/menu/{id}/toggle(id=${item.id})}">
+                            <button class="btn btn-sm btn-outline-warning" type="submit"
+                                    th:title="${item.available} ? 'Mark out of stock' : 'Mark available'">
+                                <i class="ph" th:classappend="${item.available} ? 'ph-x-circle' : 'ph-check-circle'"></i>
+                            </button>
+                        </form>
+                        <form method="post" th:action="@{/canteen/menu/{id}/delete(id=${item.id})}"
+                              onsubmit="return confirm('Delete this item?');">
+                            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="ph ph-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 </body>
 </html>

@@ -19,12 +19,12 @@
 
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">Set a config value</h5>
+            <h5 class="card-title"><i class="ph ph-sliders"></i>Set a config value</h5>
             <p class="text-muted small">Examples: <code>feature.ratings.enabled</code>, <code>notify.email</code>, <code>payment.gateway.override</code></p>
             <form method="post" th:action="@{/techmgr/tenants/{id}/config(id=${tenant.id})}" class="row g-2">
                 <div class="col-5"><input type="text" name="key" class="form-control" placeholder="Key" required="required"/></div>
                 <div class="col-5"><input type="text" name="value" class="form-control" placeholder="Value" required="required"/></div>
-                <div class="col-2"><button type="submit" class="btn btn-primary w-100">Save</button></div>
+                <div class="col-2"><button type="submit" class="btn btn-primary w-100"><i class="ph ph-check"></i></button></div>
             </form>
         </div>
     </div>

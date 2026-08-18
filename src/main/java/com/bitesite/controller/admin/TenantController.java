@@ -1,11 +1,13 @@
 package com.bitesite.controller.admin;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.config.PortalGuard;
 import com.bitesite.dto.OutletForm;
 import com.bitesite.dto.StaffForm;
 import com.bitesite.dto.TenantForm;
 import com.bitesite.exception.DuplicateEmailException;
 import com.bitesite.model.Role;
+import com.bitesite.model.StaffScope;
 import com.bitesite.model.User;
 import com.bitesite.service.OutletService;
 import com.bitesite.service.TenantService;
@@ -32,14 +34,16 @@ public class TenantController {
     private final UserService userService;
 
     @GetMapping
-    public String list(Model model) {
+    public String list(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         model.addAttribute("tenants", tenantService.listAll());
         model.addAttribute("pageTitle", "Colleges");
         return "admin/tenants";
     }
 
     @GetMapping("/new")
-    public String newForm(Model model) {
+    public String newForm(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         if (!model.containsAttribute("form")) {
             model.addAttribute("form", new TenantForm());
         }
@@ -50,6 +54,7 @@ public class TenantController {
     @PostMapping
     public String create(@AuthenticationPrincipal AppUserPrincipal principal,
             @Valid @ModelAttribute("form") TenantForm form, BindingResult bindingResult, Model model) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         if (bindingResult.hasErrors()) {
             model.addAttribute("pageTitle", "Onboard a college");
             return "admin/tenant-form";
@@ -59,7 +64,8 @@ public class TenantController {
     }
 
     @GetMapping("/{id}")
-    public String detail(@PathVariable Long id, Model model) {
+    public String detail(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id, Model model) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         Tenant tenant = tenantService.get(id);
         model.addAttribute("tenant", tenant);
         model.addAttribute("outlets", outletService.listAll(id));
@@ -78,6 +84,7 @@ public class TenantController {
     @PostMapping("/{id}/status")
     public String changeStatus(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
             @RequestParam TenantStatus status) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         tenantService.setStatus(id, status, principal.getUser().getId());
         return "redirect:/admin/tenants/" + id;
     }
@@ -85,6 +92,7 @@ public class TenantController {
     @PostMapping("/{id}/logo")
     public String uploadLogo(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
             @RequestParam("logo") MultipartFile logo, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         tenantService.uploadLogo(id, logo, principal.getUser().getId());
         redirectAttributes.addFlashAttribute("logoUploaded", true);
         return "redirect:/admin/tenants/" + id;

@@ -3,63 +3,86 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- Mobile Bottom Nav -->
+<div th:replace="~{fragments/navbar :: bottomNav}"></div>
+
 <div class="container">
-    <h3 class="mb-4">Your cart</h3>
+    <div class="page-header">
+        <h3 class="page-header-title">Your cart</h3>
+    </div>
 
     <div class="alert alert-danger" th:if="${cartError}" th:text="${cartError}"></div>
 
-    <div th:if="${#lists.isEmpty(lines)}" class="alert alert-secondary">
-        Your cart is empty. <a th:href="@{/student/menu}">Browse the menu</a>.
+    <div th:if="${#lists.isEmpty(lines)}" class="state-panel">
+        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-md"/>
+        <h4>Your cart is empty</h4>
+        <p>Nothing here yet — grab something tasty before the break ends.</p>
+        <a class="btn btn-primary" th:href="@{/student/menu}"><i class="ph ph-fork-knife"></i>Browse the menu</a>
     </div>
 
-    <div th:if="${!#lists.isEmpty(lines)}">
-        <p class="text-muted" th:if="${outlet != null}">Ordering from <strong th:text="${outlet.name}">Outlet</strong></p>
-        <table class="table bg-white">
-            <thead>
-            <tr>
-                <th>Item</th>
-                <th>Price</th>
-                <th>Qty</th>
-                <th>Subtotal</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="line : ${lines}">
-                <td th:text="${line.item().name}">Item</td>
-                <td th:text="'₹' + ${line.item().effectivePrice()}"></td>
-                <td>
-                    <form method="post" th:action="@{/student/cart/update}" class="d-flex gap-2">
-                        <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
-                        <input type="number" name="quantity" th:value="${line.quantity()}" min="1"
-                               class="form-control form-control-sm" style="width: 4.5rem;"/>
-                        <button type="submit" class="btn btn-sm btn-outline-secondary">Update</button>
-                    </form>
-                </td>
-                <td th:text="'₹' + ${line.lineTotal()}"></td>
-                <td>
-                    <form method="post" th:action="@{/student/cart/remove}">
-                        <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
-                    </form>
-                </td>
-            </tr>
-            </tbody>
-            <tfoot>
-            <tr>
-                <th colspan="3" class="text-end">Total</th>
-                <th th:text="'₹' + ${total}"></th>
-                <th></th>
-            </tr>
-            </tfoot>
-        </table>
+    <div th:if="${!#lists.isEmpty(lines)}" style="padding-bottom: 90px;"> <!-- padding for sticky pay bar -->
+        <p class="text-muted mb-4" th:if="${outlet != null}">Ordering from <strong th:text="${outlet.name}">Outlet</strong></p>
+        
+        <!-- Cart Items (Card Layout) -->
+        <div class="cart-items mb-4">
+            <div class="cart-item-card" th:each="line : ${lines}">
+                <div class="cart-item-photo">
+                    <img th:if="${line.item().photoPath != null}" th:src="@{${line.item().photoPath}}" th:alt="${line.item().name}"/>
+                    <img th:if="${line.item().photoPath == null}" th:src="@{/img/plate-placeholder.svg}" alt=""/>
+                </div>
+                
+                <div class="cart-item-info">
+                    <h6 class="cart-item-name" th:text="${line.item().name}">Item</h6>
+                    <div class="cart-item-price" th:text="'₹' + ${line.item().effectivePrice()}"></div>
+                </div>
+                
+                <div class="cart-item-right">
+                    <div class="cart-item-subtotal" th:text="'₹' + ${line.lineTotal()}"></div>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Update Qty Form -->
+                        <form method="post" th:action="@{/student/cart/update}" class="m-0"
+                              onsubmit="setTimeout(() => window.location.reload(), 100);">
+                            <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
+                            <div class="qty-stepper" style="transform: scale(0.85); transform-origin: right center;">
+                                <button type="button" class="qty-minus" onclick="if(this.nextElementSibling.value > 1) { this.nextElementSibling.value--; this.nextElementSibling.nextElementSibling.textContent = this.nextElementSibling.value; this.closest('form').submit(); }"><i class="ph ph-minus"></i></button>
+                                <input type="hidden" name="quantity" th:value="${line.quantity()}"/>
+                                <span class="qty-value" th:text="${line.quantity()}">1</span>
+                                <button type="button" class="qty-plus" onclick="if(this.nextElementSibling.value < 20) { this.previousElementSibling.value++; this.textContent = this.previousElementSibling.value; this.closest('form').submit(); }"><i class="ph ph-plus"></i></button>
+                            </div>
+                        </form>
+                        
+                        <!-- Remove Form -->
+                        <form method="post" th:action="@{/student/cart/remove}" class="m-0">
+                            <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
+                            <button type="submit" class="btn btn-sm btn-outline-danger" style="padding: 4px 8px; border: none; background: transparent;"><i class="ph ph-trash" style="margin: 0; font-size: 1.2rem;"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <form method="post" th:action="@{/student/checkout}">
-            <button type="submit" class="btn btn-primary btn-lg w-100">Pay &amp; place order</button>
-        </form>
-        <p class="text-muted small mt-2 text-center">Payment is required to place your order — this keeps the
-            kitchen from prepping food for orders that never get paid for.</p>
+        <p class="text-muted small text-center mt-4 px-3" style="max-width: 400px; margin: 0 auto;">
+            Payment is required to place your order — this keeps the kitchen from prepping food for orders that never get paid for.
+        </p>
     </div>
 </div>
+
+<!-- Sticky Pay Bar -->
+<div class="sticky-pay-bar" th:if="${!#lists.isEmpty(lines)}">
+    <div class="sticky-pay-inner">
+        <div class="sticky-pay-total">
+            <small>To Pay</small>
+            <span th:text="'₹' + ${total}">0</span>
+        </div>
+        <form method="post" th:action="@{/student/checkout}" class="m-0">
+            <button type="submit" class="btn btn-primary btn-lg px-4 d-flex align-items-center gap-2">
+                Proceed to Pay <i class="ph ph-arrow-right"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
 </body>
 </html>

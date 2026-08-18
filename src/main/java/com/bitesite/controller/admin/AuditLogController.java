@@ -1,8 +1,12 @@
 package com.bitesite.controller.admin;
 
+import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.config.PortalGuard;
+import com.bitesite.model.StaffScope;
 import com.bitesite.dao.AuditLogDao;
 import com.bitesite.tenant.TenantDao;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +24,9 @@ public class AuditLogController {
     private final TenantDao tenantDao;
 
     @GetMapping
-    public String list(@RequestParam(required = false) Long tenantId, Model model) {
+    public String list(@AuthenticationPrincipal AppUserPrincipal principal,
+                       @RequestParam(required = false) Long tenantId, Model model) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         model.addAttribute("tenants", tenantDao.findAll());
         model.addAttribute("selectedTenantId", tenantId);
         if (tenantId != null) {

@@ -3,22 +3,49 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
-<div class="container">
-    <h3 class="mb-4">My orders</h3>
 
-    <div th:if="${#lists.isEmpty(orders)}" class="alert alert-secondary">
-        No orders yet. <a th:href="@{/student/menu}">Browse the menu</a>.
+<!-- Mobile Bottom Nav -->
+<div th:replace="~{fragments/navbar :: bottomNav}"></div>
+
+<div class="container">
+    <div class="page-header">
+        <h3 class="page-header-title">My orders</h3>
     </div>
 
-    <div class="list-group" th:if="${!#lists.isEmpty(orders)}">
-        <a th:each="order : ${orders}" th:href="@{/student/orders/{id}(id=${order.id})}"
-           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-            <div>
-                <strong th:text="${order.tokenNo}">TOKEN</strong>
-                <span class="text-muted ms-2" th:text="'₹' + ${order.totalAmount}"></span>
-            </div>
-            <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
-        </a>
+    <div th:if="${#lists.isEmpty(orders)}" class="state-panel">
+        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-md"/>
+        <h4>No orders yet</h4>
+        <p>Once you place an order, you'll be able to track it here.</p>
+        <a class="btn btn-primary" th:href="@{/student/menu}"><i class="ph ph-fork-knife"></i>Browse the menu</a>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 g-3" th:if="${!#lists.isEmpty(orders)}">
+        <div class="col" th:each="order : ${orders}">
+            <a th:href="@{/student/orders/{id}(id=${order.id})}" class="order-card">
+                <div class="order-card-header">
+                    <div>
+                        <div class="text-muted small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.04em;">Order Token</div>
+                        <div class="order-card-token" th:text="${order.tokenNo}">TOKEN</div>
+                    </div>
+                    <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
+                </div>
+                
+                <div class="order-card-items text-truncate">
+                    <!-- Display first few items -->
+                    <span th:each="item, iter : ${order.items}">
+                        <span th:text="${item.quantity + ' x ' + item.itemNameSnapshot}"></span><span th:if="${!iter.last}">, </span>
+                    </span>
+                    <span th:if="${#lists.isEmpty(order.items)}">No items</span>
+                </div>
+                
+                <hr style="border-color: var(--color-border); margin: 12px 0;"/>
+                
+                <div class="order-card-footer">
+                    <div class="order-card-date" th:text="${#temporals.format(order.createdAt, 'dd MMM yyyy, hh:mm a')}">Date</div>
+                    <div class="order-card-total" th:text="'₹' + ${order.totalAmount}">₹0</div>
+                </div>
+            </a>
+        </div>
     </div>
 </div>
 </body>

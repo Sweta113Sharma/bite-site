@@ -4,8 +4,10 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class OnboardingLeadForm {
+public class OnboardingLeadForm implements Serializable {
 
     @NotBlank(message = "College name is required")
     private String collegeName;

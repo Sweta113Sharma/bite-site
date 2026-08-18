@@ -3,57 +3,127 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- Mobile Bottom Nav -->
+<div th:replace="~{fragments/navbar :: bottomNav}"></div>
+
 <div class="container">
-    <div th:if="${#lists.isEmpty(outlets)}" class="alert alert-secondary">
-        No canteen outlets are set up yet — check back soon.
+    <div th:if="${#lists.isEmpty(outlets)}" class="state-panel">
+        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-md"
+             onerror="this.style.display='none'"/>
+        <h4>No canteens yet</h4>
+        <p>Your college hasn't onboarded a canteen yet — check back soon.</p>
     </div>
 
     <div th:if="${!#lists.isEmpty(outlets)}">
-        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+        <!-- Header -->
+        <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
-                <p class="text-uppercase mb-1" style="font-size:0.75rem; letter-spacing:0.08em; color:var(--color-primary-dark); font-weight:700;">Today's menu</p>
-                <h3 class="m-0" th:text="${selectedOutlet.name}">Outlet</h3>
+                <p class="page-header-label">Today's menu</p>
+                <h3 class="page-header-title" th:text="${selectedOutlet.name}">Outlet</h3>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <form th:if="${outlets.size() > 1}" method="get" th:action="@{/student/menu}">
-                    <select name="outletId" class="form-select" onchange="this.form.submit()">
+                    <select name="outletId" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option th:each="o : ${outlets}" th:value="${o.id}" th:text="${o.name}"
                                 th:selected="${o.id == selectedOutlet.id}"></option>
                     </select>
                 </form>
-                <a class="btn btn-outline-primary" th:href="@{/student/cart}">View cart</a>
             </div>
         </div>
 
-        <div th:if="${#maps.isEmpty(itemsByCategory)}" class="alert alert-secondary">
-            Nothing on the menu right now.
+        <div th:if="${#maps.isEmpty(itemsByCategory)}" class="state-panel">
+            <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-md"
+                 onerror="this.style.display='none'"/>
+            <h4>Nothing on the menu right now</h4>
+            <p>The canteen hasn't added any items yet.</p>
         </div>
 
-        <div th:each="entry : ${itemsByCategory}" class="mb-5">
-            <h5 class="mb-3 d-flex align-items-center gap-2">
-                <span style="width:6px;height:6px;border-radius:50%;background:var(--color-primary);display:inline-block;"></span>
-                <span th:text="${entry.key}">Category</span>
-            </h5>
-            <div class="row row-cols-1 row-cols-md-2 g-3">
-                <div class="col" th:each="item : ${entry.value}">
-                    <div class="card h-100">
-                        <div class="card-body d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="card-title mb-1" th:text="${item.name}">Item</h6>
-                                <div class="card-price">
-                                    <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
-                                    <span th:text="'₹' + ${item.effectivePrice()}"></span>
+        <div th:if="${!#maps.isEmpty(itemsByCategory)}">
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="menu-search" placeholder="Search for dishes..."/>
+            </div>
+
+            <!-- Category Chips -->
+            <div class="category-chips mb-4">
+                <a class="category-chip active" onclick="scrollToCategory('all')" data-category="all">
+                    <span>All</span>
+                </a>
+                <a class="category-chip" onclick="scrollToCategory('meals')" data-category="meals">
+                    <span>Meals</span>
+                </a>
+                <a class="category-chip" onclick="scrollToCategory('snacks')" data-category="snacks">
+                    <span>Snacks</span>
+                </a>
+                <a class="category-chip" onclick="scrollToCategory('beverages')" data-category="beverages">
+                    <span>Beverages</span>
+                </a>
+                <a class="category-chip" onclick="scrollToCategory('desserts')" data-category="desserts">
+                    <span>Desserts</span>
+                </a>
+            </div>
+
+            <!-- Menu List -->
+            <div th:each="entry : ${itemsByCategory}" class="menu-category-section mb-5" th:id="${#strings.replace(entry.key.toLowerCase(), ' ', '-')}">
+                <h5 class="mb-3 d-flex align-items-center gap-2">
+                    <span style="width:6px;height:6px;border-radius:50%;background:var(--color-primary);display:inline-block;"></span>
+                    <span th:text="${entry.key}">Category</span>
+                </h5>
+                <div class="row row-cols-1 row-cols-md-2 g-3">
+                    <div class="col" th:each="item : ${entry.value}">
+                        <div class="menu-card" th:data-name="${item.name}">
+                            <div class="menu-card-row">
+                                <div class="menu-card-photo" th:classappend="${item.photoPath == null} ? 'is-placeholder'">
+                                    <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                                    <img th:if="${item.photoPath == null}" th:src="@{/img/plate-placeholder.svg}" alt=""/>
+                                    <div th:if="${item.hasDiscount()}" class="discount-tag">OFFER</div>
+                                </div>
+                                <div class="menu-card-body">
+                                    <div>
+                                        <h6 class="menu-card-name" th:text="${item.name}">Item</h6>
+                                        <div class="menu-card-price">
+                                            <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
+                                            <span th:text="'₹' + ${item.effectivePrice()}"></span>
+                                        </div>
+                                    </div>
+                                    <div class="menu-card-actions">
+                                        <!-- Add form — submitted via fetch() by app.js (add-to-cart-form),
+                                             falls back to a normal form post if JS is unavailable. -->
+                                        <form method="post" th:action="@{/student/cart/add}" class="w-100 d-flex justify-content-end add-to-cart-form">
+                                            <input type="hidden" name="menuItemId" th:value="${item.id}"/>
+                                            <input type="hidden" name="outletId" th:value="${selectedOutlet.id}"/>
+                                            
+                                            <!-- Swiggy-style Stepper -->
+                                            <div class="qty-stepper me-2">
+                                                <button type="button" class="qty-minus"><i class="ph ph-minus"></i></button>
+                                                <input type="hidden" name="quantity" value="1"/>
+                                                <span class="qty-value">1</span>
+                                                <button type="button" class="qty-plus"><i class="ph ph-plus"></i></button>
+                                            </div>
+                                            
+                                            <button type="submit" class="btn-add">Add</button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
-                            <form method="post" th:action="@{/student/cart/add}" class="d-flex align-items-center gap-2">
-                                <input type="hidden" name="menuItemId" th:value="${item.id}"/>
-                                <input type="hidden" name="outletId" th:value="${selectedOutlet.id}"/>
-                                <input type="number" name="quantity" value="1" min="1" class="form-control form-control-sm" style="width: 4.5rem;"/>
-                                <button type="submit" class="btn btn-sm btn-primary">Add</button>
-                            </form>
                         </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- Sticky Cart Bar — server-rendered from the session cart so it's already correct
+                 on first paint; app.js keeps it in sync (no reload) after an add-to-cart. -->
+            <div id="sticky-cart-bar" class="sticky-cart-bar" th:style="${cartItemCount == null or cartItemCount == 0} ? 'display:none' : 'display:block'">
+                <a class="sticky-cart-inner" th:href="@{/student/cart}">
+                    <div class="sticky-cart-info">
+                        <strong id="sticky-cart-count" th:text="${cartItemCount} + (${cartItemCount == 1} ? ' item' : ' items')">1 item</strong> in your cart
+                    </div>
+                    <div class="sticky-cart-action">
+                        View cart <i class="ph ph-caret-right"></i>
+                    </div>
+                </a>
             </div>
         </div>
     </div>

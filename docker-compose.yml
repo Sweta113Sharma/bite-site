@@ -1,31 +1,40 @@
 services:
   mysql:
     image: mysql:8.4
+    restart: unless-stopped
     environment:
       MYSQL_DATABASE: bitesite_db
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-changeme}
-    ports:
-      - "3306:3306"
+      # No insecure fallback — compose refuses to start rather than run with a known
+      # default password. Set a real DB_PASSWORD in your .env before running this.
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your environment or .env file}
+    # Not published to the host by default — the app container reaches it over the compose
+    # network on its own. Uncomment only for local debugging with a DB client.
+    # ports:
+    #   - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-changeme}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:?Set DB_PASSWORD in your environment or .env file}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   app:
     build: .
+    restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
     environment:
       DB_URL: jdbc:mysql://mysql:3306/bitesite_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       DB_USERNAME: root
-      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your environment or .env file}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      # Seed/demo data is intentionally left out here (see application.yml) — this compose
+      # file is the closest thing to a real deploy shape in this repo. Set FLYWAY_LOCATIONS
+      # to "classpath:db/migration,classpath:db/seed" only if you want the demo accounts.
     ports:
       - "8080:8080"
     volumes:
