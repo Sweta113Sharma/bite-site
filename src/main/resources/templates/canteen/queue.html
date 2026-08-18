@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <span class="live-dot"></span>
+        <h3 class="m-0">Order queue</h3>
+    </div>
+
+    <div id="queue-empty" class="state-panel" th:if="${#lists.isEmpty(orders)}">
+        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-sm"
+             onerror="this.style.display='none'"/>
+        <h4>All caught up</h4>
+        <p>No paid orders waiting right now — new ones will appear here automatically.</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-3" id="queue-body">
+        <div class="col" th:each="order : ${orders}" th:attr="data-order-id=${order.id}">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="token-badge m-0" th:text="${order.tokenNo}">TOKEN</h5>
+                        <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
+                    </div>
+                    <ul class="small text-muted mb-3">
+                        <li th:each="item : ${order.items}"
+                            th:text="${item.quantity} + 'x ' + ${item.itemNameSnapshot}"></li>
+                    </ul>
+                    <div th:if="${order.status.name() == 'PAID'}" class="d-flex flex-column gap-2">
+                        <form method="post" th:action="@{/canteen/queue/{id}/status(id=${order.id})}">
+                            <input type="hidden" name="newStatus" value="PREPARING"/>
+                            <button type="submit" class="btn btn-sm btn-warning w-100"><i class="ph ph-cooking-pot"></i>Start preparing</button>
+                        </form>
+                        <form method="post" th:action="@{/canteen/queue/{id}/cancel(id=${order.id})}"
+                              onsubmit="return confirm('Cancel this order and refund the customer in full?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100"><i class="ph ph-x-circle"></i>Cancel &amp; refund</button>
+                        </form>
+                    </div>
+                    <form method="post" th:if="${order.status.name() == 'PREPARING'}"
+                          th:action="@{/canteen/queue/{id}/status(id=${order.id})}">
+                        <input type="hidden" name="newStatus" value="READY_FOR_PICKUP"/>
+                        <button type="submit" class="btn btn-sm btn-primary w-100"><i class="ph ph-bell-simple-ringing"></i>Mark ready</button>
+                    </form>
+                    <form method="post" th:if="${order.status.name() == 'READY_FOR_PICKUP'}"
+                          th:action="@{/canteen/queue/{id}/status(id=${order.id})}">
+                        <input type="hidden" name="newStatus" value="COMPLETED"/>
+                        <button type="submit" class="btn btn-sm btn-success w-100"><i class="ph ph-check-circle"></i>Mark picked up</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script th:src="@{/js/queue-poll.js}"></script>
+</body>
+</html>

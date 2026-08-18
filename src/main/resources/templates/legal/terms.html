@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 760px;">
+    <h3 class="mb-1">Terms of service</h3>
+    <p class="text-muted mb-2" style="font-size:0.9rem;">
+        This is a draft, plain-language description of how BiteSite works today. It has not been reviewed by a
+        lawyer and should not be treated as final legal advice — get it reviewed before relying on it for a real
+        launch.
+    </p>
+    <p class="mb-4" style="font-size:0.85rem;">
+        <a th:href="@{/privacy-policy}">Privacy policy</a> ·
+        <a th:href="@{/refund-policy}">Refund policy</a>
+    </p>
+
+    <h5 class="mt-4">The service</h5>
+    <p>BiteSite lets you browse your college canteen's menu, place an order ahead of time, pay for it online,
+        and collect it during your break. Each account belongs to one college; you'll only see that college's
+        canteens and menus.</p>
+
+    <h5 class="mt-4">Payment</h5>
+    <p>Every order must be paid in full before it is sent to the kitchen — BiteSite does not support paying at
+        the counter. Payments are processed by Razorpay. An order only moves into preparation once payment is
+        confirmed as successful.</p>
+
+    <h5 class="mt-4">Cancellations and refunds</h5>
+    <p>Once an order has been marked as paid and entered the kitchen queue, it generally cannot be cancelled,
+        since the canteen has already begun preparing it. If a payment is deducted but the order fails to
+        register, or a canteen is unable to fulfil an order it has accepted payment for, raise it immediately
+        through <a th:href="@{/student/grievances}">Support</a> so it can be investigated and refunded if
+        appropriate.</p>
+
+    <h5 class="mt-4">Your account</h5>
+    <p>Keep your password confidential. You're responsible for orders placed from your account. You can view
+        your account and delete it at any time from <a th:href="@{/student/account}">My account</a> — see our
+        <a th:href="@{/privacy-policy}">privacy policy</a> for what deleting your account does and does not
+        remove.</p>
+
+    <h5 class="mt-4">Acceptable use</h5>
+    <p>Don't attempt to access another user's account, another college's data, or place orders you don't intend
+        to pay for. Accounts found doing so may be suspended.</p>
+
+    <h5 class="mt-4">Changes</h5>
+    <p>These terms may change as the service develops. Continued use after a change means you accept the
+        updated terms.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,149 @@
+spring:
+  application:
+    name: bitesite
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/bitesite_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  sql:
+    init:
+      mode: never
+
+  flyway:
+    enabled: true
+    # db/seed (V2, V8) creates the demo accounts/data — including admin@bitesite.local and
+    # tech@bitesite.local, all sharing one publicly-documented password. It is NOT in this
+    # default location list, so a plain production deploy never gets them. Local dev/demo
+    # opts back in via FLYWAY_LOCATIONS (see demo.sh); the test profile does the same in
+    # application-test.yml so test behavior is unchanged.
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
+    baseline-on-migrate: true
+
+  thymeleaf:
+    cache: ${THYMELEAF_CACHE:false}
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+  session:
+    store-type: jdbc
+    timeout: 30m
+    jdbc:
+      initialize-schema: never
+      table-name: SPRING_SESSION
+
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+  servlet:
+    session:
+      cookie:
+        # Must be true in production (behind the HTTPS-terminating reverse proxy this app
+        # expects — see README) so the session cookie is never sent over plain HTTP. Stays
+        # false by default so local http://localhost dev/demo keeps working without TLS.
+        secure: ${COOKIE_SECURE:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true
+  health:
+    mail:
+      # SMTP is intentionally unconfigured until real credentials are supplied (see
+      # app.mail below) — without this, Boot's mail health indicator tries to connect
+      # and drags the whole aggregate /actuator/health status to DOWN.
+      enabled: false
+
+app:
+  portal:
+    # Blank = host-header routing (dev mode: admin.localhost, outlet.localhost, app.localhost).
+    # Set to APP, OUTLET, or ADMIN to pin this deployment to a single portal (production).
+    target: ${APP_TARGET:}
+    domains:
+      app: ${PORTAL_APP_DOMAIN:app.localhost}
+      outlet: ${PORTAL_OUTLET_DOMAIN:outlet.localhost}
+      admin: ${PORTAL_ADMIN_DOMAIN:admin.localhost}
+  uploads:
+    # "local" (default) writes to logo-dir on this server's own disk — free, but lost on
+    # redeploy if the host filesystem is ephemeral, and not shared across app instances.
+    # "cloudinary" stores logos in Cloudinary instead (see CloudinaryFileStorageService) —
+    # set UPLOAD_STORAGE_TYPE=cloudinary plus the three CLOUDINARY_* env vars to activate.
+    storage-type: ${UPLOAD_STORAGE_TYPE:local}
+    logo-dir: ${LOGO_UPLOAD_DIR:./uploads/logos}
+    menu-photo-dir: ${MENU_PHOTO_UPLOAD_DIR:./uploads/menu-photos}
+    cloudinary:
+      cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+      api-key: ${CLOUDINARY_API_KEY:}
+      api-secret: ${CLOUDINARY_API_SECRET:}
+  order:
+    payment-timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:10}
+  mail:
+    # Left blank in dev: EmailService logs a warning and skips sending rather than
+    # failing registration when SMTP isn't configured — see EmailService.
+    from: ${MAIL_FROM:no-reply@bitesite.local}
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:}
+  key-secret: ${RAZORPAY_KEY_SECRET:}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+
+# Phone OTP (SmsService/TwilioSmsService). Blank by default — SmsService.isConfigured()
+# checks these directly, and UserService.registerStudent only gates a self-registered
+# student's phone verification when both a number was given AND this is configured.
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID:}
+  auth-token: ${TWILIO_AUTH_TOKEN:}
+  from-number: ${TWILIO_FROM_NUMBER:}
+
+# Web Push (order-ready/cancelled alerts). Self-generated key pair, not a vendor secret —
+# see README for how to generate one. Blank by default; PushNotificationService.isConfigured()
+# gates every send, mirroring razorpay/twilio/mail above.
+vapid:
+  public-key: ${VAPID_PUBLIC_KEY:}
+  private-key: ${VAPID_PRIVATE_KEY:}
+  subject: ${VAPID_SUBJECT:mailto:no-reply@bitesite.local}
+
+# Error tracking: the Sentry SDK checks its own DSN and simply doesn't initialize when
+# it's blank (logs a debug line, sends nothing) — no conditional wiring needed on our side.
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:development}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.0}
+  send-default-pii: false
+
+logging:
+  level:
+    com.bitesite: INFO
+  # Plain text console logs by default (readable locally). Set LOG_FORMAT=ecs (or
+  # logstash/gelf) in an environment with a log aggregator to switch to structured JSON
+  # — built into Boot 3.4+, no extra dependency needed.
+  structured:
+    format:
+      console: ${LOG_FORMAT:}
+
+info:
+  app:
+    name: BiteSite
+    description: Multi-tenant canteen pre-ordering platform

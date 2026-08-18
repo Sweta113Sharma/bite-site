@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="auth-shell d-flex align-items-center justify-content-center">
+    <div th:replace="~{fragments/auth-decor :: decor}"></div>
+    <div class="auth-card" style="max-width: 460px;">
+        <div class="text-center mb-4">
+            <img th:src="@{/img/mascot/bito-hero.png}" alt="Bito waving hello" class="mascot-img mascot-sm"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"/>
+            <div class="auth-mark" style="display:none;">B</div>
+            <h3 class="mb-1">Create your account</h3>
+        </div>
+
+        <div class="alert alert-danger" th:if="${rateLimited}">
+            Too many attempts from this network — please wait a few minutes and try again.
+        </div>
+
+        <form method="post" th:action="@{/register/student}" th:object="${form}">
+            <div class="mb-3">
+                <label class="form-label">College</label>
+                <select th:field="*{tenantId}" class="form-select">
+                    <option value="" disabled selected>Choose your college</option>
+                    <option th:each="college : ${colleges}" th:value="${college.id}" th:text="${college.name}"></option>
+                </select>
+                <div class="text-danger small" th:if="${#fields.hasErrors('tenantId')}" th:errors="*{tenantId}"></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Full name</label>
+                <input type="text" th:field="*{name}" class="form-control"/>
+                <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" th:field="*{email}" class="form-control"/>
+                <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <div class="input-group">
+                    <input type="password" th:field="*{password}" class="form-control" id="register-password"/>
+                    <button class="btn btn-outline-secondary toggle-password" type="button" data-target="register-password" tabindex="-1" aria-label="Show password">
+                        <i class="ph ph-eye"></i>
+                    </button>
+                </div>
+                <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Phone (optional)</label>
+                <input type="text" th:field="*{phone}" class="form-control" placeholder="10-digit mobile number"
+                       inputmode="numeric" maxlength="10"/>
+                <div class="form-text">If provided, we'll text you a code to verify it.</div>
+                <div class="text-danger small" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Roll number (optional)</label>
+                <input type="text" th:field="*{rollNo}" class="form-control"/>
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="ph ph-user-plus"></i>Create account</button>
+        </form>
+
+        <p class="mt-4 text-center mb-0" style="font-size:0.9rem;">
+            Already have an account? <a th:href="@{/login}">Sign in</a>
+        </p>
+        <p class="mt-2 text-center mb-0 text-muted" style="font-size:0.8rem;">
+            By creating an account you agree to our
+            <a th:href="@{/terms}" class="text-muted">terms</a>,
+            <a th:href="@{/privacy-policy}" class="text-muted">privacy policy</a>, and
+            <a th:href="@{/refund-policy}" class="text-muted">refund policy</a>.
+        </p>
+    </div>
+</div>
+<script th:src="@{/js/password-toggle.js}"></script>
+</body>
+</html>

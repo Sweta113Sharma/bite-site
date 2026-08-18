@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- Mobile Bottom Nav -->
+<div th:replace="~{fragments/navbar :: bottomNav}"></div>
+
+<div class="container text-center" style="max-width: 480px; margin-top: 4rem;">
+    <div class="icon-circle mx-auto mb-3" style="width:64px;height:64px;font-size:1.8rem;">
+        <i class="ph ph-credit-card"></i>
+    </div>
+    <h3 class="mb-2">Complete payment</h3>
+    <p class="text-muted mb-4">
+        Order token <strong th:text="${order.tokenNo}" class="token-badge">BITE-0000</strong> &middot;
+        <span class="fs-5 fw-bold text-dark" th:text="'₹' + ${order.totalAmount}">0</span>
+    </p>
+
+    <div class="alert alert-danger" th:if="${paymentError}" th:text="${paymentError}"></div>
+
+    <button id="pay-btn" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
+        <i class="ph ph-lock-key"></i> Pay Securely via UPI
+    </button>
+    <a th:href="@{/student/cart}" class="text-muted small text-decoration-none">Cancel and return to cart</a>
+</div>
+
+<form id="confirm-form" method="post" th:action="@{/student/checkout/{id}/confirm(id=${order.id})}" style="display:none;">
+    <input type="hidden" name="razorpay_order_id" id="f-order-id"/>
+    <input type="hidden" name="razorpay_payment_id" id="f-payment-id"/>
+    <input type="hidden" name="razorpay_signature" id="f-signature"/>
+</form>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const razorpayKeyId = /*[[${razorpayKeyId}]]*/ '';
+    const gatewayOrderId = /*[[${payment.razorpayOrderId}]]*/ '';
+    const amountPaise = /*[[${amountPaise}]]*/ 0;
+    const tokenNo = /*[[${order.tokenNo}]]*/ '';
+    /*]]>*/
+
+    function openCheckout() {
+        const rzp = new Razorpay({
+            key: razorpayKeyId,
+            amount: amountPaise,
+            currency: 'INR',
+            name: 'BiteSite',
+            description: 'Order ' + tokenNo,
+            order_id: gatewayOrderId,
+            handler: function (response) {
+                document.getElementById('f-order-id').value = response.razorpay_order_id;
+                document.getElementById('f-payment-id').value = response.razorpay_payment_id;
+                document.getElementById('f-signature').value = response.razorpay_signature;
+                document.getElementById('confirm-form').submit();
+            },
+            modal: { ondismiss: function () { /* left on this page */ } }
+        });
+        rzp.open();
+    }
+
+    document.getElementById('pay-btn').addEventListener('click', openCheckout);
+    if (!razorpayKeyId) {
+        document.getElementById('pay-btn').disabled = true;
+        document.getElementById('pay-btn').insertAdjacentHTML('afterend',
+            '<div class="alert alert-warning mt-3">Payments aren\'t configured on this server yet.</div>');
+    }
+</script>
+</body>
+</html>

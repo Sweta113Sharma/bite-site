@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="state-panel" style="margin-top: 4rem;">
+    <img th:src="@{/img/mascot/bito-lost.png}" alt="" class="mascot-img mascot-lg"
+         onerror="this.style.display='none'"/>
+    <h4>Access denied</h4>
+    <p>Your account doesn't have permission to view that page.</p>
+    <a class="btn btn-primary" href="/"><i class="ph ph-house"></i>Go home</a>
+</div>
+</body>
+</html>

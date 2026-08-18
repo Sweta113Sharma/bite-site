@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">Onboarding pipeline</h3>
+        <a class="btn btn-primary" th:href="@{/admin/onboarding/new}"><i class="ph ph-plus"></i>Add a lead</a>
+    </div>
+
+    <div th:if="${#lists.isEmpty(leads)}" class="state-panel">
+        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-sm"
+             onerror="this.style.display='none'"/>
+        <h4>No leads yet</h4>
+        <p>Add a college you're talking to and track it through the pipeline.</p>
+    </div>
+
+    <table class="table bg-white" th:if="${!#lists.isEmpty(leads)}">
+        <thead><tr><th>College</th><th>Contact</th><th>Stage</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="lead : ${leads}">
+            <td th:text="${lead.collegeName}">College</td>
+            <td>
+                <div th:text="${lead.contactName}">Contact</div>
+                <div class="text-muted small" th:text="${lead.contactEmail}"></div>
+            </td>
+            <td>
+                <form method="post" th:action="@{/admin/onboarding/{id}/stage(id=${lead.id})}" class="d-flex gap-2"
+                      th:if="${lead.stage.name() != 'ONBOARDED'}">
+                    <select name="stage" class="form-select form-select-sm">
+                        <option th:each="s : ${stages}" th:value="${s}" th:text="${s}" th:selected="${s == lead.stage}"></option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-outline-primary"><i class="ph ph-check"></i></button>
+                </form>
+                <span th:if="${lead.stage.name() == 'ONBOARDED'}" class="badge bg-success">ONBOARDED</span>
+            </td>
+            <td>
+                <form method="post" th:action="@{/admin/onboarding/{id}/convert(id=${lead.id})}"
+                      th:if="${lead.stage.name() != 'ONBOARDED'}"
+                      onsubmit="return confirm('Create a live college for ' + '&quot;' + [[${lead.collegeName}]] + '&quot;' + '?');">
+                    <button type="submit" class="btn btn-sm btn-success"><i class="ph ph-buildings"></i>Convert to college</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

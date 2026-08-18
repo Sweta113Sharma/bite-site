@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <h3 class="mb-4">Audit log</h3>
+
+    <form method="get" th:action="@{/admin/audit-log}" class="mb-4" style="max-width: 320px;">
+        <select name="tenantId" class="form-select" onchange="this.form.submit()">
+            <option value="" th:selected="${selectedTenantId == null}">Choose a college…</option>
+            <option th:each="t : ${tenants}" th:value="${t.id}" th:text="${t.name}" th:selected="${t.id == selectedTenantId}"></option>
+        </select>
+    </form>
+
+    <div th:if="${selectedTenantId != null and #lists.isEmpty(entries)}" class="alert alert-secondary"><i class="ph ph-clipboard-text"></i> No activity recorded yet.</div>
+
+    <table class="table bg-white" th:if="${!#lists.isEmpty(entries)}">
+        <thead><tr><th>When</th><th>Entity</th><th>Action</th><th>Before</th><th>After</th></tr></thead>
+        <tbody>
+        <tr th:each="e : ${entries}">
+            <td th:text="${#temporals.format(e.createdAt, 'dd MMM HH:mm')}">time</td>
+            <td th:text="${e.entityType} + ' #' + ${e.entityId}">entity</td>
+            <td th:text="${e.action}">action</td>
+            <td class="small text-muted" th:text="${e.beforeJson}"></td>
+            <td class="small text-muted" th:text="${e.afterJson}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

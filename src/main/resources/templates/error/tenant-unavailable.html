@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div class="state-panel" style="margin-top: 6rem;">
+    <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-lg"
+         onerror="this.style.display='none'"/>
+    <h4 th:if="${tenant != null and tenant.status.name() == 'PENDING'}">
+        <span th:text="${tenant.name}">This college</span> isn't live yet
+    </h4>
+    <h4 th:if="${tenant != null and tenant.status.name() == 'SUSPENDED'}">
+        <span th:text="${tenant.name}">This college</span>'s ordering is temporarily paused
+    </h4>
+    <p>Please check back soon, or contact your canteen for details.</p>
+    <form sec:authorize="isAuthenticated()" method="post" th:action="@{/logout}">
+        <button class="btn btn-outline-secondary" type="submit"><i class="ph ph-sign-out"></i>Sign out</button>
+    </form>
+</div>
+</body>
+</html>

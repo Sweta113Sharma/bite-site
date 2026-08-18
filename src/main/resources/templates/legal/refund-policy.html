@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 760px;">
+    <h3 class="mb-1">Refund and cancellation policy</h3>
+    <p class="text-muted mb-2" style="font-size:0.9rem;">
+        This is a draft, plain-language description of how refunds and cancellations actually work in BiteSite
+        today. It has not been reviewed by a lawyer and should not be treated as final legal advice — get it
+        reviewed before relying on it for a real launch.
+    </p>
+    <p class="mb-4" style="font-size:0.85rem;">
+        <a th:href="@{/terms}">Terms of service</a> ·
+        <a th:href="@{/privacy-policy}">Privacy policy</a>
+    </p>
+
+    <h5 class="mt-4">When a refund happens automatically</h5>
+    <p>If a payment is deducted by Razorpay but the order fails to register as paid on our side (a rare
+        network/gateway failure), no money reaches the canteen and it should be automatically reconciled or
+        refunded by Razorpay's own failure handling. If it is not, raise it immediately through
+        <a th:href="@{/student/grievances}">Support</a> with your payment reference — this is investigated and
+        refunded directly.</p>
+
+    <h5 class="mt-4">Cancellation before the kitchen starts preparing</h5>
+    <p>If a canteen is unable to fulfil a paid order — an item runs out, the outlet has to close early, and
+        similar — canteen staff can cancel it from their queue. Cancelling a <em>paid</em> order always issues a
+        full refund to your original payment method through Razorpay before the cancellation takes effect; the
+        order is never marked cancelled while a payment stays uncollected. Refunds typically settle back to your
+        source account within 5–7 business days, per Razorpay's standard refund timelines — BiteSite does not
+        control how long your bank or UPI app takes to reflect it.</p>
+
+    <h5 class="mt-4">Once preparation has started</h5>
+    <p>Once an order moves to "Preparing," the canteen has already committed ingredients and effort to it, so it
+        generally cannot be cancelled by the student. If something has genuinely gone wrong (wrong item
+        prepared, order not actually available despite being accepted), raise it through
+        <a th:href="@{/student/grievances}">Support</a> so canteen/admin staff can review and refund it manually
+        if appropriate.</p>
+
+    <h5 class="mt-4">Orders that are never charged</h5>
+    <p>An order that never reaches a successful payment (abandoned at checkout, or the payment attempt fails
+        outright) is never sent to the kitchen and nothing is charged — there is nothing to refund in this case.</p>
+
+    <h5 class="mt-4">How to request a refund review</h5>
+    <p>Use <a th:href="@{/student/grievances}">Support</a> from your account, describe the order and what went
+        wrong, and include the order token shown on your order detail page. Canteen and admin staff can see and
+        respond to grievances tied to their outlet's orders.</p>
+</div>
+</body>
+</html>

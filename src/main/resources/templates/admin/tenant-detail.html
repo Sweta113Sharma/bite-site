@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <img th:if="${tenant.logoPath != null}" th:src="@{${tenant.logoPath}}" height="40" alt="logo"/>
+            <h3 class="m-0" th:text="${tenant.name}">College</h3>
+        </div>
+        <span class="badge fs-6" th:classappend="${tenant.status.name() == 'ACTIVE'} ? 'bg-success' : (${tenant.status.name() == 'PENDING'} ? 'bg-secondary' : 'bg-danger')"
+              th:text="${tenant.status}"></span>
+    </div>
+
+    <div class="alert alert-success" th:if="${logoUploaded}">Logo updated.</div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="ph ph-toggle-left"></i>Status</h5>
+                    <form method="post" th:action="@{/admin/tenants/{id}/status(id=${tenant.id})}" class="d-flex gap-2">
+                        <select name="status" class="form-select">
+                            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == tenant.status}"></option>
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary"><i class="ph ph-check"></i>Update</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="ph ph-image"></i>Logo</h5>
+                    <form method="post" th:action="@{/admin/tenants/{id}/logo(id=${tenant.id})}" enctype="multipart/form-data" class="d-flex gap-2">
+                        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="form-control" required="required"/>
+                        <button type="submit" class="btn btn-outline-primary"><i class="ph ph-upload"></i>Upload</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="ph ph-storefront"></i>Canteens</h5>
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item d-flex justify-content-between" th:each="o : ${outlets}">
+                            <span th:text="${o.name}">Canteen</span>
+                            <span class="badge" th:classappend="${o.active} ? 'bg-success' : 'bg-secondary'"
+                                  th:text="${o.active} ? 'Active' : 'Inactive'"></span>
+                        </li>
+                        <li class="list-group-item text-muted" th:if="${#lists.isEmpty(outlets)}">No canteens onboarded yet.</li>
+                    </ul>
+                    <form method="post" th:action="@{/admin/tenants/{id}/outlets(id=${tenant.id})}" th:object="${outletForm}" class="d-flex gap-2">
+                        <input type="text" th:field="*{name}" class="form-control" placeholder="e.g. Main Canteen"/>
+                        <button type="submit" class="btn btn-primary"><i class="ph ph-plus"></i>Add canteen</button>
+                    </form>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('outletForm.name')}" th:errors="${outletForm.name}"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="ph ph-users-three"></i>Canteen staff accounts</h5>
+                    <table class="table table-sm" th:if="${!#lists.isEmpty(staff)}">
+                        <thead><tr><th>Name</th><th>Email</th></tr></thead>
+                        <tbody>
+                        <tr th:each="s : ${staff}" th:if="${s.role.name() == 'CANTEEN_STAFF'}">
+                            <td th:text="${s.name}">Name</td>
+                            <td th:text="${s.email}">email</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <p class="text-muted" th:if="${#lists.isEmpty(staff)}">No staff accounts yet.</p>
+
+                    <hr/>
+                    <h6>Add canteen staff</h6>
+                    <form method="post" th:action="@{/admin/tenants/{id}/staff(id=${tenant.id})}" th:object="${staffForm}">
+                        <div class="mb-2">
+                            <select th:field="*{outletId}" class="form-select">
+                                <option value="" disabled selected>Choose canteen</option>
+                                <option th:each="o : ${outlets}" th:value="${o.id}" th:text="${o.name}"></option>
+                            </select>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('outletId')}" th:errors="*{outletId}"></div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" th:field="*{name}" class="form-control" placeholder="Full name"/>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="email" th:field="*{email}" class="form-control" placeholder="Email"/>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="password" th:field="*{password}" class="form-control" placeholder="Temporary password"/>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-user-plus"></i>Create staff account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

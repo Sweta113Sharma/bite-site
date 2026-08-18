@@ -1,44 +1,68 @@
 package com.bitesite.model;
 
-public class User {
-    private int userId;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.EnumSet;
+import java.util.Set;
+
+// Serializable because this ends up inside the Spring Security SecurityContext, which
+// Spring Session JDBC persists as a serialized blob per session row — not just an
+// in-memory nicety, login itself throws NotSerializableException without this.
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class User implements Serializable {
+    private Long id;
+    private Long tenantId;
+    private Long outletId;
     private String name;
     private String email;
-    private String password;
+    private String passwordHash;
     private String phone;
     private String rollNo;
-    private String role; // 'STUDENT' or 'CANTEEN_ADMIN'
 
-    public User() {}
+    /** Primary/default role — kept for backward compatibility with existing code. */
+    private Role role;
 
-    public User(int userId, String name, String email, String password, String phone, String rollNo, String role) {
-        this.userId = userId;
-        this.name = name;
-        this.email = email;
-        this.password = password;
-        this.phone = phone;
-        this.rollNo = rollNo;
-        this.role = role;
+    /** The role the user is currently operating as (the "view-mode"). */
+    private Role activeRole;
+
+    /**
+     * All roles this user is entitled to (loaded from user_roles table).
+     * This is the source of truth for what portals/features they can access.
+     * {@link #activeRole} must always be a member of this set.
+     */
+    @Builder.Default
+    private Set<Role> roles = EnumSet.noneOf(Role.class);
+
+    private boolean active;
+
+    // Fail-closed by default (Lombok's default for an unset boolean): a User built without
+    // explicitly verifying email is treated as unverified, since email is required for
+    // every account. phoneVerified defaults the other way — true — because phone
+    // verification only ever applies to a self-registered student who both supplied a
+    // phone number and has SMS actually configured; every other account (staff/admin,
+    // students with no phone, or any account built without thinking about this field at
+    // all) has nothing to verify, matching the DB column's own DEFAULT TRUE.
+    private boolean emailVerified;
+    @Builder.Default
+    private boolean phoneVerified = true;
+
+    private LocalDateTime createdAt;
+
+    /** Whether this user holds the given role in their entitlements. */
+    public boolean hasRole(Role r) {
+        return roles != null && roles.contains(r);
     }
 
-    public int getUserId() { return userId; }
-    public void setUserId(int userId) { this.userId = userId; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-
-    public String getRollNo() { return rollNo; }
-    public void setRollNo(String rollNo) { this.rollNo = rollNo; }
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    /** Whether this user's active role is allowed on the given portal. */
+    public boolean canAccessPortal(PortalTarget portal) {
+        return activeRole != null && portal.allowsRole(activeRole);
+    }
 }

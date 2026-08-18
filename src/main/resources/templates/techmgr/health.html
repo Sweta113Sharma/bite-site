@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 480px;">
+    <h3 class="mb-4">System health</h3>
+    <div class="card">
+        <div class="card-body d-flex align-items-center gap-3">
+            <span class="icon-circle" th:classappend="${up} ? '' : 'text-danger'"
+                  th:style="${up} ? '' : 'background: var(--color-danger-tint); color: var(--color-danger);'">
+                <i class="ph ph-heartbeat"></i>
+            </span>
+            <div>
+                <span class="badge fs-6" th:classappend="${up} ? 'bg-success' : 'bg-danger'" th:text="${status}">UP</span>
+                <div class="text-muted small mt-1">Backed by Spring Boot Actuator</div>
+            </div>
+        </div>
+    </div>
+    <p class="mt-3">
+        <a th:href="@{/actuator/health}" target="_blank">Full health detail (JSON)</a> ·
+        <a th:href="@{/actuator/metrics}" target="_blank">Metrics</a>
+    </p>
+</div>
+</body>
+</html>
