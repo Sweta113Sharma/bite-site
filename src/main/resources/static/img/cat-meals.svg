@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <!-- Warm circle background -->
+  <circle cx="40" cy="40" r="38" fill="#FBE4D0"/>
+  <!-- Bowl -->
+  <path d="M22 38 C22 38 22 55 40 55 C58 55 58 38 58 38Z" fill="#E8833A" stroke="#9E3A18" stroke-width="2" stroke-linecap="round"/>
+  <path d="M40 55 L40 62" stroke="#9E3A18" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M32 62 L48 62" stroke="#9E3A18" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Steam lines -->
+  <path d="M32 32 C32 28 36 28 36 24" stroke="#457C5C" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M40 30 C40 26 44 26 44 22" stroke="#457C5C" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M48 32 C48 28 52 28 52 24" stroke="#457C5C" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <!-- Food in bowl -->
+  <circle cx="33" cy="40" r="4" fill="#FBE4D0"/>
+  <circle cx="40" cy="38" r="4.5" fill="#457C5C" opacity="0.8"/>
+  <circle cx="47" cy="40" r="4" fill="#FDE7D2"/>
+</svg>

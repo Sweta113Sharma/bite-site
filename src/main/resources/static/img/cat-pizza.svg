@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <circle cx="40" cy="40" r="38" fill="#FBE4D0"/>
+  <!-- Plate -->
+  <ellipse cx="40" cy="48" rx="24" ry="8" fill="#F7D2B4" stroke="#9E3A18" stroke-width="1.5"/>
+  <ellipse cx="40" cy="46" rx="24" ry="8" fill="#FFFAF3" stroke="#9E3A18" stroke-width="1.5"/>
+  <!-- Pizza slice shape -->
+  <path d="M28 36 L40 22 L52 36 C52 36 48 44 40 44 C32 44 28 36 28 36Z" fill="#E8833A" stroke="#9E3A18" stroke-width="1.5"/>
+  <!-- Toppings -->
+  <circle cx="36" cy="34" r="2.5" fill="#457C5C" opacity="0.7"/>
+  <circle cx="44" cy="33" r="2.5" fill="#9E3A18" opacity="0.5"/>
+  <circle cx="40" cy="38" r="2" fill="#FDE7D2"/>
+  <circle cx="38" cy="28" r="1.8" fill="#9E3A18" opacity="0.4"/>
+  <!-- Crust -->
+  <path d="M28 36 C32 38 48 38 52 36" stroke="#9E3A18" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

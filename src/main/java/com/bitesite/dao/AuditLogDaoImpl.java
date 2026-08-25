@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -23,7 +24,7 @@ public class AuditLogDaoImpl implements AuditLogDao {
             .action(rs.getString("action"))
             .beforeJson(rs.getString("before_json"))
             .afterJson(rs.getString("after_json"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
 
     @Override

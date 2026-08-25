@@ -16,5 +16,8 @@ public interface MenuItemDao {
 
     void updateAvailability(Long id, Long tenantId, boolean available);
 
+    /** Switches every item at an outlet back on in one statement — the "we restocked" button. */
+    int markAllAvailable(Long outletId, Long tenantId);
+
     void delete(Long id, Long tenantId);
 }

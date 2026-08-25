@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,7 +21,7 @@ public class TechConfigDaoImpl implements TechConfigDao {
             .tenantId(rs.getLong("tenant_id"))
             .configKey(rs.getString("config_key"))
             .configValue(rs.getString("config_value"))
-            .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+            .updatedAt(rs.getObject("updated_at", LocalDateTime.class))
             .build();
 
     @Override

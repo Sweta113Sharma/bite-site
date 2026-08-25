@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <circle cx="40" cy="40" r="38" fill="#FBE4D0"/>
+  <!-- Burger bun top -->
+  <path d="M22 40 C22 28 58 28 58 40Z" fill="#E8833A" stroke="#9E3A18" stroke-width="1.5"/>
+  <!-- Sesame seeds -->
+  <ellipse cx="32" cy="34" rx="2" ry="1.2" fill="#FDE7D2" transform="rotate(-20 32 34)"/>
+  <ellipse cx="42" cy="32" rx="2" ry="1.2" fill="#FDE7D2" transform="rotate(10 42 32)"/>
+  <ellipse cx="50" cy="35" rx="2" ry="1.2" fill="#FDE7D2" transform="rotate(-15 50 35)"/>
+  <!-- Lettuce -->
+  <path d="M20 42 C24 38 28 44 32 40 C36 36 40 44 44 40 C48 36 52 44 56 40 L60 42 L20 42Z" fill="#457C5C" opacity="0.8"/>
+  <!-- Patty -->
+  <rect x="22" y="42" width="36" height="7" rx="2" fill="#9E3A18"/>
+  <!-- Cheese -->
+  <path d="M21 42 L59 42 L57 46 L23 46Z" fill="#E8833A" opacity="0.5"/>
+  <!-- Bun bottom -->
+  <path d="M22 49 L58 49 C58 55 22 55 22 49Z" fill="#E8833A" stroke="#9E3A18" stroke-width="1.5"/>
+</svg>

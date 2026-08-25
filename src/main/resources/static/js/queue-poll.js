@@ -25,6 +25,14 @@
         READY_FOR_PICKUP: { label: 'Mark picked up', next: 'COMPLETED', btnClass: 'btn-success', icon: 'ph-check-circle' }
     };
 
+    const CANCEL_REASONS = [
+        { value: 'Ingredients ran out', label: 'Ingredients ran out' },
+        { value: 'Kitchen closing early', label: 'Kitchen closing early' },
+        { value: 'Student asked to cancel', label: 'Student asked to cancel' },
+        { value: 'Ordered by mistake', label: 'Ordered by mistake' },
+        { value: '', label: 'No reason given' }
+    ];
+
     function escapeHtml(value) {
         const div = document.createElement('div');
         div.textContent = value;
@@ -41,12 +49,23 @@
                 <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
                 <button type="submit" class="btn btn-sm ${action.btnClass} w-100"><i class="ph ${action.icon}"></i>${action.label}</button>
             </form>` : '';
+        // Kept in step with canteen/queue.html by hand: this renderer replaces the whole
+        // queue body every poll, so anything only present in the Thymeleaf version would
+        // vanish five seconds after the page loads. The reason list must match that file.
+        const reasonOptions = CANCEL_REASONS
+            .map(r => `<option value="${escapeHtml(r.value)}">${escapeHtml(r.label)}</option>`)
+            .join('');
         const cancelHtml = order.status === 'PAID' ? `
-            <form method="post" action="/canteen/queue/${order.id}/cancel"
-                  onsubmit="return confirm('Cancel this order and refund the customer in full?');">
-                <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
-                <button type="submit" class="btn btn-sm btn-outline-danger w-100 mt-2"><i class="ph ph-x-circle"></i>Cancel &amp; refund</button>
-            </form>` : '';
+            <details class="cancel-panel mt-2">
+                <summary><i class="ph ph-x-circle"></i>Cancel &amp; refund</summary>
+                <form method="post" action="/canteen/queue/${order.id}/cancel"
+                      onsubmit="return confirm('Cancel this order and refund the customer in full?');">
+                    <label class="form-label small mb-1">Reason (the student sees this)</label>
+                    <select name="reason" class="form-select form-select-sm mb-2">${reasonOptions}</select>
+                    <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
+                    <button type="submit" class="btn btn-sm btn-danger w-100"><i class="ph ph-arrow-u-up-left"></i>Cancel and refund in full</button>
+                </form>
+            </details>` : '';
 
         return `
             <div class="col" data-order-id="${order.id}">

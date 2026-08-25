@@ -2,16 +2,15 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
-<div th:replace="~{fragments/navbar :: navbar}"></div>
-<div class="auth-shell d-flex align-items-center justify-content-center">
-    <div th:replace="~{fragments/auth-decor :: decor}"></div>
+<div class="auth-shell">
+<div th:replace="~{fragments/auth-brand :: panel('Order ahead,<br/>skip the queue.','Pick your canteen, pay once, and collect the moment it is ready.')}"></div>
+<main class="auth-main">
     <div class="auth-card">
-        <div class="text-center mb-4">
-            <img th:src="@{/img/mascot/bito-hero.png}" alt="Bito waving hello" class="mascot-img mascot-md"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"/>
-            <div class="auth-mark" style="display:none;">B</div>
-            <h3 class="mb-1">Sign in to BiteSite</h3>
-            <p class="text-muted mb-0" style="font-size:0.92rem;">Order ahead, skip the queue.</p>
+        <div th:replace="~{fragments/auth-brand :: lockup}"></div>
+
+        <div class="auth-head">
+            <h1 class="auth-head__title">Welcome back</h1>
+            <p class="auth-head__sub">Sign in to continue your campus food journey.</p>
         </div>
 
         <div class="alert alert-danger" th:if="${param.error != null and param.error[0] == 'ratelimit'}">
@@ -35,35 +34,37 @@
         <div class="alert alert-success" th:if="${registered == true and verificationRequired == false}">Account created — sign in below.</div>
 
         <form method="post" th:action="@{/login}">
-            <div class="mb-3">
-                <label class="form-label">Email</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="ph ph-envelope-simple"></i></span>
-                    <input type="email" name="username" class="form-control" required="required" autofocus="autofocus"/>
-                </div>
+            <div class="field">
+                <label class="field__label" for="login-email">Email</label>
+                <input type="email" name="username" id="login-email" class="field__input"
+                       placeholder="your@email.com" required="required" autofocus="autofocus"
+                       autocomplete="email"/>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Password</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="ph ph-lock-key"></i></span>
-                    <input type="password" name="password" class="form-control" id="login-password" required="required"/>
-                    <button class="btn btn-outline-secondary toggle-password" type="button" data-target="login-password" tabindex="-1" aria-label="Show password">
-                        <i class="ph ph-eye"></i>
+            <div class="field">
+                <label class="field__label" for="login-password">Password</label>
+                <div class="field__wrap">
+                    <input type="password" name="password" id="login-password"
+                           class="field__input field__input--pw" placeholder="••••••••"
+                           required="required" autocomplete="current-password"/>
+                    <button class="field__toggle toggle-password" type="button"
+                            data-target="login-password" tabindex="-1" aria-label="Show password">
+                        <span class="material-symbols-outlined">visibility</span>
                     </button>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100"><i class="ph ph-sign-in"></i>Sign in</button>
+            <button type="submit" class="btn btn-primary btn-auth">Sign in</button>
         </form>
 
-        <p class="mt-4 text-center mb-0" style="font-size:0.9rem;">
-            New student? <a th:href="@{/register/student}">Create an account</a>
+        <p class="auth-foot">
+            Don't have an account? <a th:href="@{/register/student}">Create account</a>
         </p>
-        <p class="mt-2 text-center mb-0 text-muted" style="font-size:0.8rem;">
+        <p class="auth-legal text-muted mb-0">
             <a th:href="@{/privacy-policy}" class="text-muted">Privacy policy</a> ·
             <a th:href="@{/terms}" class="text-muted">Terms</a> ·
             <a th:href="@{/refund-policy}" class="text-muted">Refund policy</a>
         </p>
     </div>
+</main>
 </div>
 <script th:src="@{/js/password-toggle.js}"></script>
 </body>

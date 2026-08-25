@@ -13,8 +13,7 @@
     </div>
 
     <div th:if="${#lists.isEmpty(tenants)}" class="state-panel">
-        <img th:src="@{/img/mascot/bito-hero.png}" alt="" class="mascot-img mascot-md"
-             onerror="this.style.display='none'"/>
+        <div th:replace="~{fragments/state :: medallion('apartment','neutral')}"></div>
         <h4>No colleges yet</h4>
         <p>Onboard your first college to get started.</p>
         <a class="btn btn-primary" th:href="@{/admin/tenants/new}"><i class="ph ph-plus"></i>Onboard a college</a>

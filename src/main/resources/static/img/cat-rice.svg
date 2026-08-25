@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <circle cx="40" cy="40" r="38" fill="#FBE4D0"/>
+  <!-- Rice bowl base -->
+  <path d="M20 42 C20 42 20 60 40 60 C60 60 60 42 60 42Z" fill="#FFFAF3" stroke="#9E3A18" stroke-width="2" stroke-linecap="round"/>
+  <!-- Rice mound -->
+  <path d="M22 42 C22 42 28 30 40 30 C52 30 58 42 58 42" fill="#FDE7D2" stroke="#9E3A18" stroke-width="1.5"/>
+  <!-- Chopsticks -->
+  <line x1="46" y1="20" x2="36" y2="40" stroke="#9E3A18" stroke-width="2" stroke-linecap="round"/>
+  <line x1="52" y1="20" x2="42" y2="40" stroke="#9E3A18" stroke-width="2" stroke-linecap="round"/>
+  <!-- Green garnish -->
+  <circle cx="34" cy="36" r="3" fill="#457C5C" opacity="0.7"/>
+  <circle cx="46" cy="36" r="2.5" fill="#457C5C" opacity="0.5"/>
+  <!-- Base -->
+  <path d="M40 60 L40 66" stroke="#9E3A18" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M32 66 L48 66" stroke="#9E3A18" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

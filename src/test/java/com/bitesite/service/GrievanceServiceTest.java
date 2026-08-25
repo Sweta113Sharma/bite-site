@@ -1,9 +1,11 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.GrievanceDao;
+import com.bitesite.dao.OrderDao;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Grievance;
 import com.bitesite.model.GrievanceStatus;
+import com.bitesite.model.Order;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,7 @@ class GrievanceServiceTest {
 
     @Mock private GrievanceDao grievanceDao;
     @Mock private AuditService auditService;
+    @Mock private OrderDao orderDao;
 
     private GrievanceService grievanceService;
 
@@ -29,7 +32,7 @@ class GrievanceServiceTest {
 
     @BeforeEach
     void setUp() {
-        grievanceService = new GrievanceService(grievanceDao, auditService);
+        grievanceService = new GrievanceService(grievanceDao, orderDao, auditService);
     }
 
     @Test
@@ -40,10 +43,44 @@ class GrievanceServiceTest {
             return g;
         });
 
-        Grievance g = grievanceService.raise(TENANT_ID, 50L, "Wrong item", "I got the wrong order");
+        Grievance g = grievanceService.raise(TENANT_ID, 50L, null, "Wrong item", "I got the wrong order");
 
         assertThat(g.getStatus()).isEqualTo(GrievanceStatus.OPEN);
         assertThat(g.getRaisedByUserId()).isEqualTo(50L);
+        assertThat(g.getOrderId()).isNull();
+        verifyNoInteractions(orderDao);
+    }
+
+    @Test
+    void raiseAttachesAnOrderTheStudentOwns() {
+        Order own = Order.builder().id(9L).tenantId(TENANT_ID).userId(50L).build();
+        when(orderDao.findByIdAndTenantId(9L, TENANT_ID)).thenReturn(Optional.of(own));
+        when(grievanceDao.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Grievance g = grievanceService.raise(TENANT_ID, 50L, 9L, "Wrong item", "...");
+
+        assertThat(g.getOrderId()).isEqualTo(9L);
+    }
+
+    @Test
+    void raiseRefusesAnOrderBelongingToAnotherStudent() {
+        // orderId comes off a form field, so a student could post someone else's id and
+        // have its token and total rendered back to them from the support screen.
+        Order someoneElses = Order.builder().id(9L).tenantId(TENANT_ID).userId(999L).build();
+        when(orderDao.findByIdAndTenantId(9L, TENANT_ID)).thenReturn(Optional.of(someoneElses));
+
+        assertThatThrownBy(() -> grievanceService.raise(TENANT_ID, 50L, 9L, "Wrong item", "..."))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(grievanceDao, never()).save(any());
+    }
+
+    @Test
+    void raiseRefusesAnOrderFromAnotherTenant() {
+        when(orderDao.findByIdAndTenantId(9L, TENANT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> grievanceService.raise(TENANT_ID, 50L, 9L, "Wrong item", "..."))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(grievanceDao, never()).save(any());
     }
 
     @Test

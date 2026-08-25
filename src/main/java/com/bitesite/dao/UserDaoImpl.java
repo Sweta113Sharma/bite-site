@@ -9,6 +9,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.EnumSet;
@@ -36,7 +37,7 @@ public class UserDaoImpl implements UserDao {
             .active(rs.getBoolean("is_active"))
             .emailVerified(rs.getBoolean("email_verified"))
             .phoneVerified(rs.getBoolean("phone_verified"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
 
     @Override
@@ -129,6 +130,11 @@ public class UserDaoImpl implements UserDao {
     @Override
     public void setActive(Long id, boolean active) {
         jdbcTemplate.update("UPDATE users SET is_active = ? WHERE id = ?", active, id);
+    }
+
+    @Override
+    public void detachFromOutlet(Long id) {
+        jdbcTemplate.update("UPDATE users SET outlet_id = NULL, is_active = FALSE WHERE id = ?", id);
     }
 
     @Override

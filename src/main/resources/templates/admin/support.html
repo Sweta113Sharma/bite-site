@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <h3 class="mb-1">Support desk</h3>
+    <p class="text-muted mb-4">
+        Find an order from what a student can tell you: their order token, or the Razorpay
+        reference off their statement.
+    </p>
+
+    <form method="get" th:action="@{/admin/support}" class="mb-4">
+        <div class="input-group input-group-lg">
+            <span class="input-group-text bg-white"><i class="ph ph-magnifying-glass"></i></span>
+            <input type="text" name="q" th:value="${q}" class="form-control"
+                   placeholder="BITE-1984, or order_xxx / pay_xxx" autofocus="autofocus"/>
+            <button type="submit" class="btn btn-primary px-4">Search</button>
+        </div>
+        <div class="form-text">
+            Tokens match on the ending, so the last few digits are enough.
+        </div>
+    </form>
+
+    <div th:if="${searched and #lists.isEmpty(results)}" class="state-panel">
+        <div th:replace="~{fragments/state :: medallion('search','neutral')}"></div>
+        <h4>Nothing found</h4>
+        <p>No order or payment matches that. Check the reference and try again.</p>
+    </div>
+
+    <div th:each="row : ${results}" class="account-section mb-4">
+        <div class="account-section-title d-flex justify-content-between align-items-center">
+            <span th:text="${row.order().tokenNo}">TOKEN</span>
+            <span th:replace="~{fragments/order-status :: statusBadge(${row.order().status})}"></span>
+        </div>
+
+        <div class="p-3">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase" style="font-size:0.7rem; letter-spacing:0.05em;">Student</div>
+                    <div th:text="${row.studentName}">Name</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase" style="font-size:0.7rem; letter-spacing:0.05em;">College</div>
+                    <div th:text="${row.collegeName}">College</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase" style="font-size:0.7rem; letter-spacing:0.05em;">Placed</div>
+                    <div th:text="${#temporals.format(row.order().createdAt, 'dd MMM yyyy, hh:mm a')}">Date</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase" style="font-size:0.7rem; letter-spacing:0.05em;">Total</div>
+                    <div th:text="'₹' + ${row.order().totalAmount}">₹0</div>
+                </div>
+            </div>
+
+            <ul class="order-card-lines mb-3">
+                <li th:each="item : ${row.order().items}">
+                    <span class="qty" th:text="${item.quantity} + '×'">1×</span><span th:text="${item.itemNameSnapshot}">Item</span>
+                </li>
+            </ul>
+
+            <!-- Payment block. Absent for orders abandoned before checkout, which is a
+                 normal state and not an error worth dressing up as one. -->
+            <div th:if="${row.payment() == null}" class="text-muted small mb-3">
+                <i class="ph ph-info"></i> No payment was ever started for this order.
+            </div>
+
+            <div th:if="${row.payment() != null}" class="cart-summary mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted small">Payment status</span>
+                    <strong th:text="${row.payment().status}">STATUS</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted small">Razorpay order</span>
+                    <code th:text="${row.payment().razorpayOrderId ?: '—'}">—</code>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted small">Razorpay payment</span>
+                    <code th:text="${row.payment().razorpayPaymentId ?: '—'}">—</code>
+                </div>
+            </div>
+
+            <div th:if="${row.refunded()}" class="detail-unavailable mb-0">
+                <i class="ph ph-check-circle"></i>
+                <span>Already refunded. Nothing further to do here.</span>
+            </div>
+
+            <!-- Refund is SUPER_ADMIN only; a tech manager sees the evidence but not the
+                 button, matching the @PreAuthorize on the controller. Hiding it here is
+                 presentation only — the server check is what actually enforces it. -->
+            <form th:if="${row.refundable()}" sec:authorize="hasRole('SUPER_ADMIN')"
+                  method="post" th:action="@{/admin/support/orders/{id}/refund(id=${row.order().id})}"
+                  onsubmit="return confirm('Refund this payment in full? This cannot be undone.');">
+                <input type="hidden" name="tenantId" th:value="${row.order().tenantId}"/>
+                <input type="hidden" name="q" th:value="${q}"/>
+                <div class="input-group">
+                    <input type="text" name="reason" class="form-control"
+                           placeholder="Why is this being refunded? (recorded in the audit log)"/>
+                    <button type="submit" class="btn btn-outline-danger px-4">
+                        <i class="ph ph-arrow-u-left-back"></i> Refund ₹<span th:text="${row.payment().amount}">0</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

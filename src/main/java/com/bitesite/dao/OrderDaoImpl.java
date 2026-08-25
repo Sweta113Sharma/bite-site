@@ -15,7 +15,9 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -32,10 +34,12 @@ public class OrderDaoImpl implements OrderDao {
             .tokenNo(rs.getString("token_no"))
             .totalAmount(rs.getBigDecimal("total_amount"))
             .status(OrderStatus.valueOf(rs.getString("status")))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
-            .paidAt(toLocalDateTime(rs.getTimestamp("paid_at")))
-            .readyAt(toLocalDateTime(rs.getTimestamp("ready_at")))
-            .completedAt(toLocalDateTime(rs.getTimestamp("completed_at")))
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
+            .paidAt(rs.getObject("paid_at", LocalDateTime.class))
+            .readyAt(rs.getObject("ready_at", LocalDateTime.class))
+            .completedAt(rs.getObject("completed_at", LocalDateTime.class))
+            .cancelledAt(rs.getObject("cancelled_at", LocalDateTime.class))
+            .cancellationReason(rs.getString("cancellation_reason"))
             .build();
 
     private static final RowMapper<OrderItem> ITEM_ROW_MAPPER = (rs, rowNum) -> OrderItem.builder()
@@ -47,10 +51,6 @@ public class OrderDaoImpl implements OrderDao {
             .unitPrice(rs.getBigDecimal("unit_price"))
             .subtotal(rs.getBigDecimal("subtotal"))
             .build();
-
-    private static LocalDateTime toLocalDateTime(Timestamp ts) {
-        return ts == null ? null : ts.toLocalDateTime();
-    }
 
     @Override
     @Transactional
@@ -138,16 +138,58 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
-    public boolean existsTokenForTenant(Long tenantId, String token) {
+    public void cancel(Long id, Long tenantId, String reason) {
+        jdbcTemplate.update(
+                "UPDATE orders SET status = ?, cancelled_at = CURRENT_TIMESTAMP, cancellation_reason = ? "
+                        + "WHERE id = ? AND tenant_id = ?",
+                OrderStatus.CANCELLED.name(), reason, id, tenantId);
+    }
+
+    @Override
+    public Map<Long, Integer> sumQuantitiesByMenuItemToday(Long tenantId, Long outletId) {
+        Map<Long, Integer> totals = new HashMap<>();
+        jdbcTemplate.query(
+                "SELECT oi.menu_item_id AS menu_item_id, SUM(oi.quantity) AS qty "
+                        + "FROM order_items oi JOIN orders o ON o.id = oi.order_id "
+                        + "WHERE o.tenant_id = ? AND o.outlet_id = ? AND o.created_at >= CURDATE() "
+                        + "AND o.status NOT IN ('CANCELLED','EXPIRED','PAYMENT_FAILED') "
+                        + "GROUP BY oi.menu_item_id",
+                rs -> { totals.put(rs.getLong("menu_item_id"), rs.getInt("qty")); },
+                tenantId, outletId);
+        return totals;
+    }
+
+    @Override
+    public List<Order> searchByTokenAcrossTenants(String token) {
+        // Suffix match so a student can hand over the tail of a token ("1984") rather
+        // than the whole thing; anchored on the right so it still uses a scan of one
+        // short column rather than matching mid-string noise.
+        return jdbcTemplate.query(
+                "SELECT * FROM orders WHERE token_no LIKE ? ORDER BY created_at DESC LIMIT 25",
+                ORDER_ROW_MAPPER, "%" + token);
+    }
+
+    @Override
+    public boolean existsTokenForTenantToday(Long tenantId, String token) {
+        // token_day is the generated DATE(created_at) the uniqueness constraint sits on, so
+        // the check and the constraint agree by construction, and both are resolved by the
+        // database rather than against a Java-side clock.
         Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND token_no = ?", Integer.class, tenantId, token);
+                "SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND token_day = CURDATE() AND token_no = ?",
+                Integer.class, tenantId, token);
         return count != null && count > 0;
     }
 
     @Override
-    public List<Order> findExpiredAwaitingPayment(LocalDateTime cutoff) {
+    public List<Order> findExpiredAwaitingPayment(int timeoutMinutes) {
+        // NOW() - INTERVAL rather than a cutoff computed in Java, for the same reason
+        // sumQuantitiesByMenuItemToday() uses CURDATE(): created_at is written by the
+        // database, so the value it is compared against has to come from there too. With a
+        // Java-side Timestamp parameter the driver shifted the cutoff by the server's UTC
+        // offset, and a 10-minute timeout behaved as 5h40m against a database running in IST.
         return jdbcTemplate.query(
-                "SELECT * FROM orders WHERE status = 'AWAITING_PAYMENT' AND created_at < ?",
-                ORDER_ROW_MAPPER, Timestamp.valueOf(cutoff));
+                "SELECT * FROM orders WHERE status = 'AWAITING_PAYMENT' "
+                        + "AND created_at < NOW() - INTERVAL ? MINUTE",
+                ORDER_ROW_MAPPER, timeoutMinutes);
     }
 }

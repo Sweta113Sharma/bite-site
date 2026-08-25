@@ -7,8 +7,7 @@
     <h3 class="mb-4">Grievances</h3>
 
     <div th:if="${#lists.isEmpty(grievances)}" class="state-panel">
-        <img th:src="@{/img/mascot/bito-hero.png}" alt="" class="mascot-img mascot-sm"
-             onerror="this.style.display='none'"/>
+        <div th:replace="~{fragments/state :: medallion('check_circle','good')}"></div>
         <h4>All clear</h4>
         <p>No grievances raised across any college.</p>
     </div>
@@ -24,6 +23,18 @@
                       th:text="${row.grievance().status}"></span>
             </div>
             <p class="mb-2" th:text="${row.grievance().message}">Message</p>
+
+            <!-- The whole point of the order link: from a complaint, one click to the
+                 order and its payment, instead of asking the student to repeat it. -->
+            <p class="mb-2 small" th:if="${row.orderToken() != null}">
+                <i class="ph ph-receipt"></i>
+                About order <strong th:text="${row.orderToken()}">TOKEN</strong>
+                &middot;
+                <a th:href="@{/admin/support(q=${row.orderToken()})}">Open in support desk</a>
+            </p>
+            <p class="mb-2 small text-muted" th:if="${row.orderToken() == null}">
+                <i class="ph ph-info"></i> Not linked to a specific order.
+            </p>
 
             <p class="mb-2 small" th:if="${row.grievance().adminResponse != null}">
                 <strong>Response:</strong> <span th:text="${row.grievance().adminResponse}"></span>

@@ -2,13 +2,13 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
-<div th:replace="~{fragments/navbar :: navbar}"></div>
-<div class="auth-shell d-flex align-items-center justify-content-center">
-    <div th:replace="~{fragments/auth-decor :: decor}"></div>
-    <div class="auth-card" style="max-width: 440px;">
-        <div class="text-center mb-4">
-            <img th:src="@{/img/mascot/bito-listening.png}" alt="" class="mascot-img mascot-sm"
-                 onerror="this.style.display='none'"/>
+<div class="auth-shell">
+<div th:replace="~{fragments/auth-brand :: panel('Almost in.','One code stands between you and lunch.')}"></div>
+<main class="auth-main">
+    <div th:replace="~{fragments/auth-brand :: lockup}"></div>
+        <div class="auth-card" style="max-width: 440px;">
+        <div class="mb-4">
+                        <span class="auth-kicker">Almost there</span>
             <h3 class="mb-1">Verify your account</h3>
             <p class="text-muted mb-0" style="font-size:0.92rem;">Enter the code(s) we just sent you.</p>
         </div>
@@ -17,7 +17,7 @@
         <div class="alert alert-danger" th:if="${rateLimited}">Too many resend attempts — please wait a few minutes.</div>
 
         <div th:if="${needsEmail}" class="mb-4">
-            <h6 class="mb-2 d-flex align-items-center gap-2"><i class="ph ph-envelope-simple"></i>Email verification</h6>
+            <h6 class="mb-2 d-flex align-items-center gap-2"><span class="material-symbols-outlined">mail</span>Email verification</h6>
             <div class="alert alert-danger py-2" th:if="${emailError}">That code is invalid or has expired.</div>
             <form method="post" th:action="@{/verify/email}" class="d-flex gap-2">
                 <input type="text" name="code" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
@@ -31,7 +31,7 @@
         </div>
 
         <div th:if="${needsPhone}" class="mb-2">
-            <h6 class="mb-2 d-flex align-items-center gap-2"><i class="ph ph-device-mobile"></i>Phone verification</h6>
+            <h6 class="mb-2 d-flex align-items-center gap-2"><span class="material-symbols-outlined">smartphone</span>Phone verification</h6>
             <div class="alert alert-danger py-2" th:if="${phoneError}">That code is invalid or has expired.</div>
             <form method="post" th:action="@{/verify/phone}" class="d-flex gap-2">
                 <input type="text" name="code" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
@@ -48,6 +48,7 @@
             <a th:href="@{/login}">Back to sign in</a>
         </p>
     </div>
+</main>
 </div>
 </body>
 </html>

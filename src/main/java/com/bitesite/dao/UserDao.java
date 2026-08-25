@@ -22,6 +22,11 @@ public interface UserDao {
 
     void setActive(Long id, boolean active);
 
+    /** Clears a staff account's outlet assignment and switches the account off, used when
+     * the outlet they belonged to is deleted. The row survives so their audit-log entries
+     * still resolve to a person. */
+    void detachFromOutlet(Long id);
+
     void markEmailVerified(Long id);
 
     void markPhoneVerified(Long id);

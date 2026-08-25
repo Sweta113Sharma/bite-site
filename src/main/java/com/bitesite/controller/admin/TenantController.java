@@ -5,7 +5,9 @@ import com.bitesite.config.PortalGuard;
 import com.bitesite.dto.OutletForm;
 import com.bitesite.dto.StaffForm;
 import com.bitesite.dto.TenantForm;
+import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
+import com.bitesite.model.Outlet;
 import com.bitesite.model.Role;
 import com.bitesite.model.StaffScope;
 import com.bitesite.model.User;
@@ -99,8 +101,10 @@ public class TenantController {
     }
 
     @PostMapping("/{id}/outlets")
-    public String addOutlet(@PathVariable Long id, @Valid @ModelAttribute("outletForm") OutletForm form,
+    public String addOutlet(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @Valid @ModelAttribute("outletForm") OutletForm form,
             BindingResult bindingResult, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.outletForm", bindingResult);
             redirectAttributes.addFlashAttribute("outletForm", form);
@@ -111,8 +115,10 @@ public class TenantController {
     }
 
     @PostMapping("/{id}/staff")
-    public String addStaff(@PathVariable Long id, @Valid @ModelAttribute("staffForm") StaffForm form,
+    public String addStaff(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @Valid @ModelAttribute("staffForm") StaffForm form,
             BindingResult bindingResult, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         if (!bindingResult.hasErrors()) {
             try {
                 userService.createUser(id, form.getOutletId(), form.getName(), form.getEmail(), form.getPassword(),
@@ -124,6 +130,63 @@ public class TenantController {
         }
         redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.staffForm", bindingResult);
         redirectAttributes.addFlashAttribute("staffForm", form);
+        return "redirect:/admin/tenants/" + id;
+    }
+
+    @PostMapping("/{id}/outlets/{outletId}/rename")
+    public String renameOutlet(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @PathVariable Long outletId, @RequestParam String name, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) {
+            redirectAttributes.addFlashAttribute("outletError", "A canteen needs a name.");
+        } else {
+            outletService.rename(outletId, id, trimmed, principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("outletNotice", "Renamed to " + trimmed + ".");
+        }
+        return "redirect:/admin/tenants/" + id;
+    }
+
+    @PostMapping("/{id}/outlets/{outletId}/status")
+    public String setOutletActive(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @PathVariable Long outletId, @RequestParam boolean active, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        outletService.setActive(outletId, id, active, principal.getUser().getId());
+        redirectAttributes.addFlashAttribute("outletNotice", active
+                ? "Canteen enabled — it's back in the student app."
+                : "Canteen disabled — students can no longer see it or order from it.");
+        return "redirect:/admin/tenants/" + id;
+    }
+
+    /**
+     * Permanent deletion, gated on the admin typing the canteen's name back.
+     *
+     * <p>The check is repeated here rather than left to the confirmation box in the
+     * browser: a typed-name prompt that only exists in JavaScript protects nobody from a
+     * mis-aimed form post, and this endpoint destroys a canteen's whole menu. Comparison
+     * is exact after trimming — a close-enough match is exactly what the prompt is there
+     * to stop.
+     */
+    @PostMapping("/{id}/outlets/{outletId}/delete")
+    public String deleteOutlet(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @PathVariable Long outletId, @RequestParam(required = false) String confirmName,
+            RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        Outlet outlet = outletService.get(outletId, id);
+        if (confirmName == null || !confirmName.trim().equals(outlet.getName())) {
+            redirectAttributes.addFlashAttribute("outletError",
+                    "Type the canteen's name exactly (\"" + outlet.getName() + "\") to confirm deletion.");
+            return "redirect:/admin/tenants/" + id;
+        }
+        try {
+            int deactivatedStaff = outletService.delete(outletId, id, principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("outletNotice", outlet.getName() + " and its menu were deleted."
+                    + (deactivatedStaff == 0 ? ""
+                            : " " + deactivatedStaff + " staff account" + (deactivatedStaff == 1 ? " was" : "s were")
+                                    + " switched off."));
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("outletError", e.getMessage());
+        }
         return "redirect:/admin/tenants/" + id;
     }
 }

@@ -11,10 +11,10 @@
     
     <div class="d-flex align-items-center gap-3 mb-4 mt-2">
         <div class="icon-circle" style="width: 60px; height: 60px; font-size: 2rem;">
-            <i class="ph ph-user"></i>
+            <span class="material-symbols-outlined">person</span>
         </div>
         <div>
-            <h3 class="m-0" th:text="${user.name}">User Name</h3>
+            <h3 class="page-header-title m-0" th:text="${user.name}">User Name</h3>
             <div class="text-muted" th:text="${user.email}">user@example.com</div>
         </div>
     </div>
@@ -24,25 +24,34 @@
         <div class="account-section-title">My Account</div>
         
         <a th:href="@{/student/orders}" class="account-row">
-            <i class="ph ph-receipt"></i>
+            <span class="material-symbols-outlined">receipt_long</span>
             <div class="account-row-content">
                 <div class="account-row-label">Order History</div>
                 <div class="account-row-detail">View your past orders</div>
             </div>
-            <i class="ph ph-caret-right account-row-chevron"></i>
+            <span class="material-symbols-outlined account-row-chevron">chevron_right</span>
         </a>
         
         <a th:href="@{/student/grievances}" class="account-row">
-            <i class="ph ph-lifebuoy"></i>
+            <span class="material-symbols-outlined">support_agent</span>
             <div class="account-row-content">
                 <div class="account-row-label">Help & Support</div>
                 <div class="account-row-detail">Raise issues with past orders</div>
             </div>
-            <i class="ph ph-caret-right account-row-chevron"></i>
+            <span class="material-symbols-outlined account-row-chevron">chevron_right</span>
+        </a>
+
+        <a th:href="@{/terms}" class="account-row">
+            <span class="material-symbols-outlined">info</span>
+            <div class="account-row-content">
+                <div class="account-row-label">Terms &amp; policies</div>
+                <div class="account-row-detail">Terms, privacy and refunds</div>
+            </div>
+            <span class="material-symbols-outlined account-row-chevron">chevron_right</span>
         </a>
 
         <div class="account-row" style="cursor: default;">
-            <i class="ph ph-bell-ringing"></i>
+            <span class="material-symbols-outlined">notifications_active</span>
             <div class="account-row-content">
                 <div class="account-row-label">Order notifications</div>
                 <div class="account-row-detail">Get notified when your order's ready</div>
@@ -58,7 +67,7 @@
         <div class="account-section-title text-danger">Danger Zone</div>
         
         <div class="account-row" style="cursor: default;">
-            <i class="ph ph-trash text-danger"></i>
+            <span class="material-symbols-outlined text-danger">delete</span>
             <div class="account-row-content">
                 <div class="account-row-label text-danger">Delete Account</div>
                 <div class="account-row-detail text-danger">This action cannot be undone</div>
@@ -73,7 +82,7 @@
 
     <form method="post" th:action="@{/logout}" class="mt-4 mb-5 text-center">
         <button type="submit" class="btn btn-outline-secondary w-100 py-3 d-flex justify-content-center align-items-center gap-2">
-            <i class="ph ph-sign-out"></i> Log Out
+            <span class="material-symbols-outlined">logout</span> Log Out
         </button>
     </form>
 </div>

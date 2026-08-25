@@ -2,13 +2,13 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
-<div th:replace="~{fragments/navbar :: navbar}"></div>
-<div class="auth-shell d-flex align-items-center justify-content-center">
-    <div th:replace="~{fragments/auth-decor :: decor}"></div>
-    <div class="auth-card" style="max-width: 420px;">
-        <div class="text-center mb-4">
-            <img th:src="@{/img/mascot/bito-listening.png}" alt="" class="mascot-img mascot-sm"
-                 onerror="this.style.display='none'"/>
+<div class="auth-shell">
+<div th:replace="~{fragments/auth-brand :: panel('Lost the code?','We will send a fresh one to the email you registered with.')}"></div>
+<main class="auth-main">
+    <div th:replace="~{fragments/auth-brand :: lockup}"></div>
+        <div class="auth-card" style="max-width: 420px;">
+        <div class="mb-4">
+                        <span class="auth-kicker">One more step</span>
             <h3 class="mb-1">Resend verification code</h3>
             <p class="text-muted mb-0" style="font-size:0.92rem;">Enter the email you registered with.</p>
         </div>
@@ -17,12 +17,13 @@
                 <label class="form-label">Email</label>
                 <input type="email" name="email" class="form-control" required="required" autofocus="autofocus"/>
             </div>
-            <button type="submit" class="btn btn-primary w-100"><i class="ph ph-paper-plane-tilt"></i>Send code</button>
+            <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">send</span>Send code</button>
         </form>
         <p class="mt-4 text-center mb-0" style="font-size:0.9rem;">
             <a th:href="@{/login}">Back to sign in</a>
         </p>
     </div>
+</main>
 </div>
 </body>
 </html>

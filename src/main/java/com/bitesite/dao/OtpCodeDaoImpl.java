@@ -9,6 +9,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -25,9 +26,9 @@ public class OtpCodeDaoImpl implements OtpCodeDao {
             .userId(rs.getLong("user_id"))
             .channel(OtpChannel.valueOf(rs.getString("channel")))
             .codeHash(rs.getString("code_hash"))
-            .expiresAt(rs.getTimestamp("expires_at").toLocalDateTime())
+            .expiresAt(rs.getObject("expires_at", LocalDateTime.class))
             .attempts(rs.getInt("attempts"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
 
     @Override
@@ -40,7 +41,12 @@ public class OtpCodeDaoImpl implements OtpCodeDao {
             ps.setLong(1, code.getUserId());
             ps.setString(2, code.getChannel().name());
             ps.setString(3, code.getCodeHash());
-            ps.setTimestamp(4, Timestamp.valueOf(code.getExpiresAt()));
+            // setObject with a LocalDateTime, not Timestamp.valueOf: a Timestamp parameter is
+            // converted by the driver into the zone named by serverTimezone in the connection
+            // URL. That used to be invisible here because the read shifted back by the same
+            // amount and the two cancelled — now that reads are zone-free, the write has to be
+            // as well, or every OTP would come back already expired on a non-UTC database.
+            ps.setObject(4, code.getExpiresAt());
             return ps;
         }, keyHolder);
         code.setId(keyHolder.getKey().longValue());

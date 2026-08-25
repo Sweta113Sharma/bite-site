@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ============================================================
+     STATE MEDALLION — replaces the Bito mascot everywhere.
+
+     The pastel swirl mark sits behind a cream disc holding one icon,
+     so every empty/error/status moment shares one shape while the icon
+     and tone carry the meaning. An abstract mark can't act out "order
+     ready" the way a character could, so the icon does that job and the
+     mark supplies the identity.
+
+     tone: neutral (terracotta) | good (sage) | bad (danger)
+     ============================================================ -->
+<div th:fragment="medallion(icon, tone)"
+     class="state-medallion" th:classappend="'state-medallion--' + ${tone}" aria-hidden="true">
+    <span class="state-medallion__disc">
+        <span class="material-symbols-outlined is-filled" th:text="${icon}">circle</span>
+    </span>
+</div>
+
+</body>
+</html>

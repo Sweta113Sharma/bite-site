@@ -8,8 +8,10 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,8 +32,9 @@ public class MenuItemDaoImpl implements MenuItemDao {
             .discountPrice(rs.getBigDecimal("discount_price"))
             .discountPercent(rs.getBigDecimal("discount_percent"))
             .available(rs.getBoolean("is_available"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
-            .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+            .dailyLimit(rs.getObject("daily_limit", Integer.class))
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
+            .updatedAt(rs.getObject("updated_at", LocalDateTime.class))
             .build();
 
     @Override
@@ -63,7 +66,8 @@ public class MenuItemDaoImpl implements MenuItemDao {
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(
                         "INSERT INTO menu_items (tenant_id, outlet_id, name, category, photo_path, price, "
-                                + "discount_price, discount_percent, is_available) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                + "discount_price, discount_percent, is_available, daily_limit) "
+                                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         Statement.RETURN_GENERATED_KEYS);
                 ps.setLong(1, item.getTenantId());
                 ps.setLong(2, item.getOutletId());
@@ -74,15 +78,17 @@ public class MenuItemDaoImpl implements MenuItemDao {
                 ps.setBigDecimal(7, item.getDiscountPrice());
                 ps.setBigDecimal(8, item.getDiscountPercent());
                 ps.setBoolean(9, item.isAvailable());
+                ps.setObject(10, item.getDailyLimit(), Types.INTEGER);
                 return ps;
             }, keyHolder);
             item.setId(keyHolder.getKey().longValue());
         } else {
             jdbcTemplate.update(
                     "UPDATE menu_items SET name = ?, category = ?, photo_path = ?, price = ?, discount_price = ?, "
-                            + "discount_percent = ?, is_available = ? WHERE id = ? AND tenant_id = ?",
+                            + "discount_percent = ?, is_available = ?, daily_limit = ? WHERE id = ? AND tenant_id = ?",
                     item.getName(), item.getCategory(), item.getPhotoPath(), item.getPrice(), item.getDiscountPrice(),
-                    item.getDiscountPercent(), item.isAvailable(), item.getId(), item.getTenantId());
+                    item.getDiscountPercent(), item.isAvailable(), item.getDailyLimit(), item.getId(),
+                    item.getTenantId());
         }
         return findByIdAndTenantId(item.getId(), item.getTenantId()).orElseThrow();
     }
@@ -91,6 +97,14 @@ public class MenuItemDaoImpl implements MenuItemDao {
     public void updateAvailability(Long id, Long tenantId, boolean available) {
         jdbcTemplate.update(
                 "UPDATE menu_items SET is_available = ? WHERE id = ? AND tenant_id = ?", available, id, tenantId);
+    }
+
+    @Override
+    public int markAllAvailable(Long outletId, Long tenantId) {
+        return jdbcTemplate.update(
+                "UPDATE menu_items SET is_available = TRUE WHERE outlet_id = ? AND tenant_id = ? "
+                        + "AND is_available = FALSE",
+                outletId, tenantId);
     }
 
     @Override

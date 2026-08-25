@@ -9,6 +9,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
@@ -29,8 +30,8 @@ public class OnboardingDaoImpl implements OnboardingDao {
             .contactPhone(rs.getString("contact_phone"))
             .stage(OnboardingStage.valueOf(rs.getString("stage")))
             .notes(rs.getString("notes"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
-            .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
+            .updatedAt(rs.getObject("updated_at", LocalDateTime.class))
             .build();
 
     @Override

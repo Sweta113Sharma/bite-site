@@ -9,6 +9,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.Optional;
@@ -28,8 +29,8 @@ public class PaymentDaoImpl implements PaymentDao {
             .razorpaySignature(rs.getString("razorpay_signature"))
             .amount(rs.getBigDecimal("amount"))
             .status(PaymentStatus.valueOf(rs.getString("status")))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
-            .verifiedAt(rs.getTimestamp("verified_at") == null ? null : rs.getTimestamp("verified_at").toLocalDateTime())
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
+            .verifiedAt(rs.getObject("verified_at", LocalDateTime.class))
             .build();
 
     @Override
@@ -62,6 +63,14 @@ public class PaymentDaoImpl implements PaymentDao {
     public Optional<Payment> findByRazorpayOrderId(String razorpayOrderId) {
         return jdbcTemplate.query(
                 "SELECT * FROM payments WHERE razorpay_order_id = ?", ROW_MAPPER, razorpayOrderId)
+                .stream().findFirst();
+    }
+
+    @Override
+    public Optional<Payment> findByAnyGatewayReference(String reference) {
+        return jdbcTemplate.query(
+                "SELECT * FROM payments WHERE razorpay_order_id = ? OR razorpay_payment_id = ? LIMIT 1",
+                ROW_MAPPER, reference, reference)
                 .stream().findFirst();
     }
 

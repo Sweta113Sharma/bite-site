@@ -8,5 +8,19 @@
                        (${status.name() == 'READY_FOR_PICKUP'} ? 'bg-primary' :
                        (${status.name() == 'COMPLETED'} ? 'bg-success' : 'bg-danger'))))"
       th:text="${status.name().replace('_', ' ')}">STATUS</span>
+
+<!-- Status → medallion icon + tone, mapped once here rather than per screen.
+     Sits beside statusBadge above so both readings of a status stay in step. -->
+<div th:fragment="statusMedallion(status)"
+     th:with="s=${status.name()},
+              icon=${s == 'AWAITING_PAYMENT' ? 'hourglass_empty' :
+                    (s == 'PAID' ? 'check_circle' :
+                    (s == 'PREPARING' ? 'skillet' :
+                    (s == 'READY_FOR_PICKUP' ? 'notifications_active' :
+                    (s == 'COMPLETED' ? 'celebration' : 'cancel'))))},
+              tone=${s == 'PAID' or s == 'READY_FOR_PICKUP' or s == 'COMPLETED' ? 'good' :
+                    (s == 'AWAITING_PAYMENT' or s == 'PREPARING' ? 'neutral' : 'bad')}">
+    <div th:replace="~{fragments/state :: medallion(${icon}, ${tone})}"></div>
+</div>
 </body>
 </html>

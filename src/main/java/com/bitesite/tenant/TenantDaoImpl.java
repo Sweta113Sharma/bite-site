@@ -7,6 +7,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
@@ -23,8 +24,8 @@ public class TenantDaoImpl implements TenantDao {
             .name(rs.getString("name"))
             .logoPath(rs.getString("logo_path"))
             .status(TenantStatus.valueOf(rs.getString("status")))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
-            .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
+            .updatedAt(rs.getObject("updated_at", LocalDateTime.class))
             .build();
 
     @Override

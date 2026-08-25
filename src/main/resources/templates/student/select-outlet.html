@@ -7,8 +7,7 @@
 
 <div class="container" style="max-width: 640px;">
     <div class="text-center mb-4">
-        <img th:src="@{/img/mascot/bito-hero.png}" alt="" class="mascot-img mascot-sm"
-             onerror="this.style.display='none'"/>
+        <div th:replace="~{fragments/state :: medallion('storefront','neutral')}"></div>
         <p class="page-header-label" style="text-align:center;">Welcome back</p>
         <h3 class="page-header-title" style="text-align:center;">Which canteen today?</h3>
     </div>
@@ -16,12 +15,12 @@
     <div class="d-flex flex-column gap-3">
         <a class="outlet-card" th:each="outlet : ${outlets}"
            th:href="@{/student/menu(outletId=${outlet.id})}">
-            <div class="outlet-card-icon"><i class="ph ph-storefront"></i></div>
+            <div class="outlet-card-icon"><span class="material-symbols-outlined">storefront</span></div>
             <div>
                 <p class="outlet-card-name" th:text="${outlet.name}">Outlet</p>
                 <p class="outlet-card-hint">Tap to see today's menu</p>
             </div>
-            <i class="ph ph-caret-right outlet-card-chevron"></i>
+            <span class="material-symbols-outlined outlet-card-chevron">chevron_right</span>
         </a>
     </div>
 </div>

@@ -9,21 +9,9 @@
 
 <div class="container" style="max-width: 560px;">
 
-    <!-- Dynamic Status Illustration -->
-    <div class="text-center mb-4">
-        <img th:if="${order.status.name() == 'AWAITING_PAYMENT'}" th:src="@{/img/mascot/bito-listening.png}"
-             alt="" class="mascot-img mascot-md"/>
-        <img th:if="${order.status.name() == 'PAID'}" th:src="@{/img/mascot/bito-hero.png}"
-             alt="" class="mascot-img mascot-md"/>
-        <img th:if="${order.status.name() == 'PREPARING'}" th:src="@{/img/mascot/bito-cooking.png}"
-             alt="" class="mascot-img mascot-md"/>
-        <img th:if="${order.status.name() == 'READY_FOR_PICKUP'}" th:src="@{/img/mascot/bito-celebrate.png}"
-             alt="" class="mascot-img mascot-md"/>
-        <img th:if="${order.status.name() == 'COMPLETED'}" th:src="@{/img/mascot/bito-celebrate.png}"
-             alt="" class="mascot-img mascot-md"/>
-        <img th:if="${order.status.name() == 'CANCELLED' or order.status.name() == 'REFUNDED'}" th:src="@{/img/mascot/bito-lost.png}"
-             alt="" class="mascot-img mascot-md"/>
-    </div>
+    <!-- Status illustration — icon + tone resolved in fragments/order-status
+         alongside the badge, so the two never drift apart. -->
+    <div th:replace="~{fragments/order-status :: statusMedallion(${order.status})}"></div>
 
     <!-- Header Details -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -36,20 +24,61 @@
 
     <!-- Live Status Banner -->
     <div class="alert alert-info d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'PAID'}">
-        <div class="icon-circle bg-info text-white" style="background: var(--color-info) !important;"><i class="ph ph-hourglass-simple"></i></div>
+        <div class="icon-circle bg-info text-white" style="background: var(--color-info) !important;"><span class="material-symbols-outlined">hourglass_empty</span></div>
         <div>Your order is with the canteen — we'll update this page once they start preparing it.</div>
     </div>
     <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'PREPARING'}">
-        <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><i class="ph ph-cooking-pot"></i></div>
+        <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><span class="material-symbols-outlined">skillet</span></div>
         <div><strong>Preparing now!</strong> The kitchen is working on your food.</div>
     </div>
     <div class="alert alert-primary d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'READY_FOR_PICKUP'}">
-        <div class="icon-circle bg-primary text-white" style="background: var(--color-primary) !important;"><i class="ph ph-bell-simple-ringing"></i></div>
+        <div class="icon-circle bg-primary text-white" style="background: var(--color-primary) !important;"><span class="material-symbols-outlined">notifications_active</span></div>
         <div><strong>Ready!</strong> Show your token at the counter to pick up your order.</div>
     </div>
     <div class="alert alert-success d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'COMPLETED'}">
-        <div class="icon-circle bg-success text-white" style="background: var(--color-success) !important;"><i class="ph ph-check-circle"></i></div>
+        <div class="icon-circle bg-success text-white" style="background: var(--color-success) !important;"><span class="material-symbols-outlined">check_circle</span></div>
         <div><strong>Completed.</strong> Enjoy your meal!</div>
+    </div>
+
+    <!-- Cancellation, with the reason the canteen gave. Before this, a cancelled order
+         showed a red badge reading CANCELLED and nothing else: no why, and no word on
+         whether the money was coming back. -->
+    <div class="alert alert-danger d-flex align-items-start gap-3 mb-4" th:if="${order.status.name() == 'CANCELLED'}">
+        <div class="icon-circle bg-danger text-white" style="background: var(--color-danger) !important;"><span class="material-symbols-outlined">cancel</span></div>
+        <div>
+            <strong>This order was cancelled.</strong>
+            <div th:if="${order.cancellationReason != null}" th:text="${order.cancellationReason}">Reason</div>
+            <div class="small text-muted mt-1" th:if="${order.cancelledAt != null}"
+                 th:text="${#temporals.format(order.cancelledAt, 'dd MMM yyyy, hh:mm a')}">Date</div>
+        </div>
+    </div>
+
+    <div class="alert alert-secondary d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'EXPIRED'}">
+        <div class="icon-circle bg-secondary text-white"><span class="material-symbols-outlined">hourglass_empty</span></div>
+        <div><strong>This order expired.</strong> Payment wasn't completed in time, so nothing was charged.</div>
+    </div>
+
+    <!-- Refund state comes off the payment, not the order: a completed order refunded
+         through support stays COMPLETED, so this cannot key off the order status. -->
+    <div th:if="${payment != null}">
+        <div class="alert alert-info d-flex align-items-start gap-3 mb-4"
+             th:if="${payment.status.name() == 'REFUNDED'}">
+            <div class="icon-circle bg-info text-white" style="background: var(--color-info) !important;"><span class="material-symbols-outlined">undo</span></div>
+            <div>
+                <strong th:text="'₹' + ${payment.amount} + ' has been refunded.'">Refunded</strong>
+                <div class="small">It goes back to the method you paid with. Banks usually take 5-7 working days to show it.</div>
+            </div>
+        </div>
+        <!-- cancelOrder refunds before it cancels, so this pairing means something went
+             wrong rather than something is pending. Say so, and point at support. -->
+        <div class="alert alert-warning d-flex align-items-start gap-3 mb-4"
+             th:if="${order.status.name() == 'CANCELLED' and payment.status.name() == 'CAPTURED'}">
+            <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><span class="material-symbols-outlined">warning</span></div>
+            <div>
+                <strong>Your refund hasn't gone through yet.</strong>
+                <div class="small">Raise this through Support with your order token and it will be sorted out.</div>
+            </div>
+        </div>
     </div>
 
     <!-- Order Items Card -->
@@ -65,7 +94,8 @@
                     <div class="fw-bold" th:text="'₹' + ${item.subtotal}">₹0</div>
                 </div>
                 <div class="list-group-item bg-light d-flex justify-content-between align-items-center p-3">
-                    <span class="fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.04em; color: var(--color-ink-muted);">Total Paid</span>
+                    <span class="fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.04em; color: var(--color-ink-muted);"
+                          th:text="${order.paidAt != null} ? 'Total Paid' : 'Order Total'">Total</span>
                     <strong class="fs-5" th:text="'₹' + ${order.totalAmount}">₹0</strong>
                 </div>
             </div>
@@ -73,7 +103,7 @@
     </div>
 
     <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2"
-       th:href="@{/student/checkout/{id}(id=${order.id})}"><i class="ph ph-credit-card"></i> Complete payment</a>
+       th:href="@{/student/checkout/{id}(id=${order.id})}"><span class="material-symbols-outlined">credit_card</span> Complete payment</a>
 </div>
 </body>
 </html>

@@ -6,11 +6,13 @@
      TOP NAVBAR — brand, admin/staff links, logout
      On mobile for USER role: only shows brand + logout (bottom nav handles the rest)
      ============================================================ -->
-<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+<nav th:fragment="navbar" class="navbar navbar-expand-lg mb-4">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="/">
             <img th:if="${currentTenant != null and currentTenant.logoPath != null}"
                  th:src="@{${currentTenant.logoPath}}" height="28" alt="logo"/>
+            <img th:if="${currentTenant == null or currentTenant.logoPath == null}"
+                 th:src="@{/img/logo-mark.svg}" class="brand-mark" alt=""/>
             <span th:text="${currentTenant != null ? currentTenant.name : 'BiteSite'}">BiteSite</span>
         </a>
 
@@ -22,19 +24,19 @@
                 sec:authorize="hasAnyRole('CANTEEN_STAFF', 'SUPER_ADMIN', 'TECH_MANAGER')"
                 id="navbar-toggle-btn" aria-label="Toggle navigation" aria-expanded="false"
                 aria-controls="navbar-links-collapse">
-            <i class="ph ph-list"></i>
+            <span class="material-symbols-outlined">menu</span>
         </button>
 
         <div class="d-flex align-items-center gap-3">
-            <span sec:authorize="isAuthenticated()" class="navbar-text text-white-50 small d-none d-md-inline" sec:authentication="name">user</span>
+            <span sec:authorize="isAuthenticated()" class="navbar-text small d-none d-md-inline" sec:authentication="name">user</span>
 
             <!-- USER links — hidden on mobile (bottom nav takes over) -->
             <div sec:authorize="hasRole('USER')" class="top-nav-links d-flex align-items-center gap-2">
-                <a class="nav-link text-white-50" th:href="@{/student/menu}"><i class="ph ph-fork-knife"></i>Menu</a>
-                <a class="nav-link text-white-50" th:href="@{/student/cart}"><i class="ph ph-shopping-cart"></i>Cart</a>
-                <a class="nav-link text-white-50" th:href="@{/student/orders}"><i class="ph ph-receipt"></i>My Orders</a>
-                <a class="nav-link text-white-50" th:href="@{/student/grievances}"><i class="ph ph-lifebuoy"></i>Support</a>
-                <a class="nav-link text-white-50" th:href="@{/student/account}"><i class="ph ph-user-circle"></i>Account</a>
+                <a class="nav-link" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Menu</a>
+                <a class="nav-link" th:href="@{/student/cart}"><span class="material-symbols-outlined">shopping_cart</span>Cart</a>
+                <a class="nav-link" th:href="@{/student/orders}"><span class="material-symbols-outlined">receipt_long</span>My Orders</a>
+                <a class="nav-link" th:href="@{/student/grievances}"><span class="material-symbols-outlined">support_agent</span>Support</a>
+                <a class="nav-link" th:href="@{/student/account}"><span class="material-symbols-outlined">account_circle</span>Account</a>
             </div>
 
             <!-- Staff/admin links + role switcher — collapse behind the hamburger on mobile,
@@ -54,25 +56,26 @@
                 </form>
 
                 <!-- CANTEEN_STAFF links -->
-                <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link text-white-50" th:href="@{/canteen/queue}"><i class="ph ph-clock-countdown"></i>Queue</a>
-                <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link text-white-50" th:href="@{/canteen/menu}"><i class="ph ph-cooking-pot"></i>Menu</a>
+                <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link" th:href="@{/canteen/queue}"><span class="material-symbols-outlined">hourglass_top</span>Queue</a>
+                <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link" th:href="@{/canteen/menu}"><span class="material-symbols-outlined">skillet</span>Menu</a>
 
                 <!-- ADMIN links -->
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/tenants}"><i class="ph ph-buildings"></i>Colleges</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/onboarding}"><i class="ph ph-funnel"></i>Pipeline</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/grievances}"><i class="ph ph-warning-circle"></i>Grievances</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/audit-log}"><i class="ph ph-clipboard-text"></i>Audit log</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link text-white-50" th:href="@{/admin/users}"><i class="ph ph-users-three"></i>Platform users</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Pipeline</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/support}"><span class="material-symbols-outlined">support_agent</span>Support desk</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/grievances}"><span class="material-symbols-outlined">error</span>Grievances</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/audit-log}"><span class="material-symbols-outlined">assignment</span>Audit log</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/users}"><span class="material-symbols-outlined">group</span>Platform users</a>
 
                 <!-- TECH_MANAGER links -->
-                <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link text-white-50" th:href="@{/techmgr}"><i class="ph ph-buildings"></i>Colleges</a>
-                <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link text-white-50" th:href="@{/techmgr/health}"><i class="ph ph-heartbeat"></i>Health</a>
+                <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link" th:href="@{/techmgr}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
+                <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link" th:href="@{/techmgr/health}"><span class="material-symbols-outlined">monitor_heart</span>Health</a>
             </div>
 
             <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="d-inline m-0">
-                <button class="btn btn-sm btn-outline-light" type="submit"><i class="ph ph-sign-out"></i>Logout</button>
+                <button class="btn btn-sm btn-outline-secondary" type="submit"><span class="material-symbols-outlined">logout</span>Logout</button>
             </form>
-            <a sec:authorize="!isAuthenticated()" class="btn btn-sm btn-outline-light" th:href="@{/login}"><i class="ph ph-sign-in"></i>Login</a>
+            <a sec:authorize="!isAuthenticated()" class="btn btn-sm btn-outline-secondary" th:href="@{/login}"><span class="material-symbols-outlined">login</span>Login</a>
         </div>
     </div>
 </nav>
@@ -84,11 +87,11 @@
      ============================================================ -->
 <nav sec:authorize="hasRole('USER')" class="bottom-nav" id="bottom-nav" th:fragment="bottomNav">
     <a th:href="@{/student/menu}" class="bottom-nav-item" data-page="menu">
-        <i class="ph ph-fork-knife"></i>
+        <span class="material-symbols-outlined">restaurant</span>
         <span>Menu</span>
     </a>
     <a th:href="@{/student/cart}" class="bottom-nav-item" data-page="cart">
-        <i class="ph ph-shopping-cart"></i>
+        <span class="material-symbols-outlined">shopping_cart</span>
         <span>Cart</span>
         <!-- Cart badge — server-rendered with the current count so it's correct on first paint;
              app.js updates it live (no reload) after an add-to-cart. -->
@@ -97,15 +100,15 @@
               th:style="${cartItemCount == null or cartItemCount == 0} ? 'display:none' : 'display:flex'"></span>
     </a>
     <a th:href="@{/student/orders}" class="bottom-nav-item" data-page="orders">
-        <i class="ph ph-receipt"></i>
+        <span class="material-symbols-outlined">receipt_long</span>
         <span>Orders</span>
     </a>
     <a th:href="@{/student/grievances}" class="bottom-nav-item" data-page="support">
-        <i class="ph ph-lifebuoy"></i>
+        <span class="material-symbols-outlined">support_agent</span>
         <span>Support</span>
     </a>
     <a th:href="@{/student/account}" class="bottom-nav-item" data-page="account">
-        <i class="ph ph-user-circle"></i>
+        <span class="material-symbols-outlined">account_circle</span>
         <span>Account</span>
     </a>
 </nav>

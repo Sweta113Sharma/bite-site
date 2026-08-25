@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ============================================================
+     AUTH BRAND PANEL — desktop only (hidden under 992px).
+
+     Fills the half of the screen the centred card used to leave empty,
+     and puts food on the very first screen of a food app.
+     ============================================================ -->
+<aside th:fragment="panel(headline, sub)" class="auth-brand">
+    <div class="auth-brand__inner">
+        <div class="auth-brand__lockup">
+            <img th:src="@{/img/logo-mark.svg}" alt=""/>
+            <span>BiteSite</span>
+        </div>
+        <h2 class="auth-brand__headline" th:utext="${headline}">Order ahead,<br/>skip the queue.</h2>
+        <p class="auth-brand__sub" th:text="${sub}">Your campus canteen, without the wait.</p>
+        <div class="auth-brand__dishes" aria-hidden="true">
+            <span class="auth-brand__dish"><img th:src="@{/img/food/food_dosa.png}" alt=""/></span>
+            <span class="auth-brand__dish"><img th:src="@{/img/food/food_chai.png}" alt=""/></span>
+            <span class="auth-brand__dish"><img th:src="@{/img/food/food_puff.png}" alt=""/></span>
+        </div>
+    </div>
+</aside>
+
+<!-- Compact lockup shown above the form on mobile, where the panel is hidden. -->
+<div th:fragment="lockup" class="auth-lockup">
+    <img th:src="@{/img/logo-mark.svg}" alt=""/>
+    <span>BiteSite</span>
+</div>
+
+</body>
+</html>

@@ -7,41 +7,96 @@
    ============================================================ */
 
 :root {
-    --color-bg: #FBF8F3;
-    --color-surface: #FFFFFF;
-    --color-ink: #1F1B16;
-    --color-ink-muted: #6B6258;
-    --color-border: #E8E1D6;
-    --color-primary: #D9572C;
-    --color-primary-dark: #B8451F;
-    --color-primary-tint: #FCE9DF;
-    --color-success: #3F6B4A;
-    --color-success-tint: #E4EEE6;
-    --color-warning: #B5811B;
+    /* ============================================================
+       BiteSite — Stitch "Editorial" app system.
+       Ported from the app design in Stitch (project 15449988834297890483),
+       whose 12 screens all share one 51-token palette.
+
+       Two deliberate departures from the raw export, both contrast-driven:
+       the export's own hairline (#E5E5E5, 1.2:1 on canvas) is kept for
+       decorative dividers only and never for a control boundary — inputs
+       use --color-field-rule instead, which clears the 3:1 WCAG 1.4.11 asks
+       of a control edge. And the warning tone is darkened from the old
+       #B5811B (3.26:1, a text failure) to #8A5A00 (5.63:1).
+       ============================================================ */
+
+    /* --- Surfaces. Near-white canvas, pure-white cards. --- */
+    --color-bg:            #F9F9F9;  /* background / surface */
+    --color-surface:       #FFFFFF;  /* pure-white — cards, sheets */
+    --color-field:         #F3F3F3;  /* surface-container-low — inputs, pills */
+    --color-field-border:  #E5E5E5;  /* surface-border — decorative only */
+    --color-field-rule:    #8A726C;  /* outline — 4.24:1, the real control edge */
+    --color-surface-food:  #F3F3F3;  /* surface-container-low */
+    --color-surface-deep:  #E8E8E8;  /* surface-container-high — pressed/active */
+
+    --color-ink:       #1A1A1A;  /* text-main   16.5:1 on canvas */
+    --color-ink-muted: #666666;  /* text-muted   5.45:1 on canvas */
+    --color-border:    #E5E5E5;  /* surface-border */
+
+    /* --- Terracotta is the primary action colour in this system. --- */
+    --color-primary:      #9F3C25;  /* 6.34:1 on canvas, 6.67:1 behind white */
+    --color-primary-dark: #822712;  /* on-primary-fixed-variant — hover/pressed */
+    --color-primary-soft: #FFB4A3;  /* primary-fixed-dim — decorative fills only */
+    --color-primary-tint: #FFDAD2;  /* primary-fixed */
+
+    /* --- Sage is secondary: ratings, positive accents. --- */
+    --color-accent:        #486459;  /* secondary  6.15:1 on canvas */
+    --color-accent-strong: #486459;  /* text-safe at the same value */
+    --color-accent-tint:   #C8E7D9;  /* secondary-container */
+
+    /* --- Status. Success borrows the teal tertiary. --- */
+    --color-success:      #006762;  /* tertiary  6.40:1 */
+    --color-success-tint: #C8E7D9;
+    --color-warning:      #8A5A00;  /* darkened for text safety, 5.63:1 */
     --color-warning-tint: #FBF0DA;
-    --color-info: #2B6E7A;
-    --color-info-tint: #E1EFF1;
-    --color-danger: #B8402A;
-    --color-danger-tint: #F8E4DF;
-    --color-nav: #1F1B16;
+    --color-info:         #006762;
+    --color-info-tint:    #F3FFFD;
+    --color-danger:       #BA1A1A;  /* error  6.14:1 */
+    --color-danger-tint:  #FFDAD6;  /* error-container */
 
-    --radius-sm: 8px;
-    --radius-md: 14px;
-    --radius-lg: 20px;
-    --radius-pill: 999px;
+    --color-nav: #FFFFFF;
 
-    --shadow-sm: 0 1px 2px rgba(31, 27, 22, 0.06);
-    --shadow-md: 0 10px 30px -12px rgba(31, 27, 22, 0.22);
-    --shadow-lg: 0 20px 50px -16px rgba(31, 27, 22, 0.28);
-    --shadow-sticky: 0 -4px 20px rgba(31, 27, 22, 0.08);
+    /* --- Shape. Far tighter than the old system: the export caps at 12px. --- */
+    --radius-sm:   4px;   /* rounded-lg  — images, small controls */
+    --radius-md:   8px;   /* rounded-xl  — cards, buttons */
+    --radius-lg:   12px;  /* rounded-full in this config — sheets, steppers */
+    --radius-pill: 12px;  /* the export's "full" really is 12px, not 999px */
 
-    --font-display: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-    --font-body: 'Plus Jakarta Sans', sans-serif;
+    /* --- Depth. Tailwind shadow-sm / shadow-md, as the export uses. --- */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.10);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.10);
+    --shadow-sticky: 0 -4px 20px rgba(0, 0, 0, 0.05);
 
-    /* Bottom nav height — used for body padding */
+    --color-coral:      #FFDAD2;
+    --color-coral-deep: #FFB4A3;
+
+    /* --- Type. One family, as the export ships. --- */
+    --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+
+    /* --- Type scale, lifted from the export's fontSize config. --- */
+    --text-display-lg:  32px;  --lh-display-lg:  40px;
+    --text-headline-lg: 24px;  --lh-headline-lg: 32px;
+    --text-headline-md: 20px;  --lh-headline-md: 28px;
+    --text-body-lg:     16px;  --lh-body-lg:     24px;
+    --text-body-md:     14px;  --lh-body-md:     20px;
+    --text-label-lg:    14px;  --lh-label-lg:    20px;
+    --text-label-sm:    12px;  --lh-label-sm:    16px;
+
+    /* --- Spacing scale from the export. --- */
+    --stack-xs: 4px;
+    --stack-sm: 12px;
+    --stack-md: 24px;
+    --stack-lg: 48px;
+    --margin-mobile: 24px;
+    --gutter-mobile: 20px;
+    --hit-area: 48px;
+
     --bottom-nav-height: 64px;
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
+
 
 * {
     text-wrap: pretty;
@@ -84,22 +139,40 @@
 
 html, body {
     background-color: var(--color-bg);
-    background-image: url('/img/texture-grain.svg');
-    background-repeat: repeat;
+    /* Flat. The grain texture belonged to the cream canvas; on this near-white one it
+       reads as noise, and the design it is ported from has no texture layer at all. */
     color: var(--color-ink);
     font-family: var(--font-body);
-    font-size: 16px;
+    font-size: var(--text-body-lg);
+    line-height: var(--lh-body-lg);
     -webkit-font-smoothing: antialiased;
 }
 
+/* One family across every role, so hierarchy is carried by weight and tracking rather
+   than by a second typeface — see the export's fontFamily config, which maps display
+   through label all to Inter. */
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    font-weight: 700;
-    letter-spacing: -0.02em;
     color: var(--color-ink);
 }
 
-h3 { font-size: 1.65rem; }
+h1 { font-size: var(--text-display-lg);  line-height: var(--lh-display-lg);  font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: var(--text-headline-lg); line-height: var(--lh-headline-lg); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: var(--text-headline-lg); line-height: var(--lh-headline-lg); font-weight: 700; letter-spacing: -0.01em; }
+h4 { font-size: var(--text-headline-md); line-height: var(--lh-headline-md); font-weight: 600; }
+h5 { font-size: var(--text-headline-md); line-height: var(--lh-headline-md); font-weight: 600; }
+h6 { font-size: var(--text-label-lg);    line-height: var(--lh-label-lg);    font-weight: 600; }
+
+/* Material Symbols, the icon set the app design uses. Phosphor stays loaded for the
+   staff portals; the two coexist because they key off different class names. */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+    user-select: none;
+}
+.material-symbols-outlined.is-filled { font-variation-settings: 'FILL' 1; }
+.ms-20 { font-size: 20px; }
+.ms-16 { font-size: 16px; }
 
 a {
     color: var(--color-primary-dark);
@@ -129,18 +202,23 @@ a:hover { color: var(--color-primary); }
    TOP NAVBAR
    ============================================================ */
 
+/* The dark bar is gone. It was the loudest remaining piece of dashboard chrome —
+   a heavy near-black slab pinned above a warm cream page, which is exactly the
+   "generic SaaS with an orange button" read. The reference has no dark surfaces
+   at all; the canvas simply continues to the top of the screen and the brand mark
+   carries the identity. */
 .navbar {
     position: relative;
     background: var(--color-nav) !important;
     padding-top: 0.9rem;
     padding-bottom: 0.9rem;
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
 }
 
 .navbar-toggler-custom {
     background: transparent;
     border: none;
-    color: rgba(251, 248, 243, 0.85);
+    color: var(--color-ink);
     font-size: 1.5rem;
     line-height: 1;
     padding: 4px 8px;
@@ -149,7 +227,7 @@ a:hover { color: var(--color-primary); }
 }
 .navbar-toggler-custom:hover,
 .navbar-toggler-custom:active {
-    background: rgba(251, 248, 243, 0.08);
+    background: var(--color-surface-deep);
 }
 
 /* Staff/admin nav links — collapsed behind the hamburger on mobile (no bottom-nav
@@ -166,7 +244,8 @@ a:hover { color: var(--color-primary); }
     top: 100%;
     left: 0;
     right: 0;
-    background: var(--color-nav);
+    background: var(--color-surface-food);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
     padding: 0.5rem 1rem 1rem;
     box-shadow: var(--shadow-md);
     z-index: 1030;
@@ -193,33 +272,37 @@ a:hover { color: var(--color-primary); }
     }
 }
 
+/* Terracotta wordmark on cream — the brand carries the top of the page now that
+   there's no dark slab doing it. Matches the reference, whose own wordmark is the
+   one strongly orange element on the screen. */
 .navbar-brand {
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.15rem;
+    font-weight: 800;
+    font-size: 1.25rem;
     letter-spacing: -0.01em;
-    color: #FBF8F3 !important;
+    color: var(--color-accent-strong) !important;
 }
 
 .navbar-brand img {
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
 .navbar .nav-link {
     font-size: 0.9rem;
-    font-weight: 500;
-    color: rgba(251, 248, 243, 0.72) !important;
-    padding: 0.4rem 0.7rem !important;
-    border-radius: var(--radius-sm);
+    font-weight: 600;
+    color: var(--color-ink-muted) !important;
+    padding: 0.45rem 0.85rem !important;
+    border-radius: var(--radius-pill);
     transition: color 150ms ease, background-color 150ms ease;
 }
 .navbar .nav-link:hover {
-    color: #FBF8F3 !important;
-    background: rgba(251, 248, 243, 0.08);
+    color: var(--color-ink) !important;
+    background: var(--color-surface-deep);
 }
 
 .navbar .navbar-text {
     font-size: 0.85rem;
+    color: var(--color-ink-muted) !important;
 }
 
 /* Hide top-nav user links on mobile (bottom nav takes over) */
@@ -242,6 +325,7 @@ a:hover { color: var(--color-primary); }
 }
 
 @media (max-width: 767.98px) {
+    /* Floating rounded glassmorphism bar */
     .bottom-nav {
         display: flex;
         position: fixed;
@@ -251,9 +335,13 @@ a:hover { color: var(--color-primary); }
         z-index: 1050;
         height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
         padding-bottom: var(--safe-area-bottom);
-        background: var(--color-surface);
-        border-top: 1px solid var(--color-border);
-        box-shadow: var(--shadow-sticky);
+        background: rgba(251, 228, 208, 0.92);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        box-shadow: 0 -8px 24px -6px rgba(70, 45, 25, 0.12);
         align-items: stretch;
     }
 
@@ -263,29 +351,30 @@ a:hover { color: var(--color-primary); }
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 2px;
+        gap: 3px;
         text-decoration: none;
         color: var(--color-ink-muted);
-        font-size: 0.68rem;
-        font-weight: 600;
+        font-size: 0.7rem;
+        font-weight: 700;
+        font-family: var(--font-display);
         letter-spacing: 0.01em;
-        transition: color 150ms ease;
+        transition: all 180ms ease;
         position: relative;
         -webkit-tap-highlight-color: transparent;
     }
 
     .bottom-nav-item i {
-        font-size: 1.4rem;
+        font-size: 1.45rem;
         line-height: 1;
-        transition: transform 150ms ease;
+        transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .bottom-nav-item.active {
-        color: var(--color-primary);
+        color: var(--color-primary-dark);
     }
 
     .bottom-nav-item.active i {
-        transform: scale(1.1);
+        transform: scale(1.15) translateY(-2px);
     }
 
     .bottom-nav-item:active i {
@@ -295,25 +384,27 @@ a:hover { color: var(--color-primary); }
     /* Cart badge on bottom nav */
     .bottom-nav-badge {
         position: absolute;
-        top: 6px;
+        top: 5px;
         right: calc(50% - 18px);
         min-width: 18px;
         height: 18px;
         border-radius: 9px;
-        background: var(--color-primary);
+        background: var(--color-accent-strong);
         color: #fff;
         font-size: 0.65rem;
-        font-weight: 700;
+        font-weight: 800;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0 5px;
         line-height: 1;
-        animation: badge-pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 2px 6px rgba(158, 58, 24, 0.4);
+        animation: badge-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     @keyframes badge-pop {
         0% { transform: scale(0); }
+        80% { transform: scale(1.2); }
         100% { transform: scale(1); }
     }
 }
@@ -322,11 +413,15 @@ a:hover { color: var(--color-primary); }
    BUTTONS
    ============================================================ */
 
+/* Soft pills. The reference's buttons are fully rounded and generously padded —
+   at phone size they're the most tactile thing on screen, which is right for the
+   one control that commits an order. */
 .btn {
-    font-weight: 600;
-    font-size: 0.92rem;
-    border-radius: var(--radius-sm);
-    padding: 0.5rem 1.1rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    border-radius: var(--radius-pill);
+    padding: 0.6rem 1.4rem;
     transition: transform 120ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
 .btn:active { transform: scale(0.97); }
@@ -336,38 +431,67 @@ a:hover { color: var(--color-primary); }
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: #fff;
+    box-shadow: 0 6px 16px -8px rgba(69, 124, 92, 0.55);
 }
 .btn-primary:hover, .btn-primary:focus {
     background: var(--color-primary-dark);
     border-color: var(--color-primary-dark);
-    box-shadow: 0 8px 20px -8px rgba(217, 87, 44, 0.55);
+    color: #fff;
+    box-shadow: 0 10px 22px -10px rgba(69, 124, 92, 0.65);
 }
 
 .btn-outline-primary { color: var(--color-primary-dark); border-color: var(--color-primary); }
-.btn-outline-primary:hover { background: var(--color-primary); border-color: var(--color-primary); }
+.btn-outline-primary:hover { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
-.btn-outline-secondary { color: var(--color-ink-muted); border-color: var(--color-border); }
-.btn-outline-secondary:hover { background: var(--color-ink); border-color: var(--color-ink); }
+/* Secondary reads as a soft peach chip rather than a hairline outline — an outlined
+   button on a peach card is two thin lines competing; a filled tonal chip is calmer. */
+.btn-outline-secondary {
+    color: var(--color-ink);
+    background: var(--color-surface-deep);
+    border-color: transparent;
+}
+.btn-outline-secondary:hover {
+    background: var(--color-coral-deep);
+    border-color: transparent;
+    color: var(--color-ink);
+}
 
-.btn-outline-light:hover { color: var(--color-nav); }
+/* Terracotta button — for appetite/brand moments, never for confirm/pay.
+   Uses the strong tone so white label text clears 5.37:1. */
+.btn-accent {
+    background: var(--color-accent-strong);
+    border-color: var(--color-accent-strong);
+    color: #fff;
+}
+.btn-accent:hover, .btn-accent:focus {
+    background: #7F2E12;
+    border-color: #7F2E12;
+    color: #fff;
+}
 
-.btn-success { background: var(--color-success); border-color: var(--color-success); }
-.btn-success:hover { background: #325a3c; border-color: #325a3c; }
+.btn-success { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.btn-success:hover { background: var(--color-primary-dark); border-color: var(--color-primary-dark); color: #fff; }
 
 .btn-warning { background: var(--color-warning); border-color: var(--color-warning); color: #fff; }
 .btn-warning:hover { background: #96690f; border-color: #96690f; color: #fff; }
 
 .btn-danger, .btn-outline-danger:hover { background: var(--color-danger); border-color: var(--color-danger); }
 
-.btn-lg { border-radius: var(--radius-md); padding: 0.75rem 1.5rem; }
+.btn-lg { padding: 0.85rem 1.75rem; font-size: 1rem; }
 
 /* ============================================================
    CARDS
+
+   Generic .card stays a pale-cream block — it's shared with the canteen and
+   admin portals, which are deliberately outside this redesign and need dense,
+   legible surfaces. The student-facing peach blocking lives on the specific
+   component classes further down (.menu-card, .cart-item-card, .order-card,
+   .account-section, .outlet-card, .auth-card).
    ============================================================ */
 
 .card {
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border: none;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     transition: box-shadow 180ms ease, transform 180ms ease;
@@ -378,7 +502,7 @@ a:hover { color: var(--color-primary); }
 
 .card-title {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.01em;
 }
 
@@ -386,14 +510,22 @@ a:hover { color: var(--color-primary); }
    FORMS
    ============================================================ */
 
+/* Pale cream fields sitting inside the warmer surfaces around them — the reference
+   lights its inputs slightly *brighter* than the card they're on, which is what makes
+   a form read as a set of soft slots rather than a stack of outlined boxes. */
 .form-control, .form-select {
     border-radius: var(--radius-sm);
-    border-color: var(--color-border);
-    padding: 0.55rem 0.85rem;
+    border: 1.5px solid var(--color-field-border);
+    background: var(--color-field);
+    padding: 0.8rem 1rem;
     font-size: 0.95rem;
+    color: var(--color-ink);
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
+.form-control::placeholder { color: var(--color-ink-muted); }
 .form-control:focus, .form-select:focus {
     border-color: var(--color-primary);
+    background: #FFFFFF;
     box-shadow: 0 0 0 3px var(--color-primary-tint);
 }
 
@@ -401,19 +533,43 @@ a:hover { color: var(--color-primary); }
     font-weight: 600;
     font-size: 0.88rem;
     color: var(--color-ink);
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.4rem;
 }
 
 .input-group-text {
     border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
-    border-color: var(--color-border);
+    border: 1.5px solid var(--color-field-border);
+    border-right: none;
+    background: var(--color-field);
     color: var(--color-ink-muted);
 }
 .input-group .form-control {
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    border-left: none;
+}
+
+/* Buttons are pills globally, but a pill welded to the end of a field reads as a
+   detached blob floating beside it. Inside an input group the trailing button takes
+   the field's own corner radius so the two read as one control. */
+.input-group > .btn {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.input-group > .form-control:not(:last-child) {
+    border-radius: 0;
 }
 .input-group:focus-within .input-group-text {
     border-color: var(--color-primary);
+    background: #FFFFFF;
+}
+
+/* Toggle switches pick up the action color rather than Bootstrap's blue. */
+.form-check-input:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+.form-check-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-tint);
 }
 
 /* ============================================================
@@ -422,17 +578,17 @@ a:hover { color: var(--color-primary); }
 
 .badge {
     font-family: var(--font-body);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.01em;
-    padding: 0.4em 0.75em;
+    padding: 0.45em 0.85em;
     border-radius: var(--radius-pill);
 }
 
-.badge.bg-success { background: var(--color-success) !important; color: #fff !important; }
+.badge.bg-success { background: var(--color-primary) !important; color: #fff !important; }
 .badge.bg-warning { background: var(--color-warning-tint) !important; color: var(--color-warning) !important; }
 .badge.bg-info { background: var(--color-info-tint) !important; color: var(--color-info) !important; }
 .badge.bg-primary { background: var(--color-primary) !important; color: #fff !important; }
-.badge.bg-secondary { background: #EFE9DF !important; color: var(--color-ink-muted) !important; }
+.badge.bg-secondary { background: var(--color-surface-deep) !important; color: var(--color-ink-muted) !important; }
 .badge.bg-danger { background: var(--color-danger-tint) !important; color: var(--color-danger) !important; }
 
 /* ============================================================
@@ -460,300 +616,493 @@ a:hover { color: var(--color-primary); }
    ALERTS
    ============================================================ */
 
-.alert { border-radius: var(--radius-sm); border: 1px solid transparent; font-size: 0.92rem; }
-.alert-secondary { background: #F1ECE2; color: var(--color-ink-muted); }
-.alert-success { background: var(--color-success-tint); color: var(--color-success); }
+.alert { border-radius: var(--radius-md); border: none; font-size: 0.92rem; padding: 0.9rem 1.1rem; }
+.alert-secondary { background: var(--color-surface-food); color: var(--color-ink-muted); }
+.alert-success { background: var(--color-primary-tint); color: var(--color-primary-dark); }
 .alert-danger { background: var(--color-danger-tint); color: var(--color-danger); }
 .alert-warning { background: var(--color-warning-tint); color: var(--color-warning); }
 .alert-info { background: var(--color-info-tint); color: var(--color-info); }
 .alert-primary { background: var(--color-primary-tint); color: var(--color-primary-dark); }
 
 /* ============================================================
-   CATEGORY FILTER CHIPS (horizontal scroll on menu page)
+   BOOTSTRAP UTILITY OVERRIDES
+
+   The templates lean on .text-muted (39 uses) and .text-danger (30) — Bootstrap
+   ships those as cold grays/reds (#6c757d, #dc3545) which read as foreign against
+   a cream-and-terracotta page. Repointing them at the warm palette fixes the
+   inconsistency everywhere at once instead of per template.
    ============================================================ */
+
+.text-muted { color: var(--color-ink-muted) !important; }
+.text-danger { color: var(--color-danger) !important; }
+.text-dark   { color: var(--color-ink) !important; }
+.bg-light    { background-color: var(--color-surface) !important; }
+.border-bottom, .border-top { border-color: var(--color-border) !important; }
+
+/* ============================================================
+   CATEGORY TABS
+
+   The app design replaces the circular illustrated chips with a plain
+   underlined tab bar: a scrolling row of labels on a hairline, the active
+   one in primary with a 2px rule beneath it. Quieter, and it stops the
+   category row competing with the food photography below it.
+   ============================================================ */
+
+.category-chips-wrapper {
+    margin: 0 0 var(--stack-lg);
+    border-bottom: 1px solid var(--color-border);
+}
 
 .category-chips {
     display: flex;
-    gap: 8px;
+    gap: 32px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    padding: 4px 0;
-    margin: 0 -1rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    margin-bottom: -1px;
 }
 .category-chips::-webkit-scrollbar { display: none; }
 
 .category-chip {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: var(--radius-pill);
-    border: 1.5px solid var(--color-border);
-    background: var(--color-surface);
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--color-ink);
-    white-space: nowrap;
+    flex: none;
+    padding: 0 0 var(--stack-sm);
+    border: none;
+    background: transparent;
     cursor: pointer;
-    transition: all 150ms ease;
     text-decoration: none;
+    white-space: nowrap;
     -webkit-tap-highlight-color: transparent;
 }
 
-.category-chip:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary-dark);
+/* The illustrated pucks have no place in a text tab bar. */
+.cat-chip-icon,
+.cat-icon-img { display: none; }
+
+.cat-chip-label {
+    font-family: var(--font-body);
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    letter-spacing: 0.01em;
+    font-weight: 600;
+    color: var(--color-ink-muted);
+    transition: color 150ms ease;
 }
 
-.category-chip.active {
+.category-chip:hover .cat-chip-label { color: var(--color-ink); }
+
+.category-chip.active .cat-chip-label { color: var(--color-primary); }
+
+/* The active rule sits on the wrapper's hairline rather than under the label, so the
+   two line up exactly however tall the label happens to be. */
+.category-chip.active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
     background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #fff;
+    border-radius: 2px 2px 0 0;
 }
 
 /* ============================================================
    QUANTITY STEPPER (+ / - buttons replacing number input)
    ============================================================ */
 
-.qty-stepper {
+.qty-stepper,
+.cart-control__stepper {
     display: inline-flex;
     align-items: center;
-    gap: 0;
-    border: 1.5px solid var(--color-primary);
-    border-radius: var(--radius-sm);
+    gap: 3px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
     overflow: hidden;
     background: var(--color-surface);
+    padding: 3px;
+    box-shadow: 0 2px 6px rgba(70, 45, 25, 0.05);
 }
 
-.qty-stepper button {
-    width: 32px;
-    height: 32px;
+.qty-stepper button,
+.cart-control__stepper button {
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
-    background: transparent;
-    color: var(--color-primary);
-    font-size: 1rem;
+    border-radius: 50%;
+    background: var(--color-primary-tint);
+    color: var(--color-primary-dark);
+    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background 100ms ease;
+    transition: all 120ms ease;
     -webkit-tap-highlight-color: transparent;
 }
 
-.qty-stepper button:active {
-    background: var(--color-primary-tint);
+.qty-stepper button:hover,
+.cart-control__stepper button:hover {
+    background: var(--color-primary);
+    color: #fff;
+}
+.qty-stepper button:active,
+.cart-control__stepper button:active {
+    transform: scale(0.88);
 }
 
-.qty-stepper .qty-value {
+.qty-stepper .qty-value,
+.cart-control__stepper .cart-qty-value {
     min-width: 28px;
     text-align: center;
     font-weight: 700;
-    font-size: 0.85rem;
-    color: var(--color-primary);
+    font-size: 0.92rem;
+    color: var(--color-ink);
     font-family: var(--font-display);
     user-select: none;
 }
 
-/* Add button (Swiggy-style green pill) */
+/* ---------- Add / stepper swap on menu cards ----------
+   The card used to show a stepper reading "1" beside an Add button, on an
+   item that was not in the cart at all. Two controls, one of which was
+   lying: the 1 described what would be added, but read as what was already
+   there. Now the stepper only exists once the item is in the cart, so any
+   number on screen is a number in the cart.
+
+   Both controls are always in the DOM and .is-active picks between them.
+   That keeps the swap instant and, more importantly, keeps the no-JS path
+   honest: the server renders the correct one on load. */
+.cart-control__stepper { display: none; }
+.cart-control.is-active .cart-control__add { display: none; }
+.cart-control.is-active .cart-control__stepper { display: inline-flex; }
+
+/* Only the number changes on +/-, and it changes under the user's finger,
+   so it gets a short pop to confirm the tap registered. Anything longer
+   would lag behind repeated presses. */
+.cart-qty-value.is-bumped { animation: qtyBump 180ms ease; }
+@keyframes qtyBump {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.28); }
+    100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cart-qty-value.is-bumped { animation: none; }
+}
+
+/* Solid sage pill with lively tactile micro-press */
+/* ============================================================
+   ADD BUTTON
+
+   In the app design the add control is a small filled square that floats
+   over the bottom-right of the food photo, not a pill sitting in a row of
+   text. It stays the same object on the detail screen and the deals rail.
+   ============================================================ */
+
 .btn-add {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    min-width: 72px;
-    padding: 6px 16px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
     border-radius: var(--radius-sm);
-    border: 1.5px solid var(--color-primary);
-    background: var(--color-surface);
-    color: var(--color-primary);
-    font-weight: 700;
-    font-size: 0.85rem;
-    font-family: var(--font-display);
-    cursor: pointer;
-    transition: all 150ms ease;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.btn-add:hover, .btn-add:active {
     background: var(--color-primary);
     color: #fff;
+    font-family: var(--font-body);
+    font-size: 0;              /* the label is for screen readers; the glyph carries it */
+    line-height: 0;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 120ms ease, background-color 150ms ease;
 }
 
+.btn-add::before {
+    content: 'add';
+    font-family: 'Material Symbols Outlined';
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 400;
+}
+
+.btn-add:hover  { background: var(--color-primary-dark); }
+.btn-add:active { transform: scale(0.9); }
+
 /* ============================================================
-   MENU ITEM CARDS (redesigned — larger photos, better layout)
+   MENU CARD
+
+   Two-up grid of square-cropped photos on pure-white cards with a hairline
+   and the lightest shadow — the app design's main feed. The previous
+   horizontal row layout is gone: at two columns the photo does the work of
+   identifying the dish, so the text below it is only name, price, rating.
    ============================================================ */
 
 .menu-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
     overflow: hidden;
-    transition: box-shadow 180ms ease;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 200ms ease, transform 200ms ease;
 }
 
-.menu-card:hover {
-    box-shadow: var(--shadow-md);
-}
+.menu-card:hover  { box-shadow: var(--shadow-md); }
+.menu-card:active { transform: scale(0.99); }
 
-/* :hover never fires on tap, so touch devices — most of this app's traffic — need their
-   own tactile feedback. */
-.menu-card:active {
-    transform: scale(0.98);
-    transition: transform 100ms ease;
-}
-
-/* Horizontal layout (default) */
+/* The row wrapper survives from the old markup but no longer lays anything out
+   sideways — the card is a column now. */
 .menu-card-row {
     display: flex;
-    gap: 0;
+    flex-direction: column;
+    height: 100%;
 }
 
 .menu-card-photo {
-    width: 120px;
-    min-height: 120px;
-    flex-shrink: 0;
     position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: var(--color-surface-deep);
     overflow: hidden;
-    background: linear-gradient(160deg, #F5EFE3, #EFE6D4);
 }
 
 .menu-card-photo img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
-    transition: transform 300ms ease;
+    transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.menu-card:hover .menu-card-photo img {
-    transform: scale(1.05);
+.menu-card:hover .menu-card-photo img { transform: scale(1.05); }
+
+/* Generated illustrations are line art, not photography: contain them and sit them
+   on the tonal fill rather than cropping them to the square. */
+.menu-card-photo.is-illustration {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-food);
 }
 
-.menu-card-photo.is-placeholder {
+.menu-card-photo.is-illustration img {
+    width: 62%;
+    height: 62%;
+    object-fit: contain;
+}
+
+.menu-card:hover .menu-card-photo.is-illustration img { transform: scale(1.06); }
+
+.menu-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--stack-xs);
+    padding: var(--stack-sm);
+    flex: 1;
+}
+
+.menu-card-name {
+    margin: 0;
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    letter-spacing: 0.01em;
+    font-weight: 600;
+    color: var(--color-ink);
+    /* One line, clipped — a long dish name must not push the price row out of
+       alignment with the card beside it. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.menu-card-price {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+/* The add control floats over the photo, but it cannot live inside it: the photo is a
+   link to the dish page and a <form> nested in an <a> is invalid markup that browsers
+   recover from unpredictably. So the two are siblings inside a positioned media wrapper
+   — the button overlaps the image without ever being a descendant of the anchor. */
+.menu-card-media {
+    position: relative;
+}
+
+.menu-card-actions {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    z-index: 2;
+}
+
+/* An item that cannot be ordered shows no control at all; the reason is stated in the
+   card body instead. Keeps a dead button off a sold-out card. */
+.menu-card-actions:empty { display: none; }
+
+
+/* ============================================================
+   TODAY'S DEALS / SPECIALS (Foochi-style featured specials cards)
+   ============================================================ */
+
+.featured-scroll {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -1rem 12px;
+    padding: 6px 1rem 12px;
+    scroll-snap-type: x mandatory;
+}
+.featured-scroll::-webkit-scrollbar { display: none; }
+
+.deal-card {
+    flex: 0 0 170px;
+    width: 170px;
+    background: var(--color-surface-food);
+    border: 1px solid rgba(240, 220, 199, 0.6);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 4px 14px -6px rgba(70, 45, 25, 0.1);
+    padding: 10px;
+    scroll-snap-align: start;
+    transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+.deal-card:hover {
+    background: #FADEC8;
+    transform: translateY(-4px);
+    box-shadow: 0 14px 26px -8px rgba(70, 45, 25, 0.18);
+}
+.deal-card:active { transform: scale(0.96); }
+
+.deal-card-photo {
+    width: 100%;
+    aspect-ratio: 1;
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: radial-gradient(circle at 45% 40%, #FFFDF9 10%, #F5D5BE 100%);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.06);
     display: flex;
     align-items: center;
     justify-content: center;
 }
-
-.menu-card-photo.is-placeholder img {
-    width: 50%;
-    height: 50%;
+.deal-card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 300ms ease;
+}
+.deal-card:hover .deal-card-photo img {
+    transform: scale(1.08);
+}
+.deal-card-photo.is-illustration {
+    padding: 10px;
+    background: linear-gradient(160deg, #FFF0DE, var(--color-coral));
+}
+.deal-card-photo.is-illustration img {
+    width: 100%;
+    height: 100%;
     object-fit: contain;
-    opacity: 0.7;
+    opacity: 1;
+}
+.deal-card:hover .deal-card-photo.is-illustration img {
+    transform: none;
 }
 
-.menu-card-body {
-    flex: 1;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+.deal-card-body {
+    padding: 10px 4px 4px;
+}
+
+.deal-card-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.92rem;
+    margin: 0 0 6px;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--color-ink);
+}
+
+.deal-card-price {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: var(--color-accent-strong);
+}
+
+.deal-card-add {
     min-width: 0;
-}
-
-.menu-card-name {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--color-ink);
-    margin: 0 0 4px;
-    line-height: 1.3;
-}
-
-.menu-card-price {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--color-ink);
-}
-
-.menu-card-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 8px;
-}
-
-/* Discount badge on photo */
-.discount-tag {
-    position: absolute;
-    bottom: 8px;
-    left: 0;
-    background: var(--color-primary);
-    color: #fff;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 0 4px 4px 0;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-@media (max-width: 575.98px) {
-    .menu-card-photo {
-        width: 110px;
-        min-height: 110px;
-    }
+    padding: 6px 12px;
+    font-size: 0.76rem;
 }
 
 /* ============================================================
-   OUTLET PICKER (choose-your-canteen screen, shown when a
-   college has more than one outlet)
+   OUTLET PICKER (choose-your-canteen screen)
    ============================================================ */
 
 .outlet-card {
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    padding: 16px 18px;
-    transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+    gap: 16px;
+    background: var(--color-surface-food);
+    border: 1px solid rgba(240, 220, 199, 0.6);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 14px -6px rgba(70, 45, 25, 0.08);
+    padding: 20px 22px;
+    transition: all 180ms ease;
     color: inherit;
 }
 .outlet-card:hover {
-    box-shadow: var(--shadow-md);
-    border-color: var(--color-primary-tint);
-    transform: translateY(-2px);
+    background: var(--color-surface-deep);
     color: inherit;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px -8px rgba(70, 45, 25, 0.16);
 }
 .outlet-card:active {
     transform: scale(0.98);
 }
 
+/* Cream disc on peach — the icon reads as a plate set on the surface */
 .outlet-card-icon {
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-primary-tint);
-    color: var(--color-primary-dark);
-    font-size: 1.5rem;
+    background: var(--color-surface);
+    color: var(--color-accent-strong);
+    font-size: 1.6rem;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px -4px rgba(70, 45, 25, 0.12);
 }
 
 .outlet-card-name {
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 1.05rem;
+    font-weight: 700;
+    font-size: 1.15rem;
     color: var(--color-ink);
     margin: 0;
 }
 
 .outlet-card-hint {
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     color: var(--color-ink-muted);
     margin: 2px 0 0;
 }
@@ -761,11 +1110,11 @@ a:hover { color: var(--color-primary); }
 .outlet-card-chevron {
     margin-left: auto;
     color: var(--color-ink-muted);
-    font-size: 1.2rem;
+    font-size: 1.3rem;
 }
 
 /* ============================================================
-   STICKY CART BAR (shown on menu page when cart has items)
+   STICKY CART BAR (Glassmorphism & glowing action pill)
    ============================================================ */
 
 .sticky-cart-bar {
@@ -774,51 +1123,61 @@ a:hover { color: var(--color-primary); }
     right: 0;
     z-index: 1040;
     padding: 10px 16px;
-    animation: slide-up 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: slide-up 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @media (max-width: 767.98px) {
     .sticky-cart-bar {
-        bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+        bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
     }
 }
 @media (min-width: 768px) {
     .sticky-cart-bar {
-        bottom: 0;
+        bottom: 12px;
     }
 }
 
 .sticky-cart-inner {
     max-width: 540px;
     margin: 0 auto;
-    background: var(--color-primary);
+    background: rgba(69, 124, 92, 0.94);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
     color: #fff;
-    border-radius: var(--radius-md);
-    padding: 12px 18px;
+    border-radius: var(--radius-pill);
+    padding: 14px 22px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 12px 30px -8px rgba(56, 102, 75, 0.5), 0 0 0 1px rgba(255,255,255,0.2) inset;
     cursor: pointer;
     text-decoration: none;
-    transition: transform 100ms ease;
+    transition: all 150ms ease;
+    animation: cart-bar-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes cart-bar-glow {
+    0% { box-shadow: 0 10px 24px -8px rgba(56, 102, 75, 0.45); }
+    100% { box-shadow: 0 14px 34px -6px rgba(69, 124, 92, 0.7); }
 }
 
 .sticky-cart-inner:hover {
-    transform: scale(1.01);
+    transform: scale(1.02);
+    color: #fff;
 }
 
 .sticky-cart-inner:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
 }
 
 .sticky-cart-info {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     font-weight: 600;
 }
 
 .sticky-cart-info strong {
-    font-size: 1rem;
+    font-size: 1.05rem;
+    font-weight: 800;
 }
 
 .sticky-cart-action {
@@ -826,8 +1185,11 @@ a:hover { color: var(--color-primary); }
     align-items: center;
     gap: 6px;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
 }
 
 @keyframes slide-up {
@@ -839,30 +1201,122 @@ a:hover { color: var(--color-primary); }
    CART PAGE (card-based layout)
    ============================================================ */
 
+/* ---------- Cart, ported from the Stitch "Your Order" comp ----------
+   The comp introduces two things the page lacked: a named pickup block, so
+   you can see which counter you are collecting from before paying, and
+   small section labels that break a long scroll into "where" / "what" /
+   "how much".
+
+   The comp's address line and its Subtotal / Taxes & Fees rows are not
+   here: Outlet has no address column and the app has no fee concept at all
+   (Order carries a single totalAmount). Rendering either would mean
+   inventing numbers, so the summary shows the one figure that is real.
+   ============================================================ */
+.section-label {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 0.6rem;
+}
+
+.pickup-card {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: var(--color-surface-food);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: 1.75rem;
+}
+.pickup-card__icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: var(--radius-pill);
+    background: var(--color-primary-tint);
+    color: var(--color-primary);
+    font-size: 1.25rem;
+}
+.pickup-card__name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.02rem;
+    color: var(--color-ink);
+    margin: 0;
+}
+.pickup-card__meta {
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--color-ink-muted);
+}
+
+.cart-summary {
+    background: var(--color-surface-food);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    margin-bottom: 1.25rem;
+}
+.cart-summary__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.cart-summary__row dt {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--color-ink);
+    margin: 0;
+}
+.cart-summary__row dd {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--color-accent-strong);
+    margin: 0;
+}
+
 .cart-item-card {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     padding: 14px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    margin-bottom: 10px;
+    background: var(--color-surface-food);
+    border: 1px solid rgba(240, 220, 199, 0.6);
+    border-radius: var(--radius-lg);
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px -6px rgba(70, 45, 25, 0.08);
 }
 
 .cart-item-photo {
-    width: 64px;
-    height: 64px;
-    border-radius: var(--radius-sm);
+    width: 68px;
+    height: 68px;
+    border-radius: var(--radius-md);
     overflow: hidden;
     flex-shrink: 0;
-    background: linear-gradient(160deg, #F5EFE3, #EFE6D4);
+    background: radial-gradient(circle, #FFFDF9 10%, #F5D5BE 100%);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .cart-item-photo img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.cart-item-photo.is-illustration {
+    padding: 8px;
+}
+.cart-item-photo.is-illustration img {
+    object-fit: contain;
 }
 
 .cart-item-info {
@@ -872,15 +1326,15 @@ a:hover { color: var(--color-primary); }
 
 .cart-item-name {
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 1rem;
     margin: 0 0 2px;
     color: var(--color-ink);
 }
 
 .cart-item-price {
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: var(--color-ink-muted);
 }
 
@@ -893,8 +1347,9 @@ a:hover { color: var(--color-primary); }
 
 .cart-item-subtotal {
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 0.95rem;
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: var(--color-accent-strong);
 }
 
 /* Sticky pay button at bottom of cart */
@@ -904,11 +1359,14 @@ a:hover { color: var(--color-primary); }
     left: 0;
     right: 0;
     z-index: 1040;
-    background: var(--color-surface);
-    border-top: 1px solid var(--color-border);
+    background: rgba(251, 228, 208, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(240, 220, 199, 0.8);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     box-shadow: var(--shadow-sticky);
-    padding: 14px 16px;
-    padding-bottom: calc(14px + var(--safe-area-bottom));
+    padding: 16px 18px;
+    padding-bottom: calc(16px + var(--safe-area-bottom));
 }
 
 @media (max-width: 767.98px) {
@@ -928,14 +1386,15 @@ a:hover { color: var(--color-primary); }
 
 .sticky-pay-total {
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.15rem;
+    font-weight: 800;
+    font-size: 1.35rem;
+    color: var(--color-accent-strong);
 }
 
 .sticky-pay-total small {
     display: block;
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-ink-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -946,21 +1405,23 @@ a:hover { color: var(--color-primary); }
    ============================================================ */
 
 .order-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    margin-bottom: 12px;
+    background: var(--color-surface-food);
+    border: 1px solid rgba(240, 220, 199, 0.6);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 14px;
     text-decoration: none;
     color: var(--color-ink);
     display: block;
-    transition: box-shadow 180ms ease, transform 180ms ease;
+    transition: all 180ms ease;
+    box-shadow: 0 4px 12px -6px rgba(70, 45, 25, 0.08);
 }
 
 .order-card:hover {
-    box-shadow: var(--shadow-md);
+    background: var(--color-surface-deep);
     color: var(--color-ink);
     transform: translateY(-2px);
+    box-shadow: 0 10px 22px -8px rgba(70, 45, 25, 0.16);
 }
 .order-card:active {
     transform: scale(0.98);
@@ -975,13 +1436,14 @@ a:hover { color: var(--color-primary); }
 
 .order-card-token {
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1rem;
+    font-weight: 800;
+    font-size: 1.05rem;
     letter-spacing: 0.02em;
+    color: var(--color-ink);
 }
 
 .order-card-items {
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: var(--color-ink-muted);
     margin-bottom: 10px;
     line-height: 1.5;
@@ -995,13 +1457,182 @@ a:hover { color: var(--color-primary); }
 
 .order-card-total {
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1rem;
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--color-accent-strong);
 }
 
 .order-card-date {
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     color: var(--color-ink-muted);
+}
+
+/* ---------- Order history, ported from the Stitch comp ----------
+   The card previously ran its items as one truncated line, which on a
+   three-item order showed "2 x Veg Biryani, 1 x Masala Ch…" and hid the
+   rest. The comp lists them, which is both what a receipt does and the
+   thing you actually scan for when finding an old order. */
+.order-card-lines {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+}
+.order-card-lines li {
+    font-size: 0.88rem;
+    color: var(--color-ink);
+    line-height: 1.5;
+}
+.order-card-lines .qty {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-ink-muted);
+    margin-right: 0.35rem;
+}
+.order-card-lines .more {
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+}
+
+/* The whole card is the link, so this is an affordance rather than a
+   second target: it tells you the card is clickable without adding a
+   nested interactive element inside an anchor. */
+.order-card-track {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 12px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--color-primary);
+}
+.order-card-track i { font-size: 1rem; transition: transform 180ms ease; }
+.order-card:hover .order-card-track i { transform: translateX(3px); }
+
+.page-header-sub {
+    margin: 0.35rem 0 0;
+    color: var(--color-ink-muted);
+    font-size: 0.95rem;
+}
+
+/* ============================================================
+   ITEM DETAIL — ported from the Stitch "Dish Details" comp.
+
+   The comp is mostly modifiers: Add Protein, Extras, Special
+   Instructions, dietary tags, a favourite toggle. None of that exists
+   on MenuItem, which carries name, category, photo, price and an
+   optional discount and nothing else. So this page is the honest
+   subset: a bigger photo, the price with its strike-through, where to
+   collect it, and the add control. It is the right shape to hang
+   modifiers on if they ever get modelled.
+   ============================================================ */
+/* The card name is now a link; it should not look like one until you
+   reach for it, or every card in the grid turns into a wall of blue. */
+.menu-card-name__link {
+    color: inherit;
+    text-decoration: none;
+}
+.menu-card-name__link:hover,
+.menu-card-name__link:focus-visible {
+    color: var(--color-accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.5rem 0 1rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--color-ink-muted);
+    text-decoration: none;
+}
+.detail-back:hover { color: var(--color-ink); }
+.detail-back i { font-size: 1.05rem; transition: transform 180ms ease; }
+.detail-back:hover i { transform: translateX(-3px); }
+
+.detail-hero {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-surface-food);
+    aspect-ratio: 16 / 10;
+    margin-bottom: 1.25rem;
+}
+.detail-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Illustrations are line art on a transparent ground, so cropping them to
+   fill would cut the drawing; they get padded and contained instead. */
+.detail-hero.is-illustration { background: var(--color-surface-deep); }
+.detail-hero.is-illustration img { object-fit: contain; padding: 12%; }
+
+.detail-eyebrow {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 0.3rem;
+}
+.detail-name {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.7rem, 6vw, 2.2rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+    margin: 0 0 0.5rem;
+}
+.detail-price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: var(--color-accent-strong);
+    margin-bottom: 0.75rem;
+}
+.detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-ink-muted);
+    margin-bottom: 1.75rem;
+}
+.detail-meta i { color: var(--color-primary); font-size: 1.05rem; }
+
+.detail-unavailable {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    background: var(--color-danger-tint);
+    color: var(--color-danger);
+    font-weight: 600;
+    font-size: 0.92rem;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: 2rem;
+}
+
+.detail-add {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 2.5rem;
+}
+.detail-add__btn {
+    flex: 1;
+    padding: 0.9rem 1rem;
+    font-size: 1rem;
+    border-radius: var(--radius-md);
 }
 
 /* ============================================================
@@ -1009,50 +1640,62 @@ a:hover { color: var(--color-primary); }
    ============================================================ */
 
 .account-section {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    margin-bottom: 16px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .account-section-title {
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 0.75rem;
+    font-weight: 700;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     color: var(--color-ink-muted);
-    padding: 12px 16px 6px;
+    padding: 0 4px 8px;
 }
 
 .account-row {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 14px 16px;
+    padding: 16px 20px;
     text-decoration: none;
     color: var(--color-ink);
-    border-top: 1px solid var(--color-border);
-    transition: background 100ms ease;
+    background: var(--color-surface-food);
+    border-top: none;
+    transition: background 120ms ease, transform 120ms ease;
+    box-shadow: 0 2px 6px -2px rgba(70, 45, 25, 0.04);
 }
 
-.account-row:first-child,
-.account-section-title + .account-row {
-    border-top: none;
+/* Round only the outer corners of the stack so it reads as one grouped block */
+.account-section-title + .account-row,
+.account-section > .account-row:first-child {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.account-section > .account-row:last-child {
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.account-section > .account-row:only-of-type {
+    border-radius: var(--radius-lg);
 }
 
 .account-row:hover {
-    background: var(--color-primary-tint);
+    background: var(--color-surface-deep);
     color: var(--color-ink);
 }
 .account-row:active {
-    background: var(--color-primary-tint);
+    background: var(--color-surface-deep);
 }
 
 .account-row i {
-    font-size: 1.3rem;
-    color: var(--color-ink-muted);
+    font-size: 1.35rem;
+    color: var(--color-accent-strong);
     width: 28px;
     text-align: center;
 }
@@ -1062,12 +1705,12 @@ a:hover { color: var(--color-primary); }
 }
 
 .account-row-label {
-    font-weight: 600;
-    font-size: 0.92rem;
+    font-weight: 700;
+    font-size: 0.95rem;
 }
 
 .account-row-detail {
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     color: var(--color-ink-muted);
 }
 
@@ -1077,28 +1720,31 @@ a:hover { color: var(--color-primary); }
 }
 
 /* ============================================================
-   SEARCH BAR (menu page)
+   SEARCH BAR (menu page — Foochi pill search)
    ============================================================ */
 
 .search-bar {
     position: relative;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .search-bar input {
     width: 100%;
-    padding: 10px 14px 10px 40px;
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface);
-    font-size: 0.9rem;
+    padding: 15px 18px 15px 50px;
+    border: 1.5px solid transparent;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-food);
+    font-size: 0.96rem;
     font-family: var(--font-body);
-    transition: border-color 150ms ease, box-shadow 150ms ease;
+    color: var(--color-ink);
+    box-shadow: 0 4px 12px -4px rgba(70, 45, 25, 0.08);
+    transition: all 180ms ease;
 }
 
 .search-bar input:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-tint);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 4px var(--color-primary-tint), 0 6px 18px -4px rgba(70, 45, 25, 0.1);
     outline: none;
 }
 
@@ -1108,11 +1754,11 @@ a:hover { color: var(--color-primary); }
 
 .search-bar i {
     position: absolute;
-    left: 14px;
+    left: 20px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--color-ink-muted);
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     pointer-events: none;
 }
 
@@ -1122,7 +1768,7 @@ a:hover { color: var(--color-primary); }
 
 .card-price {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .price-strike {
@@ -1130,11 +1776,12 @@ a:hover { color: var(--color-primary); }
     color: var(--color-ink-muted);
     font-size: 0.85em;
     margin-right: 0.4em;
+    opacity: 0.75;
 }
 
 .token-badge {
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0.03em;
 }
 
@@ -1146,78 +1793,28 @@ a:hover { color: var(--color-primary); }
 }
 
 /* ============================================================
-   AUTH PAGES
+   AUTH PAGES — split panel on desktop, single column on mobile.
+
+   A 420px card centred in ~1400px of cream left the whole right and left
+   thirds doing nothing. The brief asked to use width intentionally at
+   large sizes, so desktop gets a peach brand panel beside the form. The
+   form itself sits directly on the canvas at every size now — no card —
+   which also permanently removes the bug where an input painted the same
+   colour as the card it sat on became invisible.
    ============================================================ */
 
 .auth-shell {
-    position: relative;
-    min-height: calc(100dvh - 76px);
-    padding: 2rem 1rem;
-    overflow: hidden;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr;
+    background: var(--color-bg);
+}
+
+.auth-main {
     display: flex;
-    background-color: var(--color-bg);
-    background-image:
-        radial-gradient(circle at 20% 20%, rgba(217, 87, 44, 0.16) 0%, transparent 45%),
-        radial-gradient(circle at 82% 15%, rgba(63, 107, 74, 0.14) 0%, transparent 42%),
-        radial-gradient(circle at 15% 85%, rgba(43, 110, 122, 0.13) 0%, transparent 42%),
-        radial-gradient(circle at 88% 82%, rgba(181, 129, 27, 0.12) 0%, transparent 40%);
-    background-repeat: no-repeat;
-    background-size: 140% 140%, 130% 130%, 120% 120%, 130% 130%;
-    animation: auth-bg-drift 24s ease-in-out infinite alternate;
-}
-
-@keyframes auth-bg-drift {
-    0%   { background-position: 20% 20%, 82% 15%, 15% 85%, 88% 82%; }
-    100% { background-position: 30% 28%, 74% 24%, 24% 76%, 78% 74%; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .auth-shell { animation: none; }
-}
-
-/* Faint hand-drawn doodles (bowl-with-steam, citrus slice) floating in the corners of
-   auth pages — pure line art in the brand palette, not a photo, so it stays crisp and
-   on-brand at any screen size and never needs a raster asset. */
-.auth-decor {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.auth-doodle {
-    position: absolute;
-    opacity: 0.16;
-    animation: doodle-float 9s ease-in-out infinite;
-}
-
-.auth-doodle-1 {
-    top: 8%;
-    left: 6%;
-    width: 92px;
-    color: var(--color-warning);
-    animation-delay: 0s;
-}
-
-.auth-doodle-2 {
-    bottom: 10%;
-    right: 7%;
-    width: 120px;
-    color: var(--color-info);
-    animation-delay: -3s;
-}
-
-@keyframes doodle-float {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50%      { transform: translateY(-14px) rotate(4deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .auth-doodle { animation: none; }
-}
-
-@media (max-width: 575.98px) {
-    .auth-doodle { display: none; }
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.25rem 3rem;
 }
 
 .auth-card {
@@ -1225,23 +1822,321 @@ a:hover { color: var(--color-primary); }
     z-index: 1;
     width: 100%;
     max-width: 400px;
-    margin: auto;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    padding: 2.25rem 2rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
 }
+
+/* Compact lockup above the form — carries the brand on mobile, where the
+   brand panel is hidden. */
+.auth-lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 1.75rem;
+}
+.auth-lockup img { width: 34px; height: 34px; }
+.auth-lockup span {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--color-accent-strong);
+}
+
+.auth-kicker {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-accent-strong);
+    background: var(--color-accent-tint);
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-pill);
+    margin-bottom: 0.75rem;
+}
+
+/* ============================================================
+   EDITORIAL AUTH FIELDS — ported from the Stitch "Sign In" comp.
+
+   The comp's one real idea is that form fields stop being boxes.
+   Bootstrap's .input-group draws an icon tile, a 1px border and a white
+   fill around every field: three pieces of chrome on a page that only
+   asks two questions. The comp replaces all of it with a single hairline
+   under the text, so the screen reads as type on cream rather than
+   widgets on a card.
+
+   The field icons come off entirely. An envelope glyph beside a field
+   labelled "Email" is decoration, and it was the thing forcing the boxed
+   treatment in the first place.
+
+   Scoped to .auth-card so the canteen and admin portals — same
+   stylesheet, deliberately not part of this redesign — keep their dense
+   bordered forms.
+   ============================================================ */
+.auth-head { margin-bottom: 2rem; }
+.auth-head__title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.9rem, 7vw, 2.35rem);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+    margin: 0 0 0.4rem;
+}
+.auth-head__sub {
+    font-size: 0.95rem;
+    color: var(--color-ink-muted);
+    margin: 0;
+}
+
+.field { margin-bottom: 1.4rem; }
+.field__label {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin-bottom: 0.35rem;
+}
+.field__wrap { position: relative; }
+.field__input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1.5px solid var(--color-field-rule);
+    border-radius: 0;
+    padding: 0.5rem 0;
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    color: var(--color-ink);
+    transition: border-color 0.18s ease;
+}
+/* 0.55 dropped the placeholder to 2.42:1. Every field here already has a
+   visible label, so the placeholder is supplementary — but it is still text,
+   and 1.4.3 does not exempt it. 0.85 resolves to #806E5D at 4.51:1. */
+.field__input::placeholder { color: var(--color-ink-muted); opacity: 0.85; }
+/* Focus is carried by the rule itself rather than a ring, to keep the
+   field flat. Thickening to 2px means it still reads for anyone who
+   can't rely on the hue change alone; the padding claws back the 0.5px
+   so the baseline doesn't hop. */
+.field__input:focus {
+    outline: none;
+    box-shadow: none;
+    border-bottom-color: var(--color-primary);
+    border-bottom-width: 2px;
+    padding-bottom: calc(0.5rem - 0.5px);
+}
+/* Chrome paints autofilled inputs pale blue, which on a transparent
+   field shows up as a floating blue slab. */
+.field__input:-webkit-autofill,
+.field__input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-ink);
+    -webkit-box-shadow: 0 0 0 100px var(--color-bg) inset;
+}
+.field__input--pw { padding-right: 2.75rem; }
+.field__toggle {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: 0;
+    padding: 0.4rem;
+    line-height: 1;
+    color: var(--color-ink-muted);
+    cursor: pointer;
+}
+.field__toggle:hover, .field__toggle:focus-visible { color: var(--color-ink); }
+.field__toggle i { font-size: 1.15rem; }
+
+/* Select gets the same underline treatment. Bootstrap's .form-select paints
+   its own border, fill and arrow, so all three are stripped and the chevron
+   is redrawn inline in --color-ink-muted to match the field text. */
+.field__select {
+    width: 100%;
+    background-color: transparent;
+    border: 0;
+    border-bottom: 1.5px solid var(--color-field-rule);
+    border-radius: 0;
+    padding: 0.5rem 1.75rem 0.5rem 0;
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    color: var(--color-ink);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236A5644' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.15rem center;
+    background-size: 1rem;
+    transition: border-color 0.18s ease;
+}
+.field__select:focus {
+    outline: none;
+    box-shadow: none;
+    border-bottom-color: var(--color-primary);
+    border-bottom-width: 2px;
+    padding-bottom: calc(0.5rem - 0.5px);
+}
+/* The "choose one" placeholder option should read as unfilled, like a
+   placeholder does, rather than as a real selection. */
+.field__select:has(option[value=""]:checked) { color: #806E5D; }
+
+/* "(Optional)" sits with the label rather than in the field, so the field
+   itself stays clean. Lowercase against the uppercase label so it reads as
+   an aside and not part of the field name. */
+.field__optional {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    font-size: 0.72rem;
+    opacity: 0.75;
+    margin-left: 0.4rem;
+}
+
+.field__hint {
+    margin: 0.4rem 0 0;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+}
+
+/* Validation copy. --color-danger is 5.11:1 on cream, so it carries as text
+   without a tinted box behind it. */
+.field__error {
+    margin: 0.4rem 0 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-danger);
+}
+/* A field that failed validation says so on the rule too, not by colour
+   alone — the message below it is the non-colour cue. */
+.field__input.is-invalid,
+.field__select.is-invalid {
+    border-bottom-color: var(--color-danger);
+    border-bottom-width: 2px;
+    padding-bottom: calc(0.5rem - 0.5px);
+}
+
+/* The comp runs a ~56px CTA. That height is what makes a two-field form
+   feel finished rather than cramped. */
+.btn-auth {
+    width: 100%;
+    padding: 0.95rem 1rem;
+    font-size: 1rem;
+    border-radius: var(--radius-md);
+}
+
+.auth-foot {
+    margin-top: 1.75rem;
+    text-align: center;
+    font-size: 0.92rem;
+    color: var(--color-ink-muted);
+}
+.auth-foot a { font-weight: 700; }
+.auth-legal {
+    margin-top: 0.85rem;
+    text-align: center;
+    font-size: 0.78rem;
+}
+
+
+/* ---------- Brand panel (desktop only) ---------- */
+
+.auth-brand { display: none; }
+
+@media (min-width: 992px) {
+    .auth-shell { grid-template-columns: 1.05fr 1fr; }
+
+    .auth-brand {
+        display: flex;
+        align-items: center;
+        padding: 4rem 3.5rem;
+        background: var(--color-surface-food);
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Oversized brand mark bled off the corner — the identity as pattern
+       rather than a logo sitting politely in a box. */
+    .auth-brand::after {
+        content: '';
+        position: absolute;
+        right: -14%;
+        bottom: -18%;
+        width: 62%;
+        aspect-ratio: 1;
+        background: url('/img/logo-mark-pastel.svg') center / contain no-repeat;
+        opacity: 0.32;
+        pointer-events: none;
+    }
+
+    .auth-lockup { display: none; }
+}
+
+.auth-brand__inner { position: relative; z-index: 1; max-width: 420px; }
+
+.auth-brand__lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 2.5rem;
+}
+.auth-brand__lockup img { width: 40px; height: 40px; }
+.auth-brand__lockup span {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.55rem;
+    color: var(--color-accent-strong);
+}
+
+.auth-brand__headline {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 2.6rem;
+    line-height: 1.12;
+    color: var(--color-ink);
+    margin: 0 0 1rem;
+}
+
+.auth-brand__sub {
+    font-size: 1.02rem;
+    color: var(--color-ink-muted);
+    margin: 0 0 2.5rem;
+    max-width: 34ch;
+}
+
+/* Three dishes on the brand panel, so the first screen of a food app
+   actually shows food. */
+.auth-brand__dishes { display: flex; gap: 0.9rem; }
+
+.auth-brand__dish {
+    width: 92px;
+    height: 92px;
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    display: grid;
+    place-items: center;
+    padding: 12px;
+}
+.auth-brand__dish img { width: 100%; height: 100%; object-fit: contain; }
+.auth-brand__dish:nth-child(2) { transform: translateY(-14px); }
 
 /* ---------- Password visibility toggle ---------- */
 
 .toggle-password {
-    border-color: var(--color-border) !important;
+    border: 1.5px solid var(--color-field-border) !important;
+    border-left: none !important;
+    background: var(--color-field) !important;
     color: var(--color-ink-muted) !important;
 }
 .toggle-password:hover {
     color: var(--color-ink) !important;
-    background: transparent !important;
+    background: var(--color-field) !important;
 }
 .toggle-password:focus-visible {
     z-index: 3;
@@ -1257,53 +2152,114 @@ a:hover { color: var(--color-primary); }
     border-radius: 50%;
     background: var(--color-success);
     display: inline-block;
-    box-shadow: 0 0 0 rgba(63, 107, 74, 0.5);
+    box-shadow: 0 0 0 rgba(69, 124, 92, 0.5);
     animation: live-pulse 2s infinite;
 }
 
 @keyframes live-pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(63, 107, 74, 0.45); }
-    70%  { box-shadow: 0 0 0 8px rgba(63, 107, 74, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(63, 107, 74, 0); }
+    0%   { box-shadow: 0 0 0 0 rgba(69, 124, 92, 0.45); }
+    70%  { box-shadow: 0 0 0 8px rgba(69, 124, 92, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(69, 124, 92, 0); }
 }
 
+/* Brand fallback mark (shown only if the Bito image fails to load) — terracotta,
+   since it stands in for the logo rather than for an action. */
 .auth-mark {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     margin: 0 auto 1rem;
-    border-radius: 12px;
-    background: var(--color-primary);
+    border-radius: 16px;
+    background: var(--color-accent-strong);
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.3rem;
+    font-size: 1.35rem;
 }
 
 /* ============================================================
-   MASCOT ILLUSTRATIONS (Bito)
+   BRAND MARK & STATE MEDALLIONS
+
+   Bito the mascot is gone. The identity is now an abstract six-ray
+   swirl — pastel at display sizes, solid terracotta wherever it has to
+   survive small (favicon, navbar, 16px).
+
+   A mark can't perform "order ready" the way a character could, so every
+   empty/error/status moment is a medallion instead: the pastel swirl as
+   a soft backdrop, a cream disc on top, one icon carrying the meaning
+   and a tone carrying the mood. One shape, many states.
    ============================================================ */
 
-.mascot-img {
-    display: block;
-    margin: 0 auto 1.25rem;
-    filter: drop-shadow(0 12px 20px rgba(31, 27, 22, 0.12));
-    animation: mascot-float 4s ease-in-out infinite;
+.brand-mark {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
 }
 
-.mascot-sm { width: 96px; height: auto; max-height: 130px; }
-.mascot-md { width: 168px; height: auto; max-height: 220px; }
-.mascot-lg { width: 220px; height: auto; max-height: 280px; }
+.state-medallion {
+    position: relative;
+    width: 132px;
+    height: 132px;
+    margin: 0 auto 1.25rem;
+    display: grid;
+    place-items: center;
+    animation: medallion-arrive 420ms cubic-bezier(0.34, 1.4, 0.64, 1) 120ms both;
+}
 
-@keyframes mascot-float {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-8px); }
+/* The swirl sits behind at reduced opacity so it reads as a warm halo
+   rather than competing with the icon in front of it. */
+.state-medallion::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('/img/logo-mark-pastel.svg') center / contain no-repeat;
+    opacity: 0.55;
+}
+
+.state-medallion__disc {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 14px -8px rgba(70, 45, 25, 0.35);
+}
+
+.state-medallion__disc i {
+    font-size: 2.1rem;
+    line-height: 1;
+    color: var(--color-accent-strong);
+}
+
+.state-medallion--good .state-medallion__disc i { color: var(--color-primary-dark); }
+.state-medallion--bad  .state-medallion__disc i { color: var(--color-danger); }
+
+/* Sad/error moments drop the spring overshoot — the same bouncy landing
+   that reads as delighted is tone-deaf on a cancelled order. */
+.state-medallion--bad {
+    animation: medallion-arrive-somber 380ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+
+.state-medallion--sm { width: 96px; height: 96px; }
+.state-medallion--sm .state-medallion__disc { width: 54px; height: 54px; }
+.state-medallion--sm .state-medallion__disc i { font-size: 1.5rem; }
+
+@keyframes medallion-arrive {
+    from { opacity: 0; transform: translateY(10px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes medallion-arrive-somber {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mascot-img { animation: none; }
+    .state-medallion, .state-medallion--bad { animation: none; }
 }
 
 /* ============================================================
@@ -1312,19 +2268,20 @@ a:hover { color: var(--color-primary); }
 
 .state-panel {
     text-align: center;
-    padding: 3rem 1.5rem;
-    max-width: 420px;
+    padding: 2.5rem 1.75rem;
+    max-width: 440px;
     margin: 0 auto;
 }
 
 .state-panel h4 {
     margin-bottom: 0.4rem;
+    font-size: 1.4rem;
 }
 
 .state-panel p {
     color: var(--color-ink-muted);
-    font-size: 0.94rem;
-    margin-bottom: 1.25rem;
+    font-size: 0.96rem;
+    margin-bottom: 1.5rem;
 }
 
 /* ============================================================
@@ -1343,15 +2300,15 @@ a:hover { color: var(--color-primary); }
 }
 
 .icon-circle {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-primary-tint);
-    color: var(--color-primary-dark);
-    font-size: 1.15rem;
+    background: var(--color-accent-tint);
+    color: var(--color-accent-strong);
+    font-size: 1.2rem;
     flex-shrink: 0;
 }
 
@@ -1416,7 +2373,7 @@ a:hover { color: var(--color-primary); }
     position: relative;
     aspect-ratio: 4 / 3;
     overflow: hidden;
-    background: linear-gradient(160deg, #F5EFE3, #EFE6D4);
+    background: linear-gradient(160deg, var(--color-coral), var(--color-coral-deep));
     border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
@@ -1501,7 +2458,7 @@ a:hover { color: var(--color-primary); }
     border-radius: var(--radius-sm);
     overflow: hidden;
     flex-shrink: 0;
-    background: linear-gradient(160deg, #F5EFE3, #EFE6D4);
+    background: linear-gradient(160deg, var(--color-coral), var(--color-coral-deep));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1550,47 +2507,1021 @@ a:hover { color: var(--color-primary); }
 .toast-msg {
     background: var(--color-ink);
     color: #fff;
-    padding: 10px 20px;
+    padding: 12px 24px;
     border-radius: var(--radius-pill);
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: var(--font-display);
     white-space: nowrap;
-    box-shadow: var(--shadow-lg);
-    animation: toast-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1), toast-out 300ms ease 2.2s forwards;
+    box-shadow: 0 10px 28px -6px rgba(44, 32, 24, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toast-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1), toast-out 300ms ease 2.2s forwards;
     pointer-events: auto;
 }
 
 @keyframes toast-in {
-    from { opacity: 0; transform: translateY(20px) scale(0.9); }
+    from { opacity: 0; transform: translateY(24px) scale(0.9); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes toast-out {
     from { opacity: 1; transform: translateY(0); }
-    to   { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 0; transform: translateY(-12px); }
 }
 
 /* ============================================================
-   PAGE SECTION HEADERS
+   PAGE SECTION HEADERS & FOOCHI WAVE DECOR
    ============================================================ */
 
 .page-header {
-    margin-bottom: 20px;
+    position: relative;
+    margin-bottom: 24px;
+    padding: 8px 0;
+}
+
+.page-header-decor {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 220px;
+    height: 140px;
+    background-image: url('/img/blob-sage-1.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.page-header-content {
+    position: relative;
+    z-index: 1;
 }
 
 .page-header-label {
-    font-size: 0.72rem;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--color-primary-dark);
+    color: var(--color-accent-strong);
     margin-bottom: 2px;
+    letter-spacing: 0.01em;
 }
 
 .page-header-title {
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.5rem;
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 1.18;
     margin: 0;
     color: var(--color-ink);
 }
+
+@media (min-width: 768px) {
+    .page-header-title { font-size: 2.35rem; }
+}
+
+/* Navbar with scroll shadow */
+.navbar.has-scrolled {
+    box-shadow: 0 6px 18px -6px rgba(70, 45, 25, 0.1) !important;
+}
+
+/* Category header section accent */
+.menu-category-section h5 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--color-ink);
+}
+
+.cat-bullet {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    display: inline-block;
+    box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+/* ============================================================
+   OPERATIONAL CONTROLS — daily caps, outlet pause, danger zones.
+
+   These belong to the outlet and admin portals, which share this
+   stylesheet with the student app but deliberately keep the denser,
+   flatter treatment (see the --color-surface note at the top). The
+   student-facing piece here is .stock-note, which is why that one
+   alone is built as a soft pill rather than a table-ish row.
+   ============================================================ */
+
+/* --- Per-item daily cap, on the outlet's own menu screen --- */
+.daily-limit-row {
+    margin-top: 0.75rem;
+}
+
+.daily-limit-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-field);
+    overflow: hidden;
+}
+
+.daily-limit-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--color-primary);
+    transition: width 200ms ease;
+}
+
+.daily-limit-text {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-ink-muted);
+}
+
+.daily-limit-text.is-low { color: var(--color-warning); }
+.daily-limit-text.is-out { color: var(--color-danger); }
+
+/* --- "Taking orders / paused" switch on the queue screen --- */
+.outlet-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1.25rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary-tint);
+    /* Left rule rather than a full border: the state is the point, and a coloured
+       edge reads at a glance from across a kitchen without shouting on the page. */
+    border-left: 4px solid var(--color-primary);
+}
+
+.outlet-switch.is-paused {
+    background: var(--color-warning-tint);
+    border-left-color: var(--color-warning);
+}
+
+.outlet-switch__text strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    color: var(--color-ink);
+}
+
+.outlet-switch__text span {
+    font-size: 0.85rem;
+    color: var(--color-ink-muted);
+}
+
+/* --- Disclosure panels: cancel-with-reason, and outlet deletion --- */
+.cancel-panel,
+.danger-zone {
+    margin-top: 0.5rem;
+}
+
+.cancel-panel > summary,
+.danger-zone > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-danger);
+    color: var(--color-danger);
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: transparent;
+    transition: background-color 150ms ease;
+}
+
+/* Safari still paints its own disclosure triangle without this. */
+.cancel-panel > summary::-webkit-details-marker,
+.danger-zone > summary::-webkit-details-marker { display: none; }
+
+.cancel-panel > summary:hover,
+.danger-zone > summary:hover { background: var(--color-danger-tint); }
+
+.cancel-panel[open] > summary,
+.danger-zone[open] > summary { margin-bottom: 0.6rem; }
+
+.cancel-panel form,
+.danger-zone form {
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-danger-tint);
+}
+
+.danger-zone__warning {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+    margin-bottom: 0.6rem;
+}
+
+/* --- One canteen's row in the admin's tenant screen --- */
+.outlet-admin-card {
+    padding: 0.9rem;
+    margin-bottom: 0.85rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+}
+
+.outlet-admin-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.outlet-admin-card__name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-ink);
+}
+
+/* --- Student-facing stock notes on a menu card --- */
+.stock-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.stock-note.is-low {
+    color: var(--color-warning);
+    background: var(--color-warning-tint);
+}
+
+.stock-note.is-out {
+    color: var(--color-danger);
+    background: var(--color-danger-tint);
+}
+
+/* --- Why an order in the history list was cancelled --- */
+.order-card-reason {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--color-danger);
+}
+
+/* ============================================================================
+   CUSTOMER APP — Stitch "Editorial" screens
+   ============================================================================
+
+   Everything below re-cuts the student and auth surfaces to the app design in
+   Stitch. It sits last on purpose: the outlet and admin portals share this
+   stylesheet and are not part of this redesign, so their rules are left intact
+   above and only the customer-app components are restated here.
+
+   Three things change shape rather than just colour, and they are the reason
+   this is a rewrite and not a re-skin:
+
+     - the food feed goes from horizontal rows to a two-up grid of square crops
+     - the category row goes from illustrated pucks to a plain underlined tab bar
+     - auth inputs lose their boxes and become ruled lines
+
+   The old system's decorative layer — organic blobs, grain texture, the swirl
+   behind the state medallion — has no counterpart in the design and is removed
+   rather than re-tinted. On a near-white canvas it read as smudge.
+   ============================================================================ */
+
+/* ---------- Page headers ---------- */
+
+/* The blob sat behind the greeting on a cream page. Gone: this design carries
+   hierarchy with type size alone. */
+.page-header-decor { display: none; }
+
+.page-header {
+    position: relative;
+    padding: var(--stack-md) 0 var(--stack-sm);
+}
+
+.page-header-title {
+    font-family: var(--font-display);
+    font-size: var(--text-display-lg);
+    line-height: var(--lh-display-lg);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--color-ink);
+}
+
+@media (min-width: 768px) {
+    .page-header-title { font-size: var(--text-display-lg); }
+}
+
+.page-header-sub {
+    margin: var(--stack-xs) 0 0;
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+}
+
+/* Uppercase micro-label above each block — the design's main structural device
+   on the cart and order screens. */
+.section-label {
+    font-family: var(--font-body);
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 var(--stack-sm);
+}
+
+/* ---------- Search ---------- */
+
+.search-bar {
+    position: relative;
+    margin-bottom: var(--stack-md);
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 12px 16px 12px 48px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    background: var(--color-field);
+    font-family: var(--font-body);
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+    color: var(--color-ink);
+    box-shadow: none;
+    transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.search-bar input::placeholder { color: var(--color-ink-muted); }
+
+.search-bar input:focus {
+    outline: none;
+    background: var(--color-surface);
+    border-color: var(--color-field-rule);
+}
+
+.search-bar > .material-symbols-outlined,
+.search-bar > i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-ink-muted);
+    font-size: 22px;
+    pointer-events: none;
+}
+
+/* ---------- "Popular today" rail ---------- */
+
+.featured-scroll {
+    display: flex;
+    gap: var(--gutter-mobile);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: var(--stack-sm);
+    margin: 0 calc(-1 * var(--margin-mobile));
+    padding-left: var(--margin-mobile);
+    padding-right: var(--margin-mobile);
+}
+.featured-scroll::-webkit-scrollbar { display: none; }
+
+/* Not a card in this design — an image with three lines under it, no fill,
+   no border, no shadow. */
+.deal-card {
+    flex: 0 0 232px;
+    width: 232px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    scroll-snap-align: start;
+}
+.deal-card:hover { transform: none; box-shadow: none; }
+
+.deal-card-photo {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    margin-bottom: var(--stack-sm);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--color-surface-deep);
+}
+
+.deal-card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.deal-card:hover .deal-card-photo img { transform: scale(1.05); }
+
+.deal-card-photo.is-illustration {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-food);
+}
+.deal-card-photo.is-illustration img {
+    width: 60%;
+    height: 60%;
+    object-fit: contain;
+}
+
+.deal-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--stack-sm);
+    padding: 0;
+}
+
+.deal-card-name {
+    margin: 0 0 2px;
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--color-ink);
+}
+
+.deal-card-price {
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+/* ---------- Discount + stock flags ---------- */
+
+.discount-tag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    color: #fff;
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.stock-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+.stock-note .material-symbols-outlined { font-size: 16px; }
+.stock-note.is-low { color: var(--color-warning); }
+.stock-note.is-out { color: var(--color-danger); }
+
+/* ---------- Quantity stepper ---------- */
+
+.qty-stepper,
+.cart-control__stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: none;
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+}
+
+.qty-stepper button,
+.cart-control__stepper button {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: background-color 150ms ease, transform 120ms ease;
+}
+.qty-stepper button:hover,
+.cart-control__stepper button:hover { background: var(--color-primary-tint); }
+.qty-stepper button:active,
+.cart-control__stepper button:active { transform: scale(0.9); }
+.qty-stepper button .material-symbols-outlined,
+.cart-control__stepper button .material-symbols-outlined { font-size: 18px; }
+
+.qty-stepper .qty-value,
+.cart-control__stepper .cart-qty-value {
+    min-width: 20px;
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+/* ---------- State medallion ---------- */
+
+/* The swirl behind the disc belonged to the warm palette. Here it is just the
+   icon on a tonal disc. */
+.state-medallion::before { display: none; }
+
+.state-medallion {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto var(--stack-md);
+}
+
+.state-medallion__disc {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-lg);
+    background: var(--color-field);
+    display: grid;
+    place-items: center;
+    box-shadow: none;
+    border: none;
+}
+
+.state-medallion__disc .material-symbols-outlined { font-size: 34px; }
+
+.state-medallion--neutral .state-medallion__disc { background: var(--color-primary-tint); }
+.state-medallion--neutral .state-medallion__disc .material-symbols-outlined { color: var(--color-primary); }
+.state-medallion--good    .state-medallion__disc { background: var(--color-accent-tint); }
+.state-medallion--good    .state-medallion__disc .material-symbols-outlined { color: var(--color-accent); }
+.state-medallion--bad     .state-medallion__disc { background: var(--color-danger-tint); }
+.state-medallion--bad     .state-medallion__disc .material-symbols-outlined { color: var(--color-danger); }
+
+.state-panel {
+    padding: var(--stack-lg) var(--stack-md);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    text-align: center;
+}
+
+/* ---------- Bottom navigation ---------- */
+
+.bottom-nav {
+    background: var(--color-surface);
+    border-top: none;
+    box-shadow: var(--shadow-sticky);
+    height: var(--bottom-nav-height);
+    padding: 8px 16px calc(8px + var(--safe-area-bottom));
+}
+
+.bottom-nav-item {
+    gap: 2px;
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    color: var(--color-ink-muted);
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: color 150ms ease, background-color 150ms ease, transform 120ms ease;
+}
+.bottom-nav-item .material-symbols-outlined { font-size: 24px; }
+.bottom-nav-item:active { transform: scale(0.9); }
+.bottom-nav-item.active {
+    color: var(--color-primary);
+    background: transparent;
+}
+.bottom-nav-item.active .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
+
+.bottom-nav-badge {
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    border: 2px solid var(--color-surface);
+}
+
+/* ---------- Sticky cart bar ---------- */
+
+.sticky-cart-bar {
+    bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
+}
+
+.sticky-cart-inner {
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: var(--shadow-lg);
+    padding: 14px 18px;
+}
+.sticky-cart-inner:hover { background: var(--color-primary-dark); color: #fff; }
+
+.sticky-cart-info,
+.sticky-cart-action {
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+/* ---------- Order cards ---------- */
+
+.order-card {
+    display: block;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: var(--stack-sm) var(--stack-md);
+    color: inherit;
+    transition: box-shadow 200ms ease;
+}
+.order-card:hover { box-shadow: var(--shadow-md); color: inherit; }
+
+.order-card-token {
+    font-family: var(--font-body);
+    font-size: var(--text-headline-md);
+    line-height: var(--lh-headline-md);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+}
+
+.order-card-total {
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.order-card-date {
+    font-size: var(--text-label-sm);
+    color: var(--color-ink-muted);
+}
+
+.order-card-reason {
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    color: var(--color-danger);
+}
+.order-card-reason .material-symbols-outlined { font-size: 16px; }
+
+/* ---------- Cart rows ---------- */
+
+/* Rows on a rule, not floating cards — the design lists items as a ledger. */
+.cart-item-card {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 16px 0;
+    gap: 16px;
+}
+
+.cart-item-photo {
+    width: 64px;
+    height: 64px;
+    flex: none;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-deep);
+    overflow: hidden;
+}
+.cart-item-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cart-item-photo.is-illustration { display: grid; place-items: center; background: var(--color-surface-food); }
+.cart-item-photo.is-illustration img { width: 62%; height: 62%; object-fit: contain; }
+
+.cart-item-name {
+    font-size: var(--text-body-lg);
+    line-height: 1.25;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin: 0;
+}
+
+.cart-item-price {
+    font-size: var(--text-body-md);
+    color: var(--color-ink-muted);
+    margin-top: 2px;
+}
+
+.cart-item-subtotal {
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+.pickup-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    gap: 12px;
+}
+.pickup-card__icon {
+    width: auto;
+    height: auto;
+    background: none;
+    color: var(--color-accent);
+}
+.pickup-card__icon .material-symbols-outlined { font-size: 20px; }
+.pickup-card__name { font-size: var(--text-body-lg); font-weight: 600; margin: 0; color: var(--color-ink); }
+.pickup-card__meta { font-size: var(--text-body-md); color: var(--color-ink-muted); margin: 0; }
+
+.cart-summary {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--stack-sm);
+}
+.cart-summary__row dt { font-size: var(--text-body-md); color: var(--color-ink-muted); font-weight: 500; }
+.cart-summary__row dd { font-size: var(--text-headline-md); font-weight: 700; color: var(--color-ink); }
+
+/* ---------- Dish detail ---------- */
+
+.detail-hero {
+    border-radius: var(--radius-md);
+    background: var(--color-surface-deep);
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: var(--stack-md);
+}
+.detail-hero img { width: 100%; height: 100%; object-fit: cover; }
+.detail-hero.is-illustration { display: grid; place-items: center; background: var(--color-surface-food); }
+.detail-hero.is-illustration img { width: 58%; height: 58%; object-fit: contain; }
+
+.detail-eyebrow {
+    font-size: var(--text-label-sm);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--color-ink-muted);
+    margin: 0 0 var(--stack-xs);
+}
+
+.detail-name {
+    font-family: var(--font-display);
+    font-size: var(--text-display-lg);
+    line-height: var(--lh-display-lg);
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    margin: 0 0 var(--stack-sm);
+    color: var(--color-ink);
+}
+
+.detail-price {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: var(--text-headline-lg);
+    line-height: var(--lh-headline-lg);
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: var(--stack-sm);
+}
+
+.detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-body-md);
+    color: var(--color-ink-muted);
+}
+.detail-meta .material-symbols-outlined { font-size: 20px; color: var(--color-accent); }
+
+.detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: var(--stack-md);
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    color: var(--color-ink-muted);
+}
+.detail-back:hover { color: var(--color-primary); }
+
+.detail-unavailable {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    background: var(--color-field);
+    border: 1px solid var(--color-border);
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-md);
+    margin-bottom: var(--stack-sm);
+}
+
+.price-strike {
+    text-decoration: line-through;
+    color: var(--color-ink-muted);
+    font-weight: 500;
+}
+
+/* ---------- Token badge ---------- */
+
+.token-badge {
+    font-family: var(--font-body);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    background: none;
+    padding: 0;
+}
+
+/* ---------- Auth ---------- */
+
+/* The design puts sign-in on plain white rather than the app canvas, opens with
+   the wordmark set large in primary, and rules its fields with a single line
+   instead of boxing them. */
+
+.auth-shell,
+.auth-main { background: var(--color-surface); }
+
+.auth-card {
+    background: var(--color-surface);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: var(--stack-lg) var(--margin-mobile);
+}
+
+/* The lockup becomes the design's oversized wordmark. The mark itself is dropped
+   on mobile — at this size the word is the logo. */
+.auth-lockup {
+    display: block;
+    margin-bottom: var(--stack-md);
+}
+.auth-lockup img { display: none; }
+.auth-lockup span {
+    font-family: var(--font-display);
+    font-size: var(--text-display-lg);
+    line-height: var(--lh-display-lg);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--color-primary);
+}
+
+.auth-head { margin-bottom: var(--stack-lg); }
+
+.auth-head__title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    margin: 0 0 var(--stack-xs);
+}
+
+.auth-head__sub {
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+    color: var(--color-ink-muted);
+    margin: 0;
+}
+
+.field { margin-bottom: var(--stack-md); }
+
+.field__label {
+    display: block;
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--color-ink-muted);
+    margin-bottom: var(--stack-xs);
+}
+
+/* Ruled, not boxed. The rule uses --color-field-rule rather than the design's
+   own #E5E5E5 hairline: at 1.2:1 on this canvas that hairline is invisible as a
+   control boundary, which WCAG 1.4.11 asks to clear 3:1. This tone is the same
+   line, dark enough to actually be one. */
+.field__input {
+    width: 100%;
+    padding: 8px 0;
+    border: none;
+    border-bottom: 1px solid var(--color-field-rule);
+    border-radius: 0;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: var(--text-body-lg);
+    line-height: var(--lh-body-lg);
+    color: var(--color-ink);
+    box-shadow: none;
+    transition: border-color 150ms ease;
+}
+
+.field__input::placeholder { color: var(--color-ink-muted); }
+
+.field__input:focus {
+    outline: none;
+    border-bottom-color: var(--color-primary);
+    border-bottom-width: 2px;
+    padding-bottom: 7px;   /* keeps the baseline still as the rule thickens */
+    box-shadow: none;
+    background: transparent;
+}
+
+.field__wrap { position: relative; }
+
+.field__toggle {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    color: var(--color-ink-muted);
+    padding: 8px;
+    cursor: pointer;
+}
+.field__toggle .material-symbols-outlined { font-size: 20px; }
+
+.btn-auth {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin-top: var(--stack-sm);
+    transition: background-color 150ms ease, transform 120ms ease;
+}
+.btn-auth:hover  { background: var(--color-primary-dark); color: #fff; }
+.btn-auth:active { transform: scale(0.98); }
+
+.auth-foot {
+    margin-top: var(--stack-md);
+    font-size: var(--text-body-md);
+    color: var(--color-ink-muted);
+    text-align: center;
+}
+.auth-foot a { color: var(--color-primary); font-weight: 600; }
+
+/* Desktop keeps the brand panel — the design has a desktop sign-in too — but it
+   re-tones to the new palette rather than the old peach. */
+@media (min-width: 992px) {
+    .auth-card { padding: var(--stack-lg); }
+    .auth-lockup img { display: inline-block; }
+}
+
+.auth-brand {
+    background: var(--color-primary);
+    color: #fff;
+}
+.auth-brand__headline,
+.auth-brand__lockup span { color: #fff; }
+.auth-brand__sub { color: rgba(255, 255, 255, 0.82); }
+.auth-brand__dish {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-md);
+}
+
+/* ---------- Buttons, app-wide within the customer surfaces ---------- */
+
+.btn-primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+}
+
+.btn-lg { padding: 14px 20px; font-size: var(--text-label-lg); }

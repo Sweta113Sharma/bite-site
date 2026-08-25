@@ -10,10 +10,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     initBottomNav();
     initSearchFilter();
+    initCategoryChips();
     initQuantitySteppers();
     initBodyClass();
     initAddToCartForms();
+    initCartControls();
     initNavbarToggle();
+    initNavbarScroll();
     registerServiceWorker();
     initPushToggle();
 });
@@ -198,16 +201,19 @@ function initBodyClass() {
 function initSearchFilter() {
     const searchInput = document.getElementById('menu-search');
     if (!searchInput) return;
+    const noResults = document.getElementById('menu-no-results');
 
     searchInput.addEventListener('input', () => {
         const query = searchInput.value.toLowerCase().trim();
         const cards = document.querySelectorAll('.menu-card');
         const categories = document.querySelectorAll('.menu-category-section');
+        let visibleCount = 0;
 
         cards.forEach(card => {
             const name = card.dataset.name || card.querySelector('.menu-card-name')?.textContent || '';
             const match = !query || name.toLowerCase().includes(query);
             card.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
         });
 
         // Hide empty category headers
@@ -215,6 +221,10 @@ function initSearchFilter() {
             const visibleCards = section.querySelectorAll('.menu-card:not([style*="display: none"])');
             section.style.display = visibleCards.length > 0 ? '' : 'none';
         });
+
+        if (noResults) {
+            noResults.style.display = query && visibleCount === 0 ? 'block' : 'none';
+        }
     });
 }
 
@@ -224,6 +234,10 @@ function initSearchFilter() {
 
 function initQuantitySteppers() {
     document.querySelectorAll('.qty-stepper').forEach(stepper => {
+        // Menu-card steppers are cart-backed and handled by initCartControls();
+        // binding this local-only handler to them as well would move the number
+        // without ever telling the server.
+        if (stepper.closest('.cart-control')) return;
         const input = stepper.querySelector('input[type="hidden"], input[name="quantity"]');
         const display = stepper.querySelector('.qty-value');
         const minusBtn = stepper.querySelector('.qty-minus');
@@ -277,6 +291,20 @@ function initAddToCartForms() {
                 })
                 .then(data => {
                     updateCartCount(data.count);
+                    // The server refuses adds the page can't always know about yet — an
+                    // item that just sold out for the day, one staff switched off, a
+                    // canteen that paused mid-browse. The stepper is deliberately left
+                    // alone in that case: showing "1" for something that is not in the
+                    // cart is worse feedback than none.
+                    if (data.blocked) {
+                        showToast(data.message || 'That item can\'t be added right now.',
+                            'ph-fill ph-warning-circle');
+                        return;
+                    }
+                    const control = form.closest('.cart-control');
+                    if (control) {
+                        setControlQuantity(control, 1);
+                    }
                     showToast('Added to cart');
                 })
                 .catch(() => {
@@ -285,6 +313,75 @@ function initAddToCartForms() {
                     form.submit();
                 });
         });
+    });
+}
+
+/* ============================================================
+   CART CONTROLS — the Add / stepper swap on menu cards.
+
+   A card shows Add until its item is in the cart, then a stepper bound to
+   the real cart quantity. Dropping to zero swaps back to Add. Every change
+   is posted to /student/cart/update; the number on screen is only moved
+   once the server has confirmed, so a failed request leaves the display
+   telling the truth rather than drifting out of sync with the cart.
+   ============================================================ */
+
+function setControlQuantity(control, qty) {
+    const value = control.querySelector('.cart-qty-value');
+    if (value) {
+        value.textContent = qty;
+        value.classList.remove('is-bumped');
+        // Reading offsetWidth forces reflow so the animation restarts on
+        // repeated taps instead of only firing the first time.
+        void value.offsetWidth;
+        value.classList.add('is-bumped');
+    }
+    control.classList.toggle('is-active', qty > 0);
+}
+
+function initCartControls() {
+    const updateUrl = document.body.dataset.cartUpdateUrl || '/student/cart/update';
+
+    document.querySelectorAll('.cart-control').forEach(control => {
+        const stepper = control.querySelector('.cart-control__stepper');
+        const value = control.querySelector('.cart-qty-value');
+        if (!stepper || !value) return;
+
+        // The add form already carries a CSRF token; reuse it rather than
+        // hunting for a meta tag that may not be there.
+        const tokenInput = control.querySelector('input[name="_csrf"]');
+        const itemId = control.dataset.itemId;
+
+        const change = (delta) => {
+            const current = parseInt(value.textContent, 10) || 0;
+            const next = Math.max(0, Math.min(20, current + delta));
+            if (next === current) return;
+
+            const body = new URLSearchParams();
+            body.set('menuItemId', itemId);
+            body.set('quantity', next);
+            if (tokenInput) body.set('_csrf', tokenInput.value);
+
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: { Accept: 'application/json' },
+                body
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('cart update failed');
+                    return response.json();
+                })
+                .then(data => {
+                    setControlQuantity(control, data.quantity);
+                    updateCartCount(data.count);
+                })
+                .catch(() => showToast("Couldn't update your cart"));
+        };
+
+        stepper.querySelector('.cart-qty-minus')
+            ?.addEventListener('click', (e) => { e.preventDefault(); change(-1); });
+        stepper.querySelector('.cart-qty-plus')
+            ?.addEventListener('click', (e) => { e.preventDefault(); change(1); });
     });
 }
 
@@ -309,10 +406,30 @@ function updateCartCount(count) {
 }
 
 /* ============================================================
-   TOAST — show a brief message at the bottom
+   NAVBAR SCROLL SHADOW — adds subtle elevation on scroll
    ============================================================ */
 
-function showToast(message) {
+function initNavbarScroll() {
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+
+    const onScroll = () => {
+        if (window.scrollY > 12) {
+            navbar.classList.add('has-scrolled');
+        } else {
+            navbar.classList.remove('has-scrolled');
+        }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+}
+
+/* ============================================================
+   TOAST — show a brief message at the bottom with icon
+   ============================================================ */
+
+function showToast(message, iconClass = 'ph-fill ph-check-circle') {
     let container = document.querySelector('.toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -322,24 +439,35 @@ function showToast(message) {
 
     const toast = document.createElement('div');
     toast.className = 'toast-msg';
-    toast.textContent = message;
+    toast.innerHTML = `<i class="${iconClass}" style="color:var(--color-primary-soft); font-size:1.15rem;"></i> <span>${message}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => toast.remove(), 2600);
 }
 
 /* ============================================================
-   CATEGORY CHIP SCROLL — smooth scroll to category section
+   CATEGORY CHIPS — smooth scroll to the matching category section.
+   Chips are generated server-side from each outlet's real category
+   names (see student/menu.html), so this reads data-category rather
+   than assuming a fixed set like "meals"/"snacks".
    ============================================================ */
 
-function scrollToCategory(categoryId) {
-    const section = document.getElementById(categoryId);
-    if (section) {
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+function initCategoryChips() {
+    const container = document.getElementById('category-chips');
+    if (!container) return;
 
-    // Update active chip
-    document.querySelectorAll('.category-chip').forEach(chip => {
-        chip.classList.toggle('active', chip.dataset.category === categoryId);
+    container.addEventListener('click', (e) => {
+        const chip = e.target.closest('.category-chip');
+        if (!chip) return;
+        const categoryId = chip.dataset.category;
+
+        const target = categoryId === 'all' ? container : document.getElementById(categoryId);
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        container.querySelectorAll('.category-chip').forEach(c => {
+            c.classList.toggle('active', c === chip);
+        });
     });
 }

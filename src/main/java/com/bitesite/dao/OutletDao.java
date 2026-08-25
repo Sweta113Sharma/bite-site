@@ -15,4 +15,17 @@ public interface OutletDao {
     List<Outlet> findActiveByTenantId(Long tenantId);
 
     Outlet save(Outlet outlet);
+
+    void updateAcceptingOrders(Long id, Long tenantId, boolean acceptingOrders);
+
+    /** Orders ever placed at this outlet. Deleting one with history would orphan financial
+     * records, so callers check this first and offer deactivation instead. */
+    int countOrders(Long id);
+
+    /** Staff accounts still pointing at this outlet. */
+    List<Long> findStaffUserIds(Long id);
+
+    /** Removes the outlet and its menu. Callers must have cleared the two things that
+     * reference it — orders (refused) and staff accounts (detached) — first. */
+    void delete(Long id, Long tenantId);
 }

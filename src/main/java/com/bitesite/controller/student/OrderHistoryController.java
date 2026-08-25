@@ -32,6 +32,10 @@ public class OrderHistoryController {
         User user = principal.getUser();
         Order order = orderService.getForUser(orderId, user.getId(), user.getTenantId());
         model.addAttribute("order", order);
+        // Whether the money came back is the first thing a student wants to know about a
+        // cancelled order, and it lives on the payment, not the order. Absent for an order
+        // that never reached the gateway, so the page has to cope with null either way.
+        model.addAttribute("payment", orderService.findPaymentForOrder(orderId, user.getTenantId()).orElse(null));
         model.addAttribute("pageTitle", "Order " + order.getTokenNo());
         return "student/order-detail";
     }

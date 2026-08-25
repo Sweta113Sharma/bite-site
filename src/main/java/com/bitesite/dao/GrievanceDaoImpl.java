@@ -10,6 +10,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
@@ -25,12 +26,15 @@ public class GrievanceDaoImpl implements GrievanceDao {
             .id(rs.getLong("id"))
             .tenantId(rs.getLong("tenant_id"))
             .raisedByUserId(rs.getLong("raised_by_user_id"))
+            // getLong yields 0 for SQL NULL, which would read as "order 0"; getObject
+            // keeps a ticket with no order genuinely null.
+            .orderId(rs.getObject("order_id", Long.class))
             .subject(rs.getString("subject"))
             .message(rs.getString("message"))
             .status(GrievanceStatus.valueOf(rs.getString("status")))
             .adminResponse(rs.getString("admin_response"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
-            .resolvedAt(rs.getTimestamp("resolved_at") == null ? null : rs.getTimestamp("resolved_at").toLocalDateTime())
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
+            .resolvedAt(rs.getObject("resolved_at", LocalDateTime.class))
             .build();
 
     @Override
@@ -38,14 +42,19 @@ public class GrievanceDaoImpl implements GrievanceDao {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO grievances (tenant_id, raised_by_user_id, subject, message, status) "
-                            + "VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO grievances (tenant_id, raised_by_user_id, order_id, subject, message, status) "
+                            + "VALUES (?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, grievance.getTenantId());
             ps.setLong(2, grievance.getRaisedByUserId());
-            ps.setString(3, grievance.getSubject());
-            ps.setString(4, grievance.getMessage());
-            ps.setString(5, grievance.getStatus().name());
+            if (grievance.getOrderId() == null) {
+                ps.setNull(3, java.sql.Types.BIGINT);
+            } else {
+                ps.setLong(3, grievance.getOrderId());
+            }
+            ps.setString(4, grievance.getSubject());
+            ps.setString(5, grievance.getMessage());
+            ps.setString(6, grievance.getStatus().name());
             return ps;
         }, keyHolder);
         grievance.setId(keyHolder.getKey().longValue());
@@ -68,16 +77,19 @@ public class GrievanceDaoImpl implements GrievanceDao {
     @Override
     public List<GrievanceAdminView> findAllWithDetails() {
         return jdbcTemplate.query(
-                "SELECT g.*, t.name AS college_name, u.name AS raised_by_name, u.email AS raised_by_email "
+                "SELECT g.*, t.name AS college_name, u.name AS raised_by_name, u.email AS raised_by_email, "
+                        + "o.token_no AS order_token "
                         + "FROM grievances g "
                         + "JOIN tenants t ON t.id = g.tenant_id "
                         + "JOIN users u ON u.id = g.raised_by_user_id "
+                        + "LEFT JOIN orders o ON o.id = g.order_id "
                         + "ORDER BY g.created_at DESC",
                 (rs, rowNum) -> new GrievanceAdminView(
                         ROW_MAPPER.mapRow(rs, rowNum),
                         rs.getString("college_name"),
                         rs.getString("raised_by_name"),
-                        rs.getString("raised_by_email")));
+                        rs.getString("raised_by_email"),
+                        rs.getString("order_token")));
     }
 
     @Override

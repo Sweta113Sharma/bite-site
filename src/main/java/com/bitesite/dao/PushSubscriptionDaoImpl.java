@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -20,7 +21,7 @@ public class PushSubscriptionDaoImpl implements PushSubscriptionDao {
             .endpoint(rs.getString("endpoint"))
             .p256dhKey(rs.getString("p256dh_key"))
             .authKey(rs.getString("auth_key"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
 
     @Override

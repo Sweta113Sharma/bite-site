@@ -7,7 +7,9 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
@@ -24,7 +26,8 @@ public class OutletDaoImpl implements OutletDao {
             .tenantId(rs.getLong("tenant_id"))
             .name(rs.getString("name"))
             .active(rs.getBoolean("is_active"))
-            .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+            .acceptingOrders(rs.getBoolean("accepting_orders"))
+            .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
 
     @Override
@@ -58,19 +61,51 @@ public class OutletDaoImpl implements OutletDao {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(
-                        "INSERT INTO outlets (tenant_id, name, is_active) VALUES (?, ?, ?)",
+                        "INSERT INTO outlets (tenant_id, name, is_active, accepting_orders) VALUES (?, ?, ?, ?)",
                         Statement.RETURN_GENERATED_KEYS);
                 ps.setLong(1, outlet.getTenantId());
                 ps.setString(2, outlet.getName());
                 ps.setBoolean(3, outlet.isActive());
+                ps.setBoolean(4, outlet.isAcceptingOrders());
                 return ps;
             }, keyHolder);
             outlet.setId(keyHolder.getKey().longValue());
         } else {
             jdbcTemplate.update(
-                    "UPDATE outlets SET name = ?, is_active = ? WHERE id = ? AND tenant_id = ?",
-                    outlet.getName(), outlet.isActive(), outlet.getId(), outlet.getTenantId());
+                    "UPDATE outlets SET name = ?, is_active = ?, accepting_orders = ? "
+                            + "WHERE id = ? AND tenant_id = ?",
+                    outlet.getName(), outlet.isActive(), outlet.isAcceptingOrders(), outlet.getId(),
+                    outlet.getTenantId());
         }
         return findById(outlet.getId()).orElseThrow();
+    }
+
+    @Override
+    public void updateAcceptingOrders(Long id, Long tenantId, boolean acceptingOrders) {
+        jdbcTemplate.update(
+                "UPDATE outlets SET accepting_orders = ? WHERE id = ? AND tenant_id = ?",
+                acceptingOrders, id, tenantId);
+    }
+
+    @Override
+    public int countOrders(Long id) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM orders WHERE outlet_id = ?", Integer.class, id);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public List<Long> findStaffUserIds(Long id) {
+        return jdbcTemplate.queryForList("SELECT id FROM users WHERE outlet_id = ?", Long.class, id);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id, Long tenantId) {
+        // Menu items go with the outlet: they are its own catalog and mean nothing without
+        // it. Safe to hard-delete only because callers refuse the whole operation when any
+        // order exists, and an order_items row can only point at a menu item through one.
+        jdbcTemplate.update("DELETE FROM menu_items WHERE outlet_id = ? AND tenant_id = ?", id, tenantId);
+        jdbcTemplate.update("DELETE FROM outlets WHERE id = ? AND tenant_id = ?", id, tenantId);
     }
 }

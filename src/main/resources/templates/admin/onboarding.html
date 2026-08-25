@@ -10,8 +10,7 @@
     </div>
 
     <div th:if="${#lists.isEmpty(leads)}" class="state-panel">
-        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-sm"
-             onerror="this.style.display='none'"/>
+        <div th:replace="~{fragments/state :: medallion('filter_alt','neutral')}"></div>
         <h4>No leads yet</h4>
         <p>Add a college you're talking to and track it through the pipeline.</p>
     </div>

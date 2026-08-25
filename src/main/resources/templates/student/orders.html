@@ -9,14 +9,15 @@
 
 <div class="container">
     <div class="page-header">
-        <h3 class="page-header-title">My orders</h3>
+        <h3 class="page-header-title">Order history</h3>
+        <p class="page-header-sub">Review your past orders and track anything still on the way.</p>
     </div>
 
     <div th:if="${#lists.isEmpty(orders)}" class="state-panel">
-        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-md"/>
+        <div th:replace="~{fragments/state :: medallion('receipt_long','neutral')}"></div>
         <h4>No orders yet</h4>
         <p>Once you place an order, you'll be able to track it here.</p>
-        <a class="btn btn-primary" th:href="@{/student/menu}"><i class="ph ph-fork-knife"></i>Browse the menu</a>
+        <a class="btn btn-primary" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Browse the menu</a>
     </div>
 
     <div class="row row-cols-1 row-cols-md-2 g-3" th:if="${!#lists.isEmpty(orders)}">
@@ -30,19 +31,35 @@
                     <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
                 </div>
                 
-                <div class="order-card-items text-truncate">
-                    <!-- Display first few items -->
-                    <span th:each="item, iter : ${order.items}">
-                        <span th:text="${item.quantity + ' x ' + item.itemNameSnapshot}"></span><span th:if="${!iter.last}">, </span>
-                    </span>
-                    <span th:if="${#lists.isEmpty(order.items)}">No items</span>
-                </div>
+                <ul class="order-card-lines">
+                    <!-- Capped at four so a large order can't run the card down the
+                         page; the count below picks up whatever is left. -->
+                    <li th:each="item, iter : ${order.items}" th:if="${iter.index < 4}">
+                        <span class="qty" th:text="${item.quantity} + '×'">1x</span><span th:text="${item.itemNameSnapshot}">Item</span>
+                    </li>
+                    <li class="more" th:if="${#lists.size(order.items) > 4}"
+                        th:text="'+ ' + (${#lists.size(order.items)} - 4) + ' more'">+ 1 more</li>
+                    <li class="more" th:if="${#lists.isEmpty(order.items)}">No items</li>
+                </ul>
                 
+                <div class="order-card-reason" th:if="${order.status.name() == 'CANCELLED' and order.cancellationReason != null}">
+                    <span class="material-symbols-outlined">info</span><span th:text="${order.cancellationReason}">Reason</span>
+                </div>
+
                 <hr style="border-color: var(--color-border); margin: 12px 0;"/>
                 
                 <div class="order-card-footer">
                     <div class="order-card-date" th:text="${#temporals.format(order.createdAt, 'dd MMM yyyy, hh:mm a')}">Date</div>
                     <div class="order-card-total" th:text="'₹' + ${order.totalAmount}">₹0</div>
+                </div>
+
+                <!-- Inlined rather than hoisted into th:with: th:if has precedence 300
+                     and th:with 600, so a variable declared here would not exist yet
+                     when the condition is evaluated. -->
+                <div class="order-card-track"
+                     th:if="${order.status.name() == 'AWAITING_PAYMENT' or order.status.name() == 'PAID'
+                             or order.status.name() == 'PREPARING' or order.status.name() == 'READY_FOR_PICKUP'}">
+                    <span>Track order</span><span class="material-symbols-outlined">arrow_forward</span>
                 </div>
             </a>
         </div>

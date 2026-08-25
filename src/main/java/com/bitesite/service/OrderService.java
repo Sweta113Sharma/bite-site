@@ -10,29 +10,35 @@ import com.bitesite.model.MenuItem;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderItem;
 import com.bitesite.model.OrderStatus;
+import com.bitesite.model.Outlet;
 import com.bitesite.model.Payment;
 import com.bitesite.model.PaymentStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class OrderService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final int TOKEN_GENERATION_ATTEMPTS = 10;
+    /** Matches the orders.cancellation_reason column width. */
+    private static final int MAX_REASON_LENGTH = 200;
 
     private final OrderDao orderDao;
     private final PaymentDao paymentDao;
     private final MenuService menuService;
+    private final OutletService outletService;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
     private final PushNotificationService pushNotificationService;
@@ -49,6 +55,25 @@ public class OrderService {
             throw new InvalidOrderStateException("Your cart is empty.");
         }
 
+        requireOutletOpen(tenantId, outletId);
+
+        // One roll-up for the whole cart rather than a query per line.
+        //
+        // Best-effort under concurrency: this count is read here and acted on at
+        // createOrder() below, with no lock in between, so two students checking out the
+        // last dosa in the same instant can both pass. A cap can therefore be overshot by
+        // at most the quantities of the checkouts in flight at that moment.
+        //
+        // Making it strict is possible and would not span the gateway call — that happens
+        // after the order row is written. It needs the read and the insert inside one
+        // transaction with a locking read (SELECT ... FOR UPDATE) on the capped items,
+        // extracted so the transaction still closes before paymentGateway.createOrder().
+        // The cost is serialising concurrent checkouts of the same item for the duration of
+        // two local queries. Left best-effort deliberately: at canteen volumes the overshoot
+        // is a dosa or two on a busy item, and a canteen can hand that back far more easily
+        // than it can absorb a lock-contention bug in the payment path.
+        Map<Long, Integer> soldToday = menuService.soldToday(tenantId, outletId);
+
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
         for (Map.Entry<Long, Integer> entry : cartQuantities.entrySet()) {
@@ -56,6 +81,8 @@ public class OrderService {
             if (!item.isAvailable() || !item.getOutletId().equals(outletId)) {
                 throw new InvalidOrderStateException(item.getName() + " is no longer available.");
             }
+            item.setSoldToday(soldToday.getOrDefault(item.getId(), 0));
+            requireDailyCapacity(item, entry.getValue());
             BigDecimal unitPrice = item.effectivePrice();
             BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(entry.getValue()));
             total = total.add(subtotal);
@@ -99,13 +126,42 @@ public class OrderService {
         return new CheckoutResult(saved, gatewayOrder);
     }
 
+    /**
+     * Both of the outlet's own "closed" states, checked at the one point that matters. The
+     * student UI hides the Add button for either, but the cart survives in the session
+     * across the moment staff flip the switch, so the guard has to live here too.
+     */
+    private void requireOutletOpen(Long tenantId, Long outletId) {
+        Outlet outlet = outletService.get(outletId, tenantId);
+        if (!outlet.isActive()) {
+            throw new InvalidOrderStateException(outlet.getName() + " is no longer taking orders.");
+        }
+        if (!outlet.isAcceptingOrders()) {
+            throw new InvalidOrderStateException(
+                    outlet.getName() + " has paused new orders for now. Please try again shortly.");
+        }
+    }
+
+    private void requireDailyCapacity(MenuItem item, int wanted) {
+        Integer remaining = item.remainingToday();
+        if (remaining == null || wanted <= remaining) {
+            return;
+        }
+        throw new InvalidOrderStateException(remaining == 0
+                ? item.getName() + " is sold out for today."
+                : "Only " + remaining + " left of " + item.getName() + " today.");
+    }
+
     private String generateUniqueToken(Long tenantId) {
         for (int attempt = 0; attempt < TOKEN_GENERATION_ATTEMPTS; attempt++) {
             String candidate = "BITE-" + (1000 + RANDOM.nextInt(9000));
-            if (!orderDao.existsTokenForTenant(tenantId, candidate)) {
+            if (!orderDao.existsTokenForTenantToday(tenantId, candidate)) {
                 return candidate;
             }
         }
+        // Only reachable if one tenant issues thousands of tokens in a single day: ten
+        // misses against a same-day pool of 9,000 is (N/9000)^10, which is about one in
+        // 4x10^12 at 500 orders a day.
         throw new IllegalStateException("Could not generate a unique order token");
     }
 
@@ -131,8 +187,14 @@ public class OrderService {
     }
 
     public Payment getPaymentForOrder(Long orderId, Long tenantId) {
-        return paymentDao.findByOrderId(orderId, tenantId)
+        return findPaymentForOrder(orderId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+    }
+
+    /** Same lookup for callers that treat "no payment" as a normal state rather than an
+     * error — an order can be cancelled before one was ever created. */
+    public Optional<Payment> findPaymentForOrder(Long orderId, Long tenantId) {
+        return paymentDao.findByOrderId(orderId, tenantId);
     }
 
     /**
@@ -190,7 +252,7 @@ public class OrderService {
      * captured, so those are cancelled directly with no refund call.
      */
     @Transactional
-    public void cancelOrder(Long orderId, Long tenantId, Long actorUserId) {
+    public void cancelOrder(Long orderId, Long tenantId, Long actorUserId, String reason) {
         Order order = getForTenant(orderId, tenantId);
         if (!order.getStatus().canTransitionTo(OrderStatus.CANCELLED)) {
             throw new InvalidOrderStateException(
@@ -206,17 +268,80 @@ public class OrderService {
         }
 
         OrderStatus previous = order.getStatus();
-        orderDao.updateStatus(orderId, tenantId, OrderStatus.CANCELLED);
+        String explanation = normalizeReason(reason);
+        orderDao.cancel(orderId, tenantId, explanation);
         auditService.record(actorUserId, tenantId, "Order", orderId, "STATUS_CANCELLED", previous, OrderStatus.CANCELLED);
         pushNotificationService.notifyUser(order.getUserId(), "Order cancelled",
-                "Your order " + order.getTokenNo() + " was cancelled" + (previous == OrderStatus.PAID ? " and refunded." : "."));
+                "Your order " + order.getTokenNo() + " was cancelled" + (previous == OrderStatus.PAID ? " and refunded" : "")
+                        + ": " + explanation);
+    }
+
+    /**
+     * Staff can skip the reason box; the student still gets a sentence rather than a blank.
+     * Clamped to the width of orders.cancellation_reason here rather than at each caller,
+     * so no entry point can hand the database a string it will refuse.
+     */
+    private String normalizeReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            return "Cancelled by the canteen";
+        }
+        String trimmed = reason.trim();
+        return trimmed.length() <= MAX_REASON_LENGTH ? trimmed : trimmed.substring(0, MAX_REASON_LENGTH);
+    }
+
+    /**
+     * Platform-side manual refund, for the case the refund policy describes: an order
+     * that is already past PREPARING, where the student "raises it through Support so
+     * canteen/admin staff can review and refund it manually if appropriate".
+     *
+     * <p>{@link #cancelOrder} cannot serve this. The state machine deliberately forbids
+     * PREPARING and READY_FOR_PICKUP from reaching CANCELLED, so an order that the
+     * kitchen has started is unrefundable through the normal path — which is exactly
+     * the situation support is called about.
+     *
+     * <p>Refunding and cancelling are separated here because they are different facts.
+     * The refund is about money and always happens; the cancellation is about
+     * fulfilment and only happens if the food was never handed over. A COMPLETED order
+     * that gets refunded stays COMPLETED, because it was in fact completed.
+     *
+     * <p>Gateway first, as in {@link #cancelOrder}: nothing in our database moves until
+     * the money is actually on its way back.
+     */
+    @Transactional
+    public void refundOrder(Long orderId, Long tenantId, Long actorUserId, String reason) {
+        Order order = getForTenant(orderId, tenantId);
+        Payment payment = getPaymentForOrder(orderId, tenantId);
+
+        if (payment.getStatus() == PaymentStatus.REFUNDED) {
+            throw new InvalidOrderStateException("This order has already been refunded.");
+        }
+        if (payment.getStatus() != PaymentStatus.CAPTURED) {
+            throw new InvalidOrderStateException(
+                    "Only a captured payment can be refunded; this one is " + payment.getStatus() + ".");
+        }
+
+        paymentGateway.refund(payment.getRazorpayPaymentId(), payment.getAmount());
+        paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
+        auditService.record(actorUserId, tenantId, "Payment", payment.getId(), "REFUND_MANUAL",
+                PaymentStatus.CAPTURED, PaymentStatus.REFUNDED);
+
+        // Only orders that were never handed over stop being live. COMPLETED stays put.
+        OrderStatus previous = order.getStatus();
+        if (previous != OrderStatus.COMPLETED) {
+            orderDao.cancel(orderId, tenantId, normalizeReason(reason));
+            auditService.record(actorUserId, tenantId, "Order", orderId, "CANCELLED_BY_REFUND",
+                    previous, OrderStatus.CANCELLED);
+        }
+
+        pushNotificationService.notifyUser(order.getUserId(), "Refund issued",
+                "Your order " + order.getTokenNo() + " has been refunded. It should reach your account in 5-7 days.");
+        log.info("Manual refund on order {} (tenant {}) by user {}: {}", orderId, tenantId, actorUserId, reason);
     }
 
     /** Sweeps unpaid orders past the payment timeout so they stop counting as pending
      * demand; call periodically (see {@link com.bitesite.config.OrderExpiryScheduler}). */
     public int expireStalePayments(int timeoutMinutes) {
-        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(timeoutMinutes);
-        List<Order> stale = orderDao.findExpiredAwaitingPayment(cutoff);
+        List<Order> stale = orderDao.findExpiredAwaitingPayment(timeoutMinutes);
         for (Order order : stale) {
             orderDao.updateStatus(order.getId(), order.getTenantId(), OrderStatus.EXPIRED);
         }

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/navbar :: bottomNav}"></div>
+
+<div class="container" style="max-width: 720px;">
+
+    <a th:href="@{/student/menu}" class="detail-back">
+        <span class="material-symbols-outlined">arrow_back</span><span>Back to menu</span>
+    </a>
+
+    <div class="detail-hero" th:classappend="${item.usesIllustration()} ? 'is-illustration'">
+        <img th:src="@{${item.displayImage()}}" th:alt="${item.name}"/>
+        <div th:if="${item.hasDiscount()}" class="discount-tag"
+             th:text="${item.discountPercentDisplay()} + '% OFF'">20% OFF</div>
+    </div>
+
+    <p class="detail-eyebrow" th:text="${item.category}">Category</p>
+    <h1 class="detail-name" th:text="${item.name}">Item name</h1>
+
+    <div class="detail-price">
+        <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}">₹0</span>
+        <span th:text="'₹' + ${item.effectivePrice()}">₹0</span>
+    </div>
+
+    <p class="detail-meta">
+        <span class="material-symbols-outlined">storefront</span>
+        <span th:text="${outlet.name}">Outlet</span>
+    </p>
+
+    <!-- Unavailable items are still reachable by URL (a stale link, a bookmarked
+         item), so the page renders but the add control is replaced rather than
+         left clickable and failing on POST. Three separate reasons it can be
+         unorderable, each said plainly rather than collapsed into one message. -->
+    <div th:if="${!item.available}" class="detail-unavailable">
+        <span class="material-symbols-outlined">block</span>
+        <span>This item is not being served right now.</span>
+    </div>
+    <div th:if="${item.available and item.soldOutToday()}" class="detail-unavailable">
+        <span class="material-symbols-outlined">hourglass_top</span>
+        <span>Sold out for today — it'll be back tomorrow.</span>
+    </div>
+    <div th:if="${item.orderable() and !outlet.acceptingOrders}" class="detail-unavailable">
+        <span class="material-symbols-outlined">pause_circle</span>
+        <span th:text="${outlet.name} + ' has paused new orders for now.'">Paused</span>
+    </div>
+    <p class="detail-meta" th:if="${item.orderable() and outlet.acceptingOrders and item.runningLowToday()}">
+        <span class="material-symbols-outlined">local_fire_department</span>
+        <span th:text="'Only ' + ${item.remainingToday()} + ' left today'">Only 3 left today</span>
+    </p>
+
+    <form th:if="${item.orderable() and outlet.acceptingOrders}" method="post" th:action="@{/student/cart/add}"
+          class="detail-add add-to-cart-form">
+        <input type="hidden" name="menuItemId" th:value="${item.id}"/>
+        <input type="hidden" name="outletId" th:value="${outlet.id}"/>
+        <div class="qty-stepper">
+            <button type="button" class="qty-minus" aria-label="Decrease quantity"><span class="material-symbols-outlined">remove</span></button>
+            <input type="hidden" name="quantity" value="1"/>
+            <span class="qty-value">1</span>
+            <button type="button" class="qty-plus" aria-label="Increase quantity"><span class="material-symbols-outlined">add</span></button>
+        </div>
+        <button type="submit" class="btn btn-primary detail-add__btn">
+            Add to order <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+    </form>
+
+</div>
+</body>
+</html>

@@ -15,6 +15,8 @@ public class Grievance {
     private Long id;
     private Long tenantId;
     private Long raisedByUserId;
+    /** The order this ticket is about; null for tickets that aren't order-specific. */
+    private Long orderId;
     private String subject;
     private String message;
     private GrievanceStatus status;

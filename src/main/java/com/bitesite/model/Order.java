@@ -26,6 +26,13 @@ public class Order {
     private LocalDateTime paidAt;
     private LocalDateTime readyAt;
     private LocalDateTime completedAt;
+    private LocalDateTime cancelledAt;
+
+    /**
+     * Why the order was cancelled, in words the student is shown on their order page.
+     * Staff pick from a short list or type their own — see the outlet queue screen.
+     */
+    private String cancellationReason;
 
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();

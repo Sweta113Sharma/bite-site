@@ -9,20 +9,32 @@
 
 <div class="container" style="max-width: 700px;">
     <div class="text-center mb-3">
-        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-sm"
-             onerror="this.style.display='none'"/>
+        <div th:replace="~{fragments/state :: medallion('chat_bubble','neutral')}"></div>
     </div>
     <h3 class="mb-4 text-center">We're listening</h3>
 
     <div class="card mb-4" style="border-radius: var(--radius-lg);">
         <div class="card-body p-4">
             <h5 class="card-title mb-3 d-flex align-items-center gap-2">
-                <div class="icon-circle"><i class="ph ph-chat-teardrop-text"></i></div> Raise an issue
+                <div class="icon-circle"><span class="material-symbols-outlined">chat_bubble</span></div> Raise an issue
             </h5>
             <div class="alert alert-danger" th:if="${rateLimited}">
                 You've submitted several issues recently — please wait a bit before sending another.
             </div>
             <form method="post" th:action="@{/student/grievances}" th:object="${form}">
+                <!-- Optional order picker. The refund policy tells students to include
+                     their order token; asking for it as a dropdown means support gets a
+                     real foreign key instead of a token typed from memory. -->
+                <div class="mb-3" th:if="${!#lists.isEmpty(orders)}">
+                    <label class="form-label" for="grievance-order">Which order is this about?</label>
+                    <select th:field="*{orderId}" id="grievance-order" class="form-select">
+                        <option value="">Not about a specific order</option>
+                        <option th:each="o : ${orders}" th:value="${o.id}"
+                                th:text="${o.tokenNo} + ' · ₹' + ${o.totalAmount} + ' · '
+                                         + ${#temporals.format(o.createdAt, 'dd MMM yyyy')}"></option>
+                    </select>
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label">Subject</label>
                     <input type="text" th:field="*{subject}" class="form-control form-control-lg" placeholder="E.g. Food quality, Missing item"/>
@@ -33,7 +45,7 @@
                     <textarea th:field="*{message}" class="form-control" rows="4" placeholder="Please describe what went wrong..."></textarea>
                     <div class="text-danger small mt-1" th:if="${#fields.hasErrors('message')}" th:errors="*{message}"></div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-lg w-100"><i class="ph ph-paper-plane-tilt"></i> Submit Grievance</button>
+                <button type="submit" class="btn btn-primary btn-lg w-100"><span class="material-symbols-outlined">send</span> Submit Grievance</button>
             </form>
         </div>
     </div>
@@ -44,7 +56,7 @@
     </h5>
     
     <div th:if="${#lists.isEmpty(grievances)}" class="state-panel p-0 pt-3">
-        <img th:src="@{/img/mascot/bito-celebrate.png}" alt="" class="mascot-img mascot-sm mb-2"/>
+        <div th:replace="~{fragments/state :: medallion('check_circle','good')}"></div>
         <p>No issues raised yet. That's a good thing!</p>
     </div>
     
@@ -57,8 +69,12 @@
                         <span class="badge" th:classappend="${g.status.name() == 'RESOLVED'} ? 'bg-success' : 'bg-secondary'" th:text="${g.status}"></span>
                     </div>
                     <p class="mb-2 text-muted" th:text="${g.message}">Message</p>
+                    <p class="mb-2 small text-muted" th:if="${g.orderId != null}">
+                        <span class="material-symbols-outlined">receipt_long</span>
+                        <a th:href="@{/student/orders/{id}(id=${g.orderId})}">View the order this is about</a>
+                    </p>
                     <div th:if="${g.adminResponse != null}" class="alert alert-success p-2 small m-0 mt-2 d-flex align-items-start gap-2">
-                        <i class="ph ph-check-circle fs-5"></i>
+                        <span class="material-symbols-outlined fs-5">check_circle</span>
                         <div>
                             <strong>Response from Admin:</strong><br/>
                             <span th:text="${g.adminResponse}"></span>

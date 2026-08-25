@@ -5,6 +5,7 @@ import com.bitesite.config.RateLimiter;
 import com.bitesite.dto.GrievanceForm;
 import com.bitesite.model.User;
 import com.bitesite.service.GrievanceService;
+import com.bitesite.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,12 +28,14 @@ public class StudentGrievanceController {
     private static final Duration WINDOW = Duration.ofHours(1);
 
     private final GrievanceService grievanceService;
+    private final OrderService orderService;
     private final RateLimiter rateLimiter;
 
     @GetMapping
     public String list(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
         User user = principal.getUser();
         model.addAttribute("grievances", grievanceService.listForUser(user.getId(), user.getTenantId()));
+        model.addAttribute("orders", orderService.historyForUser(user.getId(), user.getTenantId()));
         if (!model.containsAttribute("form")) {
             model.addAttribute("form", new GrievanceForm());
         }
@@ -46,16 +49,19 @@ public class StudentGrievanceController {
         User user = principal.getUser();
         if (bindingResult.hasErrors()) {
             model.addAttribute("grievances", grievanceService.listForUser(user.getId(), user.getTenantId()));
+            model.addAttribute("orders", orderService.historyForUser(user.getId(), user.getTenantId()));
             model.addAttribute("pageTitle", "Support");
             return "student/grievances";
         }
         if (!rateLimiter.tryConsume("grievance:" + user.getId(), MAX_PER_WINDOW, WINDOW)) {
             model.addAttribute("grievances", grievanceService.listForUser(user.getId(), user.getTenantId()));
+            model.addAttribute("orders", orderService.historyForUser(user.getId(), user.getTenantId()));
             model.addAttribute("rateLimited", true);
             model.addAttribute("pageTitle", "Support");
             return "student/grievances";
         }
-        grievanceService.raise(user.getTenantId(), user.getId(), form.getSubject(), form.getMessage());
+        grievanceService.raise(user.getTenantId(), user.getId(), form.getOrderId(),
+                form.getSubject(), form.getMessage());
         return "redirect:/student/grievances";
     }
 }

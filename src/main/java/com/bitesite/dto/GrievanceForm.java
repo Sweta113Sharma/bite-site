@@ -8,6 +8,9 @@ import java.io.Serializable;
 @Data
 public class GrievanceForm implements Serializable {
 
+    /** Optional: the order this is about. Ownership is checked in GrievanceService. */
+    private Long orderId;
+
     @NotBlank(message = "Subject is required")
     private String subject;
 

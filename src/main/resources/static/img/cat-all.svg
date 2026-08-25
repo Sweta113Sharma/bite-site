@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <circle cx="40" cy="40" r="38" fill="#E4F0E8"/>
+  <!-- Star shape for "all" -->
+  <path d="M40 16 L44 30 L58 30 L47 38 L51 52 L40 44 L29 52 L33 38 L22 30 L36 30Z" fill="#457C5C" opacity="0.25"/>
+  <!-- Fork -->
+  <g stroke="#457C5C" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <path d="M30 24 L30 38 M30 38 L30 56"/>
+    <path d="M26 24 L26 34 C26 38 30 38 30 34"/>
+    <path d="M34 24 L34 34 C34 38 30 38 30 34"/>
+  </g>
+  <!-- Spoon -->
+  <g stroke="#E8833A" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <path d="M50 56 L50 38"/>
+    <path d="M50 38 C42 38 42 24 50 24 C58 24 58 38 50 38Z" fill="#E8833A" opacity="0.2"/>
+  </g>
+</svg>

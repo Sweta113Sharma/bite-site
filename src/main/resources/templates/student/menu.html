@@ -9,18 +9,25 @@
 
 <div class="container">
     <div th:if="${#lists.isEmpty(outlets)}" class="state-panel">
-        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-md"
-             onerror="this.style.display='none'"/>
+        <div th:replace="~{fragments/state :: medallion('storefront','neutral')}"></div>
         <h4>No canteens yet</h4>
         <p>Your college hasn't onboarded a canteen yet — check back soon.</p>
     </div>
 
     <div th:if="${!#lists.isEmpty(outlets)}">
-        <!-- Header -->
+        <!-- Header with organic decor -->
         <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3">
-            <div>
-                <p class="page-header-label">Today's menu</p>
-                <h3 class="page-header-title" th:text="${selectedOutlet.name}">Outlet</h3>
+            <div class="page-header-decor" aria-hidden="true"></div>
+            <div class="page-header-content">
+                <!-- Comp hierarchy: the greeting is the headline, not a kicker above
+                     one. Keeps this page in step with the auth screens, where the
+                     personal line is what you land on. -->
+                <h3 class="page-header-title" th:text="${greeting + (firstName != null ? ', ' + firstName : '')}">Good morning</h3>
+                <p class="page-header-sub">What are you craving today?</p>
+                <p class="text-muted mb-0 mt-1 d-flex align-items-center gap-1" style="font-size:0.88rem; font-weight: 600;">
+                    <span class="material-symbols-outlined is-filled">storefront</span>
+                    <span th:text="${selectedOutlet.name}">Outlet</span>
+                </p>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <form th:if="${outlets.size() > 1}" method="get" th:action="@{/student/menu}">
@@ -32,9 +39,48 @@
             </div>
         </div>
 
+        <!-- The canteen has paused new orders. Said once, at the top, rather than
+             repeated on every card — and every Add control below is gone, so the page
+             is not offering something it will then refuse. -->
+        <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" th:if="${!ordersOpen}">
+            <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><span class="material-symbols-outlined">pause_circle</span></div>
+            <div>
+                <strong th:text="${selectedOutlet.name} + ' has paused new orders.'">Paused</strong>
+                <div class="small">You can still browse the menu — check back in a little while.</div>
+            </div>
+        </div>
+
+        <!-- Today's Deals (Foochi-style Specials carousel) -->
+        <div th:if="${!#lists.isEmpty(dealItems)}" class="mb-4">
+            <h5 class="mb-3 d-flex align-items-center gap-2" style="font-family: var(--font-display); font-weight: 800; font-size: 1.25rem;">
+                <span class="material-symbols-outlined is-filled">local_fire_department</span>
+                <span>Today's specials</span>
+            </h5>
+            <div class="featured-scroll">
+                <div class="deal-card" th:each="item : ${dealItems}">
+                    <div class="deal-card-photo" th:classappend="${item.usesIllustration()} ? 'is-illustration'">
+                        <img th:src="@{${item.displayImage()}}" th:alt="${item.name}"/>
+                        <div class="discount-tag" th:text="${item.discountPercentDisplay()} + '% OFF'">20% OFF</div>
+                    </div>
+                    <div class="deal-card-body">
+                        <p class="deal-card-name" th:text="${item.name}">Item</p>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="deal-card-price" th:text="'₹' + ${item.effectivePrice()}">₹0</div>
+                            <form method="post" th:action="@{/student/cart/add}" class="m-0 add-to-cart-form"
+                                  th:if="${ordersOpen}">
+                                <input type="hidden" name="menuItemId" th:value="${item.id}"/>
+                                <input type="hidden" name="outletId" th:value="${selectedOutlet.id}"/>
+                                <input type="hidden" name="quantity" value="1"/>
+                                <button type="submit" class="btn-add deal-card-add" aria-label="Add to cart">Add</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div th:if="${#maps.isEmpty(itemsByCategory)}" class="state-panel">
-            <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-md"
-                 onerror="this.style.display='none'"/>
+            <div th:replace="~{fragments/state :: medallion('skillet','neutral')}"></div>
             <h4>Nothing on the menu right now</h4>
             <p>The canteen hasn't added any items yet.</p>
         </div>
@@ -42,69 +88,102 @@
         <div th:if="${!#maps.isEmpty(itemsByCategory)}">
             <!-- Search Bar -->
             <div class="search-bar">
-                <i class="ph ph-magnifying-glass"></i>
-                <input type="text" id="menu-search" placeholder="Search for dishes..."/>
+                <span class="material-symbols-outlined">search</span>
+                <input type="text" id="menu-search" placeholder="Search delicious food..."/>
             </div>
 
-            <!-- Category Chips -->
-            <div class="category-chips mb-4">
-                <a class="category-chip active" onclick="scrollToCategory('all')" data-category="all">
-                    <span>All</span>
-                </a>
-                <a class="category-chip" onclick="scrollToCategory('meals')" data-category="meals">
-                    <span>Meals</span>
-                </a>
-                <a class="category-chip" onclick="scrollToCategory('snacks')" data-category="snacks">
-                    <span>Snacks</span>
-                </a>
-                <a class="category-chip" onclick="scrollToCategory('beverages')" data-category="beverages">
-                    <span>Beverages</span>
-                </a>
-                <a class="category-chip" onclick="scrollToCategory('desserts')" data-category="desserts">
-                    <span>Desserts</span>
-                </a>
+            <!-- Foochi-style Circular Category Chips -->
+            <div class="category-chips-wrapper">
+                <div class="category-chips" id="category-chips">
+                    <a class="category-chip active" data-category="all">
+                        <div class="cat-chip-icon">
+                            <img th:src="@{/img/food/food_ramen.png}" alt="All" class="cat-icon-img"/>
+                        </div>
+                        <span class="cat-chip-label">All Dishes</span>
+                    </a>
+                    <a class="category-chip" th:each="entry : ${itemsByCategory}"
+                       th:data-category="${#strings.replace(entry.key.toLowerCase(), ' ', '-')}">
+                        <div class="cat-chip-icon">
+                            <img th:src="@{${entry.value.get(0).displayImage()}}"
+                                 th:alt="${entry.key}" class="cat-icon-img"/>
+                        </div>
+                        <span class="cat-chip-label" th:text="${entry.key}">Category</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- No search results -->
+            <div id="menu-no-results" class="state-panel" style="display:none;">
+                <div th:replace="~{fragments/state :: medallion('search','neutral')}"></div>
+                <h4>No matches</h4>
+                <p>We couldn't find anything for that search. Try a different word.</p>
             </div>
 
             <!-- Menu List -->
             <div th:each="entry : ${itemsByCategory}" class="menu-category-section mb-5" th:id="${#strings.replace(entry.key.toLowerCase(), ' ', '-')}">
                 <h5 class="mb-3 d-flex align-items-center gap-2">
-                    <span style="width:6px;height:6px;border-radius:50%;background:var(--color-primary);display:inline-block;"></span>
+                    <span class="cat-bullet"></span>
                     <span th:text="${entry.key}">Category</span>
                 </h5>
-                <div class="row row-cols-1 row-cols-md-2 g-3">
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
                     <div class="col" th:each="item : ${entry.value}">
                         <div class="menu-card" th:data-name="${item.name}">
                             <div class="menu-card-row">
-                                <div class="menu-card-photo" th:classappend="${item.photoPath == null} ? 'is-placeholder'">
-                                    <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
-                                    <img th:if="${item.photoPath == null}" th:src="@{/img/plate-placeholder.svg}" alt=""/>
-                                    <div th:if="${item.hasDiscount()}" class="discount-tag">OFFER</div>
-                                </div>
-                                <div class="menu-card-body">
-                                    <div>
-                                        <h6 class="menu-card-name" th:text="${item.name}">Item</h6>
-                                        <div class="menu-card-price">
-                                            <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
-                                            <span th:text="'₹' + ${item.effectivePrice()}"></span>
+                                <!-- Photo and the add control are siblings inside the media
+                                     wrapper, never nested: the photo is a link to the dish page
+                                     and a <form> inside an <a> is invalid markup that browsers
+                                     recover from unpredictably. CSS floats the control over the
+                                     image's bottom-right corner. -->
+                                <div class="menu-card-media">
+                                    <a th:href="@{/student/menu/item/{id}(id=${item.id})}"
+                                       class="menu-card-photo" th:classappend="${item.usesIllustration()} ? 'is-illustration'">
+                                        <img th:src="@{${item.displayImage()}}" th:alt="${item.name}"/>
+                                        <div th:if="${item.hasDiscount()}" class="discount-tag"
+                                             th:text="${item.discountPercentDisplay()} + '% OFF'">20% OFF</div>
+                                    </a>
+                                    <!-- Add button and stepper both render; .is-active picks which
+                                         one is visible. Doing it this way rather than building the
+                                         stepper in JS keeps the no-JS path working: without script
+                                         the form still posts and the page reloads with the right
+                                         control already chosen server-side. -->
+                                    <div class="menu-card-actions">
+                                        <div class="cart-control" th:if="${ordersOpen and item.orderable()}"
+                                             th:with="qty=${cartQuantities != null and cartQuantities.containsKey(item.id)} ? ${cartQuantities.get(item.id)} : 0"
+                                             th:classappend="${qty > 0} ? 'is-active'"
+                                             th:attr="data-item-id=${item.id},data-outlet-id=${selectedOutlet.id}">
+
+                                            <form method="post" th:action="@{/student/cart/add}"
+                                                  class="cart-control__add add-to-cart-form">
+                                                <input type="hidden" name="menuItemId" th:value="${item.id}"/>
+                                                <input type="hidden" name="outletId" th:value="${selectedOutlet.id}"/>
+                                                <input type="hidden" name="quantity" value="1"/>
+                                                <button type="submit" class="btn-add">Add</button>
+                                            </form>
+
+                                            <div class="cart-control__stepper">
+                                                <button type="button" class="cart-qty-minus" aria-label="Decrease quantity"><span class="material-symbols-outlined ms-20">remove</span></button>
+                                                <span class="cart-qty-value" th:text="${qty}">1</span>
+                                                <button type="button" class="cart-qty-plus" aria-label="Increase quantity"><span class="material-symbols-outlined ms-20">add</span></button>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="menu-card-actions">
-                                        <!-- Add form — submitted via fetch() by app.js (add-to-cart-form),
-                                             falls back to a normal form post if JS is unavailable. -->
-                                        <form method="post" th:action="@{/student/cart/add}" class="w-100 d-flex justify-content-end add-to-cart-form">
-                                            <input type="hidden" name="menuItemId" th:value="${item.id}"/>
-                                            <input type="hidden" name="outletId" th:value="${selectedOutlet.id}"/>
-                                            
-                                            <!-- Swiggy-style Stepper -->
-                                            <div class="qty-stepper me-2">
-                                                <button type="button" class="qty-minus"><i class="ph ph-minus"></i></button>
-                                                <input type="hidden" name="quantity" value="1"/>
-                                                <span class="qty-value">1</span>
-                                                <button type="button" class="qty-plus"><i class="ph ph-plus"></i></button>
-                                            </div>
-                                            
-                                            <button type="submit" class="btn-add">Add</button>
-                                        </form>
+                                </div>
+                                <div class="menu-card-body">
+                                    <h6 class="menu-card-name">
+                                        <a th:href="@{/student/menu/item/{id}(id=${item.id})}"
+                                           class="menu-card-name__link" th:text="${item.name}">Item</a>
+                                    </h6>
+                                    <div class="menu-card-price">
+                                        <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
+                                        <span th:text="'₹' + ${item.effectivePrice()}"></span>
+                                    </div>
+                                    <!-- Only shown when it changes what you'd do: the last few,
+                                         or none left. A cap of 40 with 40 left is not news. -->
+                                    <div class="stock-note is-out" th:if="${item.soldOutToday()}">
+                                        <span class="material-symbols-outlined ms-16">block</span><span>Sold out today</span>
+                                    </div>
+                                    <div class="stock-note is-low" th:if="${item.runningLowToday()}">
+                                        <span class="material-symbols-outlined ms-16">local_fire_department</span><span th:text="'Only ' + ${item.remainingToday()} + ' left'">Only 3 left</span>
                                     </div>
                                 </div>
                             </div>
@@ -113,15 +192,14 @@
                 </div>
             </div>
             
-            <!-- Sticky Cart Bar — server-rendered from the session cart so it's already correct
-                 on first paint; app.js keeps it in sync (no reload) after an add-to-cart. -->
+            <!-- Sticky Cart Bar -->
             <div id="sticky-cart-bar" class="sticky-cart-bar" th:style="${cartItemCount == null or cartItemCount == 0} ? 'display:none' : 'display:block'">
                 <a class="sticky-cart-inner" th:href="@{/student/cart}">
                     <div class="sticky-cart-info">
                         <strong id="sticky-cart-count" th:text="${cartItemCount} + (${cartItemCount == 1} ? ' item' : ' items')">1 item</strong> in your cart
                     </div>
                     <div class="sticky-cart-action">
-                        View cart <i class="ph ph-caret-right"></i>
+                        View cart <span class="material-symbols-outlined">chevron_right</span>
                     </div>
                 </a>
             </div>

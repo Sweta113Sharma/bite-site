@@ -9,27 +9,45 @@
 
 <div class="container">
     <div class="page-header">
-        <h3 class="page-header-title">Your cart</h3>
+        <h3 class="page-header-title">Your order</h3>
     </div>
 
     <div class="alert alert-danger" th:if="${cartError}" th:text="${cartError}"></div>
 
+    <!-- A cart can sit open for a while, and in that time the canteen can sell out or
+         close. Saying so here beats letting the Pay button be the thing that finds out. -->
+    <div class="alert alert-warning" th:if="${cartWarnings != null and !#lists.isEmpty(cartWarnings)}">
+        <strong>Some things changed while your cart was open</strong>
+        <ul class="mb-0 mt-1">
+            <li th:each="warning : ${cartWarnings}" th:text="${warning}">Item sold out</li>
+        </ul>
+    </div>
+
     <div th:if="${#lists.isEmpty(lines)}" class="state-panel">
-        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-md"/>
+        <div th:replace="~{fragments/state :: medallion('shopping_cart','neutral')}"></div>
         <h4>Your cart is empty</h4>
         <p>Nothing here yet — grab something tasty before the break ends.</p>
-        <a class="btn btn-primary" th:href="@{/student/menu}"><i class="ph ph-fork-knife"></i>Browse the menu</a>
+        <a class="btn btn-primary" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Browse the menu</a>
     </div>
 
     <div th:if="${!#lists.isEmpty(lines)}" style="padding-bottom: 90px;"> <!-- padding for sticky pay bar -->
-        <p class="text-muted mb-4" th:if="${outlet != null}">Ordering from <strong th:text="${outlet.name}">Outlet</strong></p>
-        
+        <div th:if="${outlet != null}">
+            <p class="section-label">Pickup location</p>
+            <div class="pickup-card">
+                <span class="pickup-card__icon"><span class="material-symbols-outlined">storefront</span></span>
+                <div>
+                    <p class="pickup-card__name" th:text="${outlet.name}">Outlet</p>
+                    <p class="pickup-card__meta">Collect from the counter when your token is called.</p>
+                </div>
+            </div>
+        </div>
+
+        <p class="section-label">Items</p>
         <!-- Cart Items (Card Layout) -->
         <div class="cart-items mb-4">
             <div class="cart-item-card" th:each="line : ${lines}">
-                <div class="cart-item-photo">
-                    <img th:if="${line.item().photoPath != null}" th:src="@{${line.item().photoPath}}" th:alt="${line.item().name}"/>
-                    <img th:if="${line.item().photoPath == null}" th:src="@{/img/plate-placeholder.svg}" alt=""/>
+                <div class="cart-item-photo" th:classappend="${line.item().usesIllustration()} ? 'is-illustration'">
+                    <img th:src="@{${line.item().displayImage()}}" th:alt="${line.item().name}"/>
                 </div>
                 
                 <div class="cart-item-info">
@@ -46,22 +64,30 @@
                               onsubmit="setTimeout(() => window.location.reload(), 100);">
                             <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
                             <div class="qty-stepper" style="transform: scale(0.85); transform-origin: right center;">
-                                <button type="button" class="qty-minus" onclick="if(this.nextElementSibling.value > 1) { this.nextElementSibling.value--; this.nextElementSibling.nextElementSibling.textContent = this.nextElementSibling.value; this.closest('form').submit(); }"><i class="ph ph-minus"></i></button>
+                                <button type="button" class="qty-minus" onclick="if(this.nextElementSibling.value > 1) { this.nextElementSibling.value--; this.nextElementSibling.nextElementSibling.textContent = this.nextElementSibling.value; this.closest('form').submit(); }"><span class="material-symbols-outlined">remove</span></button>
                                 <input type="hidden" name="quantity" th:value="${line.quantity()}"/>
                                 <span class="qty-value" th:text="${line.quantity()}">1</span>
-                                <button type="button" class="qty-plus" onclick="if(this.nextElementSibling.value < 20) { this.previousElementSibling.value++; this.textContent = this.previousElementSibling.value; this.closest('form').submit(); }"><i class="ph ph-plus"></i></button>
+                                <button type="button" class="qty-plus" onclick="if(this.nextElementSibling.value < 20) { this.previousElementSibling.value++; this.textContent = this.previousElementSibling.value; this.closest('form').submit(); }"><span class="material-symbols-outlined">add</span></button>
                             </div>
                         </form>
                         
                         <!-- Remove Form -->
                         <form method="post" th:action="@{/student/cart/remove}" class="m-0">
                             <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
-                            <button type="submit" class="btn btn-sm btn-outline-danger" style="padding: 4px 8px; border: none; background: transparent;"><i class="ph ph-trash" style="margin: 0; font-size: 1.2rem;"></i></button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger" style="padding: 4px 8px; border: none; background: transparent;"><span class="material-symbols-outlined">delete</span></button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
+
+        <p class="section-label">Summary</p>
+        <dl class="cart-summary">
+            <div class="cart-summary__row">
+                <dt>Total</dt>
+                <dd th:text="'₹' + ${total}">₹0</dd>
+            </div>
+        </dl>
 
         <p class="text-muted small text-center mt-4 px-3" style="max-width: 400px; margin: 0 auto;">
             Payment is required to place your order — this keeps the kitchen from prepping food for orders that never get paid for.
@@ -78,7 +104,7 @@
         </div>
         <form method="post" th:action="@{/student/checkout}" class="m-0">
             <button type="submit" class="btn btn-primary btn-lg px-4 d-flex align-items-center gap-2">
-                Proceed to Pay <i class="ph ph-arrow-right"></i>
+                Proceed to Pay <span class="material-symbols-outlined">arrow_forward</span>
             </button>
         </form>
     </div>

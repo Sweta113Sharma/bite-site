@@ -4,14 +4,35 @@
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex align-items-center gap-2 mb-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
         <span class="live-dot"></span>
         <h3 class="m-0">Order queue</h3>
     </div>
 
+    <div class="alert alert-success" th:if="${queueNotice}" th:text="${queueNotice}"></div>
+
+    <!-- Pause switch. Lives on the queue rather than in a settings page because the moment
+         you need it is the moment you are staring at twenty tokens. Pausing only stops new
+         orders; everything already below stays workable. -->
+    <div class="outlet-switch" th:classappend="${!outlet.acceptingOrders} ? 'is-paused'">
+        <div class="outlet-switch__text">
+            <strong th:if="${outlet.acceptingOrders}">Taking new orders</strong>
+            <strong th:if="${!outlet.acceptingOrders}">New orders paused</strong>
+            <span th:if="${outlet.acceptingOrders}">Students can order from <span th:text="${outlet.name}">this canteen</span> right now.</span>
+            <span th:if="${!outlet.acceptingOrders}">Students see this canteen as closed. Orders already placed are unaffected.</span>
+        </div>
+        <form method="post" th:action="@{/canteen/queue/accepting}">
+            <input type="hidden" name="accepting" th:value="${!outlet.acceptingOrders}"/>
+            <button type="submit" class="btn btn-sm"
+                    th:classappend="${outlet.acceptingOrders} ? 'btn-outline-danger' : 'btn-success'">
+                <i class="ph" th:classappend="${outlet.acceptingOrders} ? 'ph-pause-circle' : 'ph-play-circle'"></i>
+                <span th:text="${outlet.acceptingOrders} ? 'Pause new orders' : 'Resume orders'">Pause new orders</span>
+            </button>
+        </form>
+    </div>
+
     <div id="queue-empty" class="state-panel" th:if="${#lists.isEmpty(orders)}">
-        <img th:src="@{/img/mascot/bito-empty.png}" alt="" class="mascot-img mascot-sm"
-             onerror="this.style.display='none'"/>
+        <div th:replace="~{fragments/state :: medallion('hourglass_top','neutral')}"></div>
         <h4>All caught up</h4>
         <p>No paid orders waiting right now — new ones will appear here automatically.</p>
     </div>
@@ -33,10 +54,28 @@
                             <input type="hidden" name="newStatus" value="PREPARING"/>
                             <button type="submit" class="btn btn-sm btn-warning w-100"><i class="ph ph-cooking-pot"></i>Start preparing</button>
                         </form>
-                        <form method="post" th:action="@{/canteen/queue/{id}/cancel(id=${order.id})}"
-                              onsubmit="return confirm('Cancel this order and refund the customer in full?');">
-                            <button type="submit" class="btn btn-sm btn-outline-danger w-100"><i class="ph ph-x-circle"></i>Cancel &amp; refund</button>
-                        </form>
+
+                        <!-- Reason is asked for here, not after the fact: it is the only
+                             thing the student will be told, and nobody comes back to fill
+                             it in later. Kept behind a disclosure so the common path
+                             (start preparing) stays the obvious one. -->
+                        <details class="cancel-panel">
+                            <summary><i class="ph ph-x-circle"></i>Cancel &amp; refund</summary>
+                            <form method="post" th:action="@{/canteen/queue/{id}/cancel(id=${order.id})}"
+                                  onsubmit="return confirm('Cancel this order and refund the customer in full?');">
+                                <label class="form-label small mb-1">Reason (the student sees this)</label>
+                                <select name="reason" class="form-select form-select-sm mb-2">
+                                    <option value="Ingredients ran out">Ingredients ran out</option>
+                                    <option value="Kitchen closing early">Kitchen closing early</option>
+                                    <option value="Student asked to cancel">Student asked to cancel</option>
+                                    <option value="Ordered by mistake">Ordered by mistake</option>
+                                    <option value="">No reason given</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-danger w-100">
+                                    <i class="ph ph-arrow-u-up-left"></i>Cancel and refund in full
+                                </button>
+                            </form>
+                        </details>
                     </div>
                     <form method="post" th:if="${order.status.name() == 'PREPARING'}"
                           th:action="@{/canteen/queue/{id}/status(id=${order.id})}">
