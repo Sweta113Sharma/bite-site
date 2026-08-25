@@ -2124,7 +2124,20 @@ a:hover { color: var(--color-primary); }
     padding: 12px;
 }
 .auth-brand__dish img { width: 100%; height: 100%; object-fit: contain; }
-.auth-brand__dish:nth-child(2) { transform: translateY(-14px); }
+
+/* The middle tile used to be lifted 14px as a staggered flourish, which suited the old
+   peach panel. On the flat one it just reads as a tile that failed to line up, so the
+   row is level now. */
+
+/* These three illustrations are not the same shape: the chai is portrait (202x320)
+   while the dosa and puff are landscape (320x215, 320x193). object-fit: contain sizes
+   each to the tile, so the portrait one alone fills the full height and lands about 50%
+   taller than its neighbours — level with them, but visually looming. Capping its height
+   matches the optical weight of the other two rather than their bounding boxes.
+
+   Tagged by class rather than :nth-child so it stays correct if the dishes are
+   reordered, which the position-based rule did not. */
+.auth-brand__dish--portrait img { max-height: 72%; }
 
 /* ---------- Password visibility toggle ---------- */
 
