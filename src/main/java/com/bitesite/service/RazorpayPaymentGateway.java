@@ -22,7 +22,20 @@ public class RazorpayPaymentGateway implements PaymentGateway {
 
     private static final String CURRENCY = "INR";
 
+    /** Razorpay rejects anything under 1 rupee. Checked here rather than at the call site
+     * because it is the gateway's rule, not the app's, and the error it returns otherwise
+     * is opaque. Reachable in practice: a 100%% discount, or a sub-rupee item. */
+    private static final long MIN_AMOUNT_PAISE = 100;
+
     private final RazorpayProperties properties;
+
+    /** Rupees to paise, the unit every Razorpay amount field uses. HALF_UP so a price
+     * that somehow carries sub-paise precision rounds the way money is expected to. */
+    private static long toPaise(BigDecimal amountRupees) {
+        return amountRupees.multiply(BigDecimal.valueOf(100))
+                .setScale(0, RoundingMode.HALF_UP)
+                .longValueExact();
+    }
 
     private RazorpayClient client() {
         if (!properties.isConfigured()) {
@@ -38,9 +51,11 @@ public class RazorpayPaymentGateway implements PaymentGateway {
 
     @Override
     public GatewayOrder createOrder(BigDecimal amountRupees, String receipt) {
-        long amountPaise = amountRupees.multiply(BigDecimal.valueOf(100))
-                .setScale(0, RoundingMode.HALF_UP)
-                .longValueExact();
+        long amountPaise = toPaise(amountRupees);
+        if (amountPaise < MIN_AMOUNT_PAISE) {
+            throw new PaymentGatewayException(
+                    "Orders under ₹1 can't be paid for online. Please add something else to your order.");
+        }
         try {
             JSONObject request = new JSONObject();
             request.put("amount", amountPaise);
@@ -81,9 +96,7 @@ public class RazorpayPaymentGateway implements PaymentGateway {
 
     @Override
     public void refund(String gatewayPaymentId, BigDecimal amountRupees) {
-        long amountPaise = amountRupees.multiply(BigDecimal.valueOf(100))
-                .setScale(0, RoundingMode.HALF_UP)
-                .longValueExact();
+        long amountPaise = toPaise(amountRupees);
         try {
             JSONObject request = new JSONObject();
             request.put("amount", amountPaise);

@@ -44,7 +44,22 @@
     const tokenNo = /*[[${order.tokenNo}]]*/ '';
     /*]]>*/
 
+    const payBtn = document.getElementById('pay-btn');
+
+    /* One place to say something went wrong. Replaces the previous silence: a dismissed
+       modal and a declined card both used to leave the button sitting there with no
+       indication of what had happened, which reads as the app being broken. */
+    function showNotice(message, tone) {
+        const existing = document.getElementById('pay-notice');
+        if (existing) existing.remove();
+        payBtn.insertAdjacentHTML('afterend',
+            '<div id="pay-notice" class="alert alert-' + tone + ' mt-3 mb-0">' + message + '</div>');
+    }
+
     function openCheckout() {
+        const notice = document.getElementById('pay-notice');
+        if (notice) notice.remove();
+
         const rzp = new Razorpay({
             key: razorpayKeyId,
             amount: amountPaise,
@@ -53,21 +68,43 @@
             description: 'Order ' + tokenNo,
             order_id: gatewayOrderId,
             handler: function (response) {
+                /* The signature is verified server-side before anything is marked paid —
+                   see CheckoutController.confirm. Nothing here is trusted. */
                 document.getElementById('f-order-id').value = response.razorpay_order_id;
                 document.getElementById('f-payment-id').value = response.razorpay_payment_id;
                 document.getElementById('f-signature').value = response.razorpay_signature;
+                payBtn.disabled = true;
+                payBtn.textContent = 'Confirming payment…';
                 document.getElementById('confirm-form').submit();
             },
-            modal: { ondismiss: function () { /* left on this page */ } }
+            modal: {
+                ondismiss: function () {
+                    /* Closing the modal is not an error — the order is still awaiting
+                       payment and the same button reopens it. Say so plainly. */
+                    payBtn.disabled = false;
+                    showNotice('Payment cancelled. Your order is still held — tap Pay to try again.', 'warning');
+                }
+            }
         });
+
+        /* A declined card, an expired UPI collect, insufficient funds. Razorpay reports
+           these through this event rather than the handler, so without it a failed
+           payment looked identical to nothing happening. */
+        rzp.on('payment.failed', function (response) {
+            payBtn.disabled = false;
+            const reason = (response && response.error && response.error.description)
+                ? response.error.description
+                : 'Your payment could not be completed.';
+            showNotice(reason + ' Nothing was charged — you can try again.', 'danger');
+        });
+
         rzp.open();
     }
 
-    document.getElementById('pay-btn').addEventListener('click', openCheckout);
+    payBtn.addEventListener('click', openCheckout);
     if (!razorpayKeyId) {
-        document.getElementById('pay-btn').disabled = true;
-        document.getElementById('pay-btn').insertAdjacentHTML('afterend',
-            '<div class="alert alert-warning mt-3">Payments aren\'t configured on this server yet.</div>');
+        payBtn.disabled = true;
+        showNotice('Payments aren\'t configured on this server yet.', 'warning');
     }
 </script>
 </body>

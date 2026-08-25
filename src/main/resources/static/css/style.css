@@ -3492,7 +3492,12 @@ a:hover { color: var(--color-primary); }
    re-tones to the new palette rather than the old peach. */
 @media (min-width: 992px) {
     .auth-card { padding: var(--stack-lg); }
-    .auth-lockup img { display: inline-block; }
+
+    /* The panel carries the identity at this width, so the card's own lockup would be
+       the second one on screen. The pre-redesign layout hid it here for that reason;
+       the unscoped `.auth-lockup { display: block }` above silently undid that, because
+       a media query adds no specificity and this file's later rule simply won. */
+    .auth-lockup { display: none; }
 }
 
 .auth-brand {
