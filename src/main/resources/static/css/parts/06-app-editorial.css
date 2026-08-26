@@ -1,0 +1,764 @@
+/* ============================================================
+   06-app-editorial.css  (6 of 6)
+
+   Customer app, Stitch Editorial layer.
+
+   Loads last on purpose. It restates several components defined in 03-app.css
+   and depends on winning the cascade against them, so its position is
+   load-bearing rather than incidental.
+
+   Part of an ordered set. The browser concatenates these in the order they
+   are linked in fragments/head.html, and that order IS the cascade. Do not
+   reorder the <link> tags, and do not move a rule between files without
+   checking what it would then stop overriding.
+   ============================================================ */
+
+/* ============================================================================
+   CUSTOMER APP — Stitch "Editorial" screens
+   ============================================================================
+
+   Everything below re-cuts the student and auth surfaces to the app design in
+   Stitch. It sits last on purpose: the outlet and admin portals share this
+   stylesheet and are not part of this redesign, so their rules are left intact
+   above and only the customer-app components are restated here.
+
+   Three things change shape rather than just colour, and they are the reason
+   this is a rewrite and not a re-skin:
+
+     - the food feed goes from horizontal rows to a two-up grid of square crops
+     - the category row goes from illustrated pucks to a plain underlined tab bar
+     - auth inputs lose their boxes and become ruled lines
+
+   The old system's decorative layer — organic blobs, grain texture, the swirl
+   behind the state medallion — has no counterpart in the design and is removed
+   rather than re-tinted. On a near-white canvas it read as smudge.
+   ============================================================================ */
+
+/* ---------- Page headers ---------- */
+
+/* The blob sat behind the greeting on a cream page. Gone: this design carries
+   hierarchy with type size alone. */
+.page-header-decor { display: none; }
+
+.page-header {
+    position: relative;
+    padding: var(--stack-md) 0 var(--stack-sm);
+}
+
+.page-header-title {
+    font-family: var(--font-display);
+    font-size: var(--text-display-lg);
+    line-height: var(--lh-display-lg);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--color-ink);
+}
+
+@media (min-width: 768px) {
+    .page-header-title { font-size: var(--text-display-lg); }
+}
+
+.page-header-sub {
+    margin: var(--stack-xs) 0 0;
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+}
+
+/* Uppercase micro-label above each block — the design's main structural device
+   on the cart and order screens. */
+.section-label {
+    font-family: var(--font-body);
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 var(--stack-sm);
+}
+
+/* ---------- Search ---------- */
+
+.search-bar {
+    position: relative;
+    margin-bottom: var(--stack-md);
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 12px 16px 12px 48px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    background: var(--color-field);
+    font-family: var(--font-body);
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+    color: var(--color-ink);
+    box-shadow: none;
+    transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.search-bar input::placeholder { color: var(--color-ink-muted); }
+
+.search-bar input:focus {
+    outline: none;
+    background: var(--color-surface);
+    border-color: var(--color-field-rule);
+}
+
+.search-bar > .material-symbols-outlined,
+.search-bar > i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-ink-muted);
+    font-size: 22px;
+    pointer-events: none;
+}
+
+/* ---------- "Popular today" rail ---------- */
+
+.featured-scroll {
+    display: flex;
+    gap: var(--gutter-mobile);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: var(--stack-sm);
+    margin: 0 calc(-1 * var(--margin-mobile));
+    padding-left: var(--margin-mobile);
+    padding-right: var(--margin-mobile);
+}
+.featured-scroll::-webkit-scrollbar { display: none; }
+
+/* Not a card in this design — an image with three lines under it, no fill,
+   no border, no shadow. */
+.deal-card {
+    flex: 0 0 232px;
+    width: 232px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    scroll-snap-align: start;
+}
+.deal-card:hover { transform: none; box-shadow: none; }
+
+.deal-card-photo {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    margin-bottom: var(--stack-sm);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--color-surface-deep);
+}
+
+.deal-card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.deal-card:hover .deal-card-photo img { transform: scale(1.05); }
+
+.deal-card-photo.is-illustration {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-food);
+}
+.deal-card-photo.is-illustration img {
+    width: 60%;
+    height: 60%;
+    object-fit: contain;
+}
+
+.deal-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--stack-sm);
+    padding: 0;
+}
+
+.deal-card-name {
+    margin: 0 0 2px;
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--color-ink);
+}
+
+.deal-card-price {
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+/* ---------- Discount + stock flags ---------- */
+
+.discount-tag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    color: #fff;
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.stock-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+.stock-note .material-symbols-outlined { font-size: 16px; }
+.stock-note.is-low { color: var(--color-warning); }
+.stock-note.is-out { color: var(--color-danger); }
+
+/* ---------- Quantity stepper ---------- */
+
+.qty-stepper,
+.cart-control__stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: none;
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+}
+
+.qty-stepper button,
+.cart-control__stepper button {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: background-color 150ms ease, transform 120ms ease;
+}
+.qty-stepper button:hover,
+.cart-control__stepper button:hover { background: var(--color-primary-tint); }
+.qty-stepper button:active,
+.cart-control__stepper button:active { transform: scale(0.9); }
+.qty-stepper button .material-symbols-outlined,
+.cart-control__stepper button .material-symbols-outlined { font-size: 18px; }
+
+.qty-stepper .qty-value,
+.cart-control__stepper .cart-qty-value {
+    min-width: 20px;
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+/* ---------- State medallion ---------- */
+
+/* The swirl behind the disc belonged to the warm palette. Here it is just the
+   icon on a tonal disc. */
+.state-medallion::before { display: none; }
+
+.state-medallion {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto var(--stack-md);
+}
+
+.state-medallion__disc {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-lg);
+    background: var(--color-field);
+    display: grid;
+    place-items: center;
+    box-shadow: none;
+    border: none;
+}
+
+.state-medallion__disc .material-symbols-outlined { font-size: 34px; }
+
+.state-medallion--neutral .state-medallion__disc { background: var(--color-primary-tint); }
+.state-medallion--neutral .state-medallion__disc .material-symbols-outlined { color: var(--color-primary); }
+.state-medallion--good    .state-medallion__disc { background: var(--color-accent-tint); }
+.state-medallion--good    .state-medallion__disc .material-symbols-outlined { color: var(--color-accent); }
+.state-medallion--bad     .state-medallion__disc { background: var(--color-danger-tint); }
+.state-medallion--bad     .state-medallion__disc .material-symbols-outlined { color: var(--color-danger); }
+
+.state-panel {
+    padding: var(--stack-lg) var(--stack-md);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    text-align: center;
+}
+
+/* ---------- Bottom navigation ---------- */
+
+.bottom-nav {
+    background: var(--color-surface);
+    border-top: none;
+    box-shadow: var(--shadow-sticky);
+    height: var(--bottom-nav-height);
+    padding: 8px 16px calc(8px + var(--safe-area-bottom));
+}
+
+.bottom-nav-item {
+    gap: 2px;
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    color: var(--color-ink-muted);
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: color 150ms ease, background-color 150ms ease, transform 120ms ease;
+}
+.bottom-nav-item .material-symbols-outlined { font-size: 24px; }
+.bottom-nav-item:active { transform: scale(0.9); }
+.bottom-nav-item.active {
+    color: var(--color-primary);
+    background: transparent;
+}
+.bottom-nav-item.active .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
+
+.bottom-nav-badge {
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    border: 2px solid var(--color-surface);
+}
+
+/* ---------- Sticky cart bar ---------- */
+
+.sticky-cart-bar {
+    bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
+}
+
+.sticky-cart-inner {
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: var(--shadow-lg);
+    padding: 14px 18px;
+}
+.sticky-cart-inner:hover { background: var(--color-primary-dark); color: #fff; }
+
+.sticky-cart-info,
+.sticky-cart-action {
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+/* ---------- Order cards ---------- */
+
+.order-card {
+    display: block;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: var(--stack-sm) var(--stack-md);
+    color: inherit;
+    transition: box-shadow 200ms ease;
+}
+.order-card:hover { box-shadow: var(--shadow-md); color: inherit; }
+
+.order-card-token {
+    font-family: var(--font-body);
+    font-size: var(--text-headline-md);
+    line-height: var(--lh-headline-md);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+}
+
+.order-card-total {
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.order-card-date {
+    font-size: var(--text-label-sm);
+    color: var(--color-ink-muted);
+}
+
+.order-card-reason {
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    color: var(--color-danger);
+}
+.order-card-reason .material-symbols-outlined { font-size: 16px; }
+
+/* ---------- Cart rows ---------- */
+
+/* Rows on a rule, not floating cards — the design lists items as a ledger. */
+.cart-item-card {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 16px 0;
+    gap: 16px;
+}
+
+.cart-item-photo {
+    width: 64px;
+    height: 64px;
+    flex: none;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-deep);
+    overflow: hidden;
+}
+.cart-item-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cart-item-photo.is-illustration { display: grid; place-items: center; background: var(--color-surface-food); }
+.cart-item-photo.is-illustration img { width: 62%; height: 62%; object-fit: contain; }
+
+.cart-item-name {
+    font-size: var(--text-body-lg);
+    line-height: 1.25;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin: 0;
+}
+
+.cart-item-price {
+    font-size: var(--text-body-md);
+    color: var(--color-ink-muted);
+    margin-top: 2px;
+}
+
+.cart-item-subtotal {
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+.pickup-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    gap: 12px;
+}
+.pickup-card__icon {
+    width: auto;
+    height: auto;
+    background: none;
+    color: var(--color-accent);
+}
+.pickup-card__icon .material-symbols-outlined { font-size: 20px; }
+.pickup-card__name { font-size: var(--text-body-lg); font-weight: 600; margin: 0; color: var(--color-ink); }
+.pickup-card__meta { font-size: var(--text-body-md); color: var(--color-ink-muted); margin: 0; }
+
+.cart-summary {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--stack-sm);
+}
+.cart-summary__row dt { font-size: var(--text-body-md); color: var(--color-ink-muted); font-weight: 500; }
+.cart-summary__row dd { font-size: var(--text-headline-md); font-weight: 700; color: var(--color-ink); }
+
+/* ---------- Dish detail ---------- */
+
+.detail-hero {
+    border-radius: var(--radius-md);
+    background: var(--color-surface-deep);
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: var(--stack-md);
+}
+.detail-hero img { width: 100%; height: 100%; object-fit: cover; }
+.detail-hero.is-illustration { display: grid; place-items: center; background: var(--color-surface-food); }
+.detail-hero.is-illustration img { width: 58%; height: 58%; object-fit: contain; }
+
+.detail-eyebrow {
+    font-size: var(--text-label-sm);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--color-ink-muted);
+    margin: 0 0 var(--stack-xs);
+}
+
+.detail-name {
+    font-family: var(--font-display);
+    font-size: var(--text-display-lg);
+    line-height: var(--lh-display-lg);
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    margin: 0 0 var(--stack-sm);
+    color: var(--color-ink);
+}
+
+.detail-price {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: var(--text-headline-lg);
+    line-height: var(--lh-headline-lg);
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: var(--stack-sm);
+}
+
+.detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--text-body-md);
+    color: var(--color-ink-muted);
+}
+.detail-meta .material-symbols-outlined { font-size: 20px; color: var(--color-accent); }
+
+.detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: var(--stack-md);
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    color: var(--color-ink-muted);
+}
+.detail-back:hover { color: var(--color-primary); }
+
+.detail-unavailable {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    background: var(--color-field);
+    border: 1px solid var(--color-border);
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-md);
+    margin-bottom: var(--stack-sm);
+}
+
+.price-strike {
+    text-decoration: line-through;
+    color: var(--color-ink-muted);
+    font-weight: 500;
+}
+
+/* ---------- Token badge ---------- */
+
+.token-badge {
+    font-family: var(--font-body);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    background: none;
+    padding: 0;
+}
+
+/* ---------- Auth ---------- */
+
+/* The design puts sign-in on plain white rather than the app canvas, opens with
+   the wordmark set large in primary, and rules its fields with a single line
+   instead of boxing them. */
+
+.auth-shell,
+.auth-main { background: var(--color-surface); }
+
+.auth-card {
+    background: var(--color-surface);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: var(--stack-lg) var(--margin-mobile);
+}
+
+/* The lockup becomes the design's oversized wordmark. The mark itself is dropped
+   on mobile — at this size the word is the logo. */
+.auth-lockup {
+    display: block;
+    margin-bottom: var(--stack-md);
+}
+.auth-lockup img { display: none; }
+.auth-lockup span {
+    font-family: var(--font-display);
+    font-size: var(--text-display-lg);
+    line-height: var(--lh-display-lg);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--color-primary);
+}
+
+.auth-head { margin-bottom: var(--stack-lg); }
+
+.auth-head__title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    margin: 0 0 var(--stack-xs);
+}
+
+.auth-head__sub {
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+    color: var(--color-ink-muted);
+    margin: 0;
+}
+
+.field { margin-bottom: var(--stack-md); }
+
+.field__label {
+    display: block;
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--color-ink-muted);
+    margin-bottom: var(--stack-xs);
+}
+
+/* Ruled, not boxed. The rule uses --color-field-rule rather than the design's
+   own #E5E5E5 hairline: at 1.2:1 on this canvas that hairline is invisible as a
+   control boundary, which WCAG 1.4.11 asks to clear 3:1. This tone is the same
+   line, dark enough to actually be one. */
+.field__input {
+    width: 100%;
+    padding: 8px 0;
+    border: none;
+    border-bottom: 1px solid var(--color-field-rule);
+    border-radius: 0;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: var(--text-body-lg);
+    line-height: var(--lh-body-lg);
+    color: var(--color-ink);
+    box-shadow: none;
+    transition: border-color 150ms ease;
+}
+
+.field__input::placeholder { color: var(--color-ink-muted); }
+
+.field__input:focus {
+    outline: none;
+    border-bottom-color: var(--color-primary);
+    border-bottom-width: 2px;
+    padding-bottom: 7px;   /* keeps the baseline still as the rule thickens */
+    box-shadow: none;
+    background: transparent;
+}
+
+.field__wrap { position: relative; }
+
+.field__toggle {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    color: var(--color-ink-muted);
+    padding: 8px;
+    cursor: pointer;
+}
+.field__toggle .material-symbols-outlined { font-size: 20px; }
+
+.btn-auth {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: var(--text-label-lg);
+    line-height: var(--lh-label-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin-top: var(--stack-sm);
+    transition: background-color 150ms ease, transform 120ms ease;
+}
+.btn-auth:hover  { background: var(--color-primary-dark); color: #fff; }
+.btn-auth:active { transform: scale(0.98); }
+
+.auth-foot {
+    margin-top: var(--stack-md);
+    font-size: var(--text-body-md);
+    color: var(--color-ink-muted);
+    text-align: center;
+}
+.auth-foot a { color: var(--color-primary); font-weight: 600; }
+
+/* Desktop keeps the brand panel — the design has a desktop sign-in too — but it
+   re-tones to the new palette rather than the old peach. */
+@media (min-width: 992px) {
+    .auth-card { padding: var(--stack-lg); }
+
+    /* The panel carries the identity at this width, so the card's own lockup would be
+       the second one on screen. The pre-redesign layout hid it here for that reason;
+       the unscoped `.auth-lockup { display: block }` above silently undid that, because
+       a media query adds no specificity and this file's later rule simply won. */
+    .auth-lockup { display: none; }
+}
+
+.auth-brand {
+    background: var(--color-primary);
+    color: #fff;
+}
+.auth-brand__headline,
+.auth-brand__lockup span { color: #fff; }
+.auth-brand__sub { color: rgba(255, 255, 255, 0.82); }
+.auth-brand__dish {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-md);
+}
+
+/* ---------- Buttons, app-wide within the customer surfaces ---------- */
+
+.btn-primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--text-label-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+}
+
+.btn-lg { padding: 14px 20px; font-size: var(--text-label-lg); }

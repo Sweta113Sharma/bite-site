@@ -11,13 +11,21 @@
 //     network-only. A service worker must never cache or replay a checkout/order POST.
 'use strict';
 
-const VERSION = 'v1';
+// Bumped when the precache list changes: an existing client keeps its old list
+// until the version changes, and the previous one references a stylesheet that
+// no longer exists, so install would fail and offline would silently break.
+const VERSION = 'v2';
 const STATIC_CACHE = `bitesite-static-${VERSION}`;
 const PAGE_CACHE = `bitesite-pages-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_URLS = [
-    '/css/style.css',
+    '/css/parts/01-tokens.css',
+    '/css/parts/02-base.css',
+    '/css/parts/03-app.css',
+    '/css/parts/04-shared.css',
+    '/css/parts/05-outlet.css',
+    '/css/parts/06-app-editorial.css',
     '/js/app.js',
     '/js/password-toggle.js',
     OFFLINE_URL,

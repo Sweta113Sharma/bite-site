@@ -25,7 +25,17 @@
     <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet"/>
     <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" rel="stylesheet"/>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <!-- Ordered stylesheet set. The browser concatenates these in link order and
+         that order is the cascade: 06 restates components from 03 and has to win.
+         Reordering these tags changes rendering. Split from a single 3,545-line
+         style.css at existing section boundaries, so the concatenation is byte
+         identical to what it replaced. -->
+    <link rel="stylesheet" th:href="@{/css/parts/01-tokens.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/02-base.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/03-app.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/04-shared.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/05-outlet.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/06-app-editorial.css}"/>
     <script th:src="@{/js/app.js}" defer></script>
     <meta name="_csrf" th:content="${_csrf?.token}"/>
     <meta name="_csrf_parameter" th:content="${_csrf?.parameterName}"/>

@@ -1,0 +1,549 @@
+/* ============================================================
+   02-base.css  (2 of 6)
+
+   Shared primitives used by every portal: view transitions, navbar, bottom nav,
+   buttons, cards, forms, badges, tables, alerts, and the Bootstrap overrides
+   that retone them.
+
+   Part of an ordered set. The browser concatenates these in the order they
+   are linked in fragments/head.html, and that order IS the cascade. Do not
+   reorder the <link> tags, and do not move a rule between files without
+   checking what it would then stop overriding.
+   ============================================================ */
+
+/* ============================================================
+   CROSS-DOCUMENT VIEW TRANSITIONS
+   This is a traditional server-rendered app, not an SPA — every
+   link click and form submit is a full page navigation. Without
+   this, that's a hard white-flash reload; with it, the browser
+   cross-fades outgoing/incoming pages natively, no JS involved.
+   Safe progressive enhancement: browsers that don't support it
+   (Safari < 18.2, older Firefox) just keep the instant navigation
+   they already have.
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+        navigation: auto;
+    }
+}
+
+::view-transition-old(root) {
+    animation: view-transition-fade-out 160ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+::view-transition-new(root) {
+    animation: view-transition-fade-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes view-transition-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes view-transition-fade-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+html, body {
+    background-color: var(--color-bg);
+    /* Flat. The grain texture belonged to the cream canvas; on this near-white one it
+       reads as noise, and the design it is ported from has no texture layer at all. */
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: var(--text-body-lg);
+    line-height: var(--lh-body-lg);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* One family across every role, so hierarchy is carried by weight and tracking rather
+   than by a second typeface — see the export's fontFamily config, which maps display
+   through label all to Inter. */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    color: var(--color-ink);
+}
+
+h1 { font-size: var(--text-display-lg);  line-height: var(--lh-display-lg);  font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: var(--text-headline-lg); line-height: var(--lh-headline-lg); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: var(--text-headline-lg); line-height: var(--lh-headline-lg); font-weight: 700; letter-spacing: -0.01em; }
+h4 { font-size: var(--text-headline-md); line-height: var(--lh-headline-md); font-weight: 600; }
+h5 { font-size: var(--text-headline-md); line-height: var(--lh-headline-md); font-weight: 600; }
+h6 { font-size: var(--text-label-lg);    line-height: var(--lh-label-lg);    font-weight: 600; }
+
+/* Material Symbols, the icon set the app design uses. Phosphor stays loaded for the
+   staff portals; the two coexist because they key off different class names. */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+    user-select: none;
+}
+.material-symbols-outlined.is-filled { font-variation-settings: 'FILL' 1; }
+.ms-20 { font-size: 20px; }
+.ms-16 { font-size: 16px; }
+
+a {
+    color: var(--color-primary-dark);
+    text-decoration: none;
+}
+a:hover { color: var(--color-primary); }
+
+::selection {
+    background: var(--color-primary-tint);
+    color: var(--color-primary-dark);
+}
+
+/* ---------- Layout ---------- */
+
+.container {
+    max-width: 1100px;
+}
+
+/* On mobile, add bottom padding for the bottom nav */
+@media (max-width: 767.98px) {
+    body.has-bottom-nav {
+        padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 12px);
+    }
+}
+
+/* ============================================================
+   TOP NAVBAR
+   ============================================================ */
+
+/* The dark bar is gone. It was the loudest remaining piece of dashboard chrome —
+   a heavy near-black slab pinned above a warm cream page, which is exactly the
+   "generic SaaS with an orange button" read. The reference has no dark surfaces
+   at all; the canvas simply continues to the top of the screen and the brand mark
+   carries the identity. */
+.navbar {
+    position: relative;
+    background: var(--color-nav) !important;
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
+    box-shadow: none;
+}
+
+.navbar-toggler-custom {
+    background: transparent;
+    border: none;
+    color: var(--color-ink);
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: background-color 150ms ease;
+}
+.navbar-toggler-custom:hover,
+.navbar-toggler-custom:active {
+    background: var(--color-surface-deep);
+}
+
+/* Staff/admin nav links — collapsed behind the hamburger on mobile (no bottom-nav
+   fallback for these roles), always inline on desktop. */
+.navbar-links-collapse {
+    display: none;
+}
+.navbar-links-collapse.is-open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface-food);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    padding: 0.5rem 1rem 1rem;
+    box-shadow: var(--shadow-md);
+    z-index: 1030;
+    animation: fade-up 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.navbar-links-collapse.is-open .nav-link {
+    padding: 0.6rem 0.7rem !important;
+}
+
+@media (min-width: 992px) {
+    .navbar-toggler-custom {
+        display: none;
+    }
+    .navbar-links-collapse {
+        display: flex !important;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        position: static;
+        background: none;
+        padding: 0;
+        box-shadow: none;
+        animation: none !important;
+    }
+}
+
+/* Terracotta wordmark on cream — the brand carries the top of the page now that
+   there's no dark slab doing it. Matches the reference, whose own wordmark is the
+   one strongly orange element on the screen. */
+.navbar-brand {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+    color: var(--color-accent-strong) !important;
+}
+
+.navbar-brand img {
+    border-radius: 8px;
+}
+
+.navbar .nav-link {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-ink-muted) !important;
+    padding: 0.45rem 0.85rem !important;
+    border-radius: var(--radius-pill);
+    transition: color 150ms ease, background-color 150ms ease;
+}
+.navbar .nav-link:hover {
+    color: var(--color-ink) !important;
+    background: var(--color-surface-deep);
+}
+
+.navbar .navbar-text {
+    font-size: 0.85rem;
+    color: var(--color-ink-muted) !important;
+}
+
+/* Hide top-nav user links on mobile (bottom nav takes over) */
+@media (max-width: 767.98px) {
+    .navbar .top-nav-links {
+        display: none !important;
+    }
+    .navbar {
+        padding-top: 0.65rem;
+        padding-bottom: 0.65rem;
+    }
+}
+
+/* ============================================================
+   BOTTOM TAB NAVIGATION (mobile only)
+   ============================================================ */
+
+.bottom-nav {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    /* Floating rounded glassmorphism bar */
+    .bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+        padding-bottom: var(--safe-area-bottom);
+        background: rgba(251, 228, 208, 0.92);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        box-shadow: 0 -8px 24px -6px rgba(70, 45, 25, 0.12);
+        align-items: stretch;
+    }
+
+    .bottom-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        text-decoration: none;
+        color: var(--color-ink-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        font-family: var(--font-display);
+        letter-spacing: 0.01em;
+        transition: all 180ms ease;
+        position: relative;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .bottom-nav-item i {
+        font-size: 1.45rem;
+        line-height: 1;
+        transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .bottom-nav-item.active {
+        color: var(--color-primary-dark);
+    }
+
+    .bottom-nav-item.active i {
+        transform: scale(1.15) translateY(-2px);
+    }
+
+    .bottom-nav-item:active i {
+        transform: scale(0.9);
+    }
+
+    /* Cart badge on bottom nav */
+    .bottom-nav-badge {
+        position: absolute;
+        top: 5px;
+        right: calc(50% - 18px);
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: var(--color-accent-strong);
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 5px;
+        line-height: 1;
+        box-shadow: 0 2px 6px rgba(158, 58, 24, 0.4);
+        animation: badge-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes badge-pop {
+        0% { transform: scale(0); }
+        80% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+/* Soft pills. The reference's buttons are fully rounded and generously padded —
+   at phone size they're the most tactile thing on screen, which is right for the
+   one control that commits an order. */
+.btn {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    border-radius: var(--radius-pill);
+    padding: 0.6rem 1.4rem;
+    transition: transform 120ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+.btn-primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 6px 16px -8px rgba(69, 124, 92, 0.55);
+}
+.btn-primary:hover, .btn-primary:focus {
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+    color: #fff;
+    box-shadow: 0 10px 22px -10px rgba(69, 124, 92, 0.65);
+}
+
+.btn-outline-primary { color: var(--color-primary-dark); border-color: var(--color-primary); }
+.btn-outline-primary:hover { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+/* Secondary reads as a soft peach chip rather than a hairline outline — an outlined
+   button on a peach card is two thin lines competing; a filled tonal chip is calmer. */
+.btn-outline-secondary {
+    color: var(--color-ink);
+    background: var(--color-surface-deep);
+    border-color: transparent;
+}
+.btn-outline-secondary:hover {
+    background: var(--color-coral-deep);
+    border-color: transparent;
+    color: var(--color-ink);
+}
+
+/* Terracotta button — for appetite/brand moments, never for confirm/pay.
+   Uses the strong tone so white label text clears 5.37:1. */
+.btn-accent {
+    background: var(--color-accent-strong);
+    border-color: var(--color-accent-strong);
+    color: #fff;
+}
+.btn-accent:hover, .btn-accent:focus {
+    background: #7F2E12;
+    border-color: #7F2E12;
+    color: #fff;
+}
+
+.btn-success { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.btn-success:hover { background: var(--color-primary-dark); border-color: var(--color-primary-dark); color: #fff; }
+
+.btn-warning { background: var(--color-warning); border-color: var(--color-warning); color: #fff; }
+.btn-warning:hover { background: #96690f; border-color: #96690f; color: #fff; }
+
+.btn-danger, .btn-outline-danger:hover { background: var(--color-danger); border-color: var(--color-danger); }
+
+.btn-lg { padding: 0.85rem 1.75rem; font-size: 1rem; }
+
+/* ============================================================
+   CARDS
+
+   Generic .card stays a pale-cream block — it's shared with the canteen and
+   admin portals, which are deliberately outside this redesign and need dense,
+   legible surfaces. The student-facing peach blocking lives on the specific
+   component classes further down (.menu-card, .cart-item-card, .order-card,
+   .account-section, .outlet-card, .auth-card).
+   ============================================================ */
+
+.card {
+    background: var(--color-surface);
+    border: none;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 180ms ease, transform 180ms ease;
+}
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* ============================================================
+   FORMS
+   ============================================================ */
+
+/* Pale cream fields sitting inside the warmer surfaces around them — the reference
+   lights its inputs slightly *brighter* than the card they're on, which is what makes
+   a form read as a set of soft slots rather than a stack of outlined boxes. */
+.form-control, .form-select {
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--color-field-border);
+    background: var(--color-field);
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+.form-control::placeholder { color: var(--color-ink-muted); }
+.form-control:focus, .form-select:focus {
+    border-color: var(--color-primary);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+.form-label {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--color-ink);
+    margin-bottom: 0.4rem;
+}
+
+.input-group-text {
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
+    border: 1.5px solid var(--color-field-border);
+    border-right: none;
+    background: var(--color-field);
+    color: var(--color-ink-muted);
+}
+.input-group .form-control {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    border-left: none;
+}
+
+/* Buttons are pills globally, but a pill welded to the end of a field reads as a
+   detached blob floating beside it. Inside an input group the trailing button takes
+   the field's own corner radius so the two read as one control. */
+.input-group > .btn {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.input-group > .form-control:not(:last-child) {
+    border-radius: 0;
+}
+.input-group:focus-within .input-group-text {
+    border-color: var(--color-primary);
+    background: #FFFFFF;
+}
+
+/* Toggle switches pick up the action color rather than Bootstrap's blue. */
+.form-check-input:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+.form-check-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+/* ============================================================
+   BADGES (status pills)
+   ============================================================ */
+
+.badge {
+    font-family: var(--font-body);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 0.45em 0.85em;
+    border-radius: var(--radius-pill);
+}
+
+.badge.bg-success { background: var(--color-primary) !important; color: #fff !important; }
+.badge.bg-warning { background: var(--color-warning-tint) !important; color: var(--color-warning) !important; }
+.badge.bg-info { background: var(--color-info-tint) !important; color: var(--color-info) !important; }
+.badge.bg-primary { background: var(--color-primary) !important; color: #fff !important; }
+.badge.bg-secondary { background: var(--color-surface-deep) !important; color: var(--color-ink-muted) !important; }
+.badge.bg-danger { background: var(--color-danger-tint) !important; color: var(--color-danger) !important; }
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+
+.table {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+.table thead th {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-muted);
+    border-bottom-width: 1px;
+    background: #F5F0E8;
+}
+.table td, .table th { vertical-align: middle; border-color: var(--color-border); }
+
+/* ============================================================
+   ALERTS
+   ============================================================ */
+
+.alert { border-radius: var(--radius-md); border: none; font-size: 0.92rem; padding: 0.9rem 1.1rem; }
+.alert-secondary { background: var(--color-surface-food); color: var(--color-ink-muted); }
+.alert-success { background: var(--color-primary-tint); color: var(--color-primary-dark); }
+.alert-danger { background: var(--color-danger-tint); color: var(--color-danger); }
+.alert-warning { background: var(--color-warning-tint); color: var(--color-warning); }
+.alert-info { background: var(--color-info-tint); color: var(--color-info); }
+.alert-primary { background: var(--color-primary-tint); color: var(--color-primary-dark); }
+
+/* ============================================================
+   BOOTSTRAP UTILITY OVERRIDES
+
+   The templates lean on .text-muted (39 uses) and .text-danger (30) — Bootstrap
+   ships those as cold grays/reds (#6c757d, #dc3545) which read as foreign against
+   a cream-and-terracotta page. Repointing them at the warm palette fixes the
+   inconsistency everywhere at once instead of per template.
+   ============================================================ */
+
+.text-muted { color: var(--color-ink-muted) !important; }
+.text-danger { color: var(--color-danger) !important; }
+.text-dark   { color: var(--color-ink) !important; }
+.bg-light    { background-color: var(--color-surface) !important; }
+.border-bottom, .border-top { border-color: var(--color-border) !important; }

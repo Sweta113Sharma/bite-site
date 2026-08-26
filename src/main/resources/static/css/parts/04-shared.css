@@ -1,0 +1,478 @@
+/* ============================================================
+   04-shared.css  (4 of 6)
+
+   Cross-portal UI: state medallions, empty states, icons, entry animations,
+   toast, page headers.
+
+   Two outlet-only blocks also live in this range — the queue, and the menu
+   photo grid with its upload widget. They are not here because they belong
+   here; they are here because they sit at these line numbers in the original,
+   and lifting them out would reorder the cascade.
+
+   Part of an ordered set. The browser concatenates these in the order they
+   are linked in fragments/head.html, and that order IS the cascade. Do not
+   reorder the <link> tags, and do not move a rule between files without
+   checking what it would then stop overriding.
+   ============================================================ */
+
+/* ============================================================
+   CANTEEN QUEUE
+   ============================================================ */
+
+.live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--color-success);
+    display: inline-block;
+    box-shadow: 0 0 0 rgba(69, 124, 92, 0.5);
+    animation: live-pulse 2s infinite;
+}
+
+@keyframes live-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(69, 124, 92, 0.45); }
+    70%  { box-shadow: 0 0 0 8px rgba(69, 124, 92, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(69, 124, 92, 0); }
+}
+
+/* Brand fallback mark (shown only if the Bito image fails to load) — terracotta,
+   since it stands in for the logo rather than for an action. */
+.auth-mark {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem;
+    border-radius: 16px;
+    background: var(--color-accent-strong);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+}
+
+/* ============================================================
+   BRAND MARK & STATE MEDALLIONS
+
+   Bito the mascot is gone. The identity is now an abstract six-ray
+   swirl — pastel at display sizes, solid terracotta wherever it has to
+   survive small (favicon, navbar, 16px).
+
+   A mark can't perform "order ready" the way a character could, so every
+   empty/error/status moment is a medallion instead: the pastel swirl as
+   a soft backdrop, a cream disc on top, one icon carrying the meaning
+   and a tone carrying the mood. One shape, many states.
+   ============================================================ */
+
+.brand-mark {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.state-medallion {
+    position: relative;
+    width: 132px;
+    height: 132px;
+    margin: 0 auto 1.25rem;
+    display: grid;
+    place-items: center;
+    animation: medallion-arrive 420ms cubic-bezier(0.34, 1.4, 0.64, 1) 120ms both;
+}
+
+/* The swirl sits behind at reduced opacity so it reads as a warm halo
+   rather than competing with the icon in front of it. */
+.state-medallion::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('/img/logo-mark-pastel.svg') center / contain no-repeat;
+    opacity: 0.55;
+}
+
+.state-medallion__disc {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 14px -8px rgba(70, 45, 25, 0.35);
+}
+
+.state-medallion__disc i {
+    font-size: 2.1rem;
+    line-height: 1;
+    color: var(--color-accent-strong);
+}
+
+.state-medallion--good .state-medallion__disc i { color: var(--color-primary-dark); }
+.state-medallion--bad  .state-medallion__disc i { color: var(--color-danger); }
+
+/* Sad/error moments drop the spring overshoot — the same bouncy landing
+   that reads as delighted is tone-deaf on a cancelled order. */
+.state-medallion--bad {
+    animation: medallion-arrive-somber 380ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+
+.state-medallion--sm { width: 96px; height: 96px; }
+.state-medallion--sm .state-medallion__disc { width: 54px; height: 54px; }
+.state-medallion--sm .state-medallion__disc i { font-size: 1.5rem; }
+
+@keyframes medallion-arrive {
+    from { opacity: 0; transform: translateY(10px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes medallion-arrive-somber {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .state-medallion, .state-medallion--bad { animation: none; }
+}
+
+/* ============================================================
+   EMPTY / ERROR STATES
+   ============================================================ */
+
+.state-panel {
+    text-align: center;
+    padding: 2.5rem 1.75rem;
+    max-width: 440px;
+    margin: 0 auto;
+}
+
+.state-panel h4 {
+    margin-bottom: 0.4rem;
+    font-size: 1.4rem;
+}
+
+.state-panel p {
+    color: var(--color-ink-muted);
+    font-size: 0.96rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ============================================================
+   ICONS (Phosphor)
+   ============================================================ */
+
+[class^="ph-"], [class*=" ph-"] {
+    vertical-align: -0.15em;
+    line-height: 1;
+}
+
+.btn i[class^="ph-"], .btn i[class*=" ph-"],
+.nav-link i[class^="ph-"], .nav-link i[class*=" ph-"] {
+    margin-right: 0.4em;
+    font-size: 1.05em;
+}
+
+.icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent-tint);
+    color: var(--color-accent-strong);
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   ENTRY ANIMATIONS
+   ============================================================ */
+
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.container > *,
+.auth-card {
+    animation: fade-up 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.row.g-3 > .col,
+.row.row-cols-1 > .col,
+.row.row-cols-md-2 > .col,
+.row.row-cols-md-3 > .col {
+    animation: fade-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.row > .col:nth-child(2) { animation-delay: 40ms; }
+.row > .col:nth-child(3) { animation-delay: 80ms; }
+.row > .col:nth-child(4) { animation-delay: 120ms; }
+.row > .col:nth-child(5) { animation-delay: 160ms; }
+.row > .col:nth-child(n+6) { animation-delay: 200ms; }
+
+/* Staggered menu cards */
+.menu-card { animation: fade-up 400ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.menu-card:nth-child(2) { animation-delay: 50ms; }
+.menu-card:nth-child(3) { animation-delay: 100ms; }
+.menu-card:nth-child(4) { animation-delay: 150ms; }
+.menu-card:nth-child(5) { animation-delay: 200ms; }
+.menu-card:nth-child(n+6) { animation-delay: 250ms; }
+
+@media (prefers-reduced-motion: reduce) {
+    .container > *, .auth-card, .row > .col, .menu-card { animation: none; }
+}
+
+/* ============================================================
+   CARD HOVER LIFT
+   ============================================================ */
+
+.card.hoverable {
+    cursor: pointer;
+}
+.card.hoverable:hover {
+    transform: translateY(-3px);
+    border-color: var(--color-primary-tint);
+}
+.card.hoverable:active {
+    transform: scale(0.98);
+}
+
+/* ============================================================
+   MENU ITEM PHOTOS (legacy — kept for canteen management grid)
+   ============================================================ */
+
+.menu-photo-frame {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--color-coral), var(--color-coral-deep));
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.menu-photo-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 300ms ease;
+}
+
+.card:hover .menu-photo-frame img {
+    transform: scale(1.04);
+}
+
+.menu-photo-frame.is-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-photo-frame.menu-photo-inline {
+    width: 92px;
+    aspect-ratio: 1;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    flex-shrink: 0;
+}
+
+.menu-photo-frame.is-placeholder img {
+    width: 46%;
+    height: 46%;
+    object-fit: contain;
+    opacity: 0.9;
+    transition: none;
+}
+
+.menu-photo-frame .badge-unavailable {
+    position: absolute;
+    inset: 0;
+    background: rgba(31, 27, 22, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   PHOTO UPLOAD WIDGET (canteen menu item form)
+   ============================================================ */
+
+.photo-dropzone {
+    position: relative;
+    border: 1.5px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: border-color 150ms ease, background-color 150ms ease;
+    background: #FBF8F3;
+}
+.photo-dropzone:hover, .photo-dropzone.is-dragover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-tint);
+}
+.photo-dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.photo-dropzone-preview {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+    background: linear-gradient(160deg, var(--color-coral), var(--color-coral-deep));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.photo-dropzone-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.photo-dropzone-preview img.is-placeholder-icon {
+    width: 60%;
+    height: 60%;
+    object-fit: contain;
+    opacity: 0.85;
+}
+
+.photo-dropzone-text strong {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--color-ink);
+}
+.photo-dropzone-text span {
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+}
+
+/* ============================================================
+   TOAST NOTIFICATION (added to cart, etc.)
+   ============================================================ */
+
+.toast-container {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    pointer-events: none;
+}
+
+@media (max-width: 767.98px) {
+    .toast-container {
+        bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 20px);
+    }
+}
+
+.toast-msg {
+    background: var(--color-ink);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: var(--radius-pill);
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: var(--font-display);
+    white-space: nowrap;
+    box-shadow: 0 10px 28px -6px rgba(44, 32, 24, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toast-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1), toast-out 300ms ease 2.2s forwards;
+    pointer-events: auto;
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(24px) scale(0.9); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-12px); }
+}
+
+/* ============================================================
+   PAGE SECTION HEADERS & FOOCHI WAVE DECOR
+   ============================================================ */
+
+.page-header {
+    position: relative;
+    margin-bottom: 24px;
+    padding: 8px 0;
+}
+
+.page-header-decor {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 220px;
+    height: 140px;
+    background-image: url('/img/blob-sage-1.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.page-header-content {
+    position: relative;
+    z-index: 1;
+}
+
+.page-header-label {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-accent-strong);
+    margin-bottom: 2px;
+    letter-spacing: 0.01em;
+}
+
+.page-header-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 1.18;
+    margin: 0;
+    color: var(--color-ink);
+}
+
+@media (min-width: 768px) {
+    .page-header-title { font-size: 2.35rem; }
+}
+
+/* Navbar with scroll shadow */
+.navbar.has-scrolled {
+    box-shadow: 0 6px 18px -6px rgba(70, 45, 25, 0.1) !important;
+}
+
+/* Category header section accent */
+.menu-category-section h5 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--color-ink);
+}
+
+.cat-bullet {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    display: inline-block;
+    box-shadow: 0 0 0 3px var(--color-primary-tint);
+}

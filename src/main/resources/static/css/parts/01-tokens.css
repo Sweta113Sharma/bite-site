@@ -1,0 +1,117 @@
+/* ============================================================
+   01-tokens.css  (1 of 6)
+
+   Design tokens and the base reset.
+
+   Everything downstream reads the custom properties defined here, so this file
+   loads first and nothing else declares a :root token.
+
+   Part of an ordered set. The browser concatenates these in the order they
+   are linked in fragments/head.html, and that order IS the cascade. Do not
+   reorder the <link> tags, and do not move a rule between files without
+   checking what it would then stop overriding.
+   ============================================================ */
+
+/* ============================================================
+   BiteSite design system — warm, appetizing, not generic-AI-blue.
+   Built as overrides on top of Bootstrap 5, so every existing
+   .btn / .card / .badge / .form-control class keeps working.
+
+   v2 — Mobile-first redesign inspired by modern food ordering apps.
+   ============================================================ */
+
+:root {
+    /* ============================================================
+       BiteSite — Stitch "Editorial" app system.
+       Ported from the app design in Stitch (project 15449988834297890483),
+       whose 12 screens all share one 51-token palette.
+
+       Two deliberate departures from the raw export, both contrast-driven:
+       the export's own hairline (#E5E5E5, 1.2:1 on canvas) is kept for
+       decorative dividers only and never for a control boundary — inputs
+       use --color-field-rule instead, which clears the 3:1 WCAG 1.4.11 asks
+       of a control edge. And the warning tone is darkened from the old
+       #B5811B (3.26:1, a text failure) to #8A5A00 (5.63:1).
+       ============================================================ */
+
+    /* --- Surfaces. Near-white canvas, pure-white cards. --- */
+    --color-bg:            #F9F9F9;  /* background / surface */
+    --color-surface:       #FFFFFF;  /* pure-white — cards, sheets */
+    --color-field:         #F3F3F3;  /* surface-container-low — inputs, pills */
+    --color-field-border:  #E5E5E5;  /* surface-border — decorative only */
+    --color-field-rule:    #8A726C;  /* outline — 4.24:1, the real control edge */
+    --color-surface-food:  #F3F3F3;  /* surface-container-low */
+    --color-surface-deep:  #E8E8E8;  /* surface-container-high — pressed/active */
+
+    --color-ink:       #1A1A1A;  /* text-main   16.5:1 on canvas */
+    --color-ink-muted: #666666;  /* text-muted   5.45:1 on canvas */
+    --color-border:    #E5E5E5;  /* surface-border */
+
+    /* --- Terracotta is the primary action colour in this system. --- */
+    --color-primary:      #9F3C25;  /* 6.34:1 on canvas, 6.67:1 behind white */
+    --color-primary-dark: #822712;  /* on-primary-fixed-variant — hover/pressed */
+    --color-primary-soft: #FFB4A3;  /* primary-fixed-dim — decorative fills only */
+    --color-primary-tint: #FFDAD2;  /* primary-fixed */
+
+    /* --- Sage is secondary: ratings, positive accents. --- */
+    --color-accent:        #486459;  /* secondary  6.15:1 on canvas */
+    --color-accent-strong: #486459;  /* text-safe at the same value */
+    --color-accent-tint:   #C8E7D9;  /* secondary-container */
+
+    /* --- Status. Success borrows the teal tertiary. --- */
+    --color-success:      #006762;  /* tertiary  6.40:1 */
+    --color-success-tint: #C8E7D9;
+    --color-warning:      #8A5A00;  /* darkened for text safety, 5.63:1 */
+    --color-warning-tint: #FBF0DA;
+    --color-info:         #006762;
+    --color-info-tint:    #F3FFFD;
+    --color-danger:       #BA1A1A;  /* error  6.14:1 */
+    --color-danger-tint:  #FFDAD6;  /* error-container */
+
+    --color-nav: #FFFFFF;
+
+    /* --- Shape. Far tighter than the old system: the export caps at 12px. --- */
+    --radius-sm:   4px;   /* rounded-lg  — images, small controls */
+    --radius-md:   8px;   /* rounded-xl  — cards, buttons */
+    --radius-lg:   12px;  /* rounded-full in this config — sheets, steppers */
+    --radius-pill: 12px;  /* the export's "full" really is 12px, not 999px */
+
+    /* --- Depth. Tailwind shadow-sm / shadow-md, as the export uses. --- */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.10);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.10);
+    --shadow-sticky: 0 -4px 20px rgba(0, 0, 0, 0.05);
+
+    --color-coral:      #FFDAD2;
+    --color-coral-deep: #FFB4A3;
+
+    /* --- Type. One family, as the export ships. --- */
+    --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+
+    /* --- Type scale, lifted from the export's fontSize config. --- */
+    --text-display-lg:  32px;  --lh-display-lg:  40px;
+    --text-headline-lg: 24px;  --lh-headline-lg: 32px;
+    --text-headline-md: 20px;  --lh-headline-md: 28px;
+    --text-body-lg:     16px;  --lh-body-lg:     24px;
+    --text-body-md:     14px;  --lh-body-md:     20px;
+    --text-label-lg:    14px;  --lh-label-lg:    20px;
+    --text-label-sm:    12px;  --lh-label-sm:    16px;
+
+    /* --- Spacing scale from the export. --- */
+    --stack-xs: 4px;
+    --stack-sm: 12px;
+    --stack-md: 24px;
+    --stack-lg: 48px;
+    --margin-mobile: 24px;
+    --gutter-mobile: 20px;
+    --hit-area: 48px;
+
+    --bottom-nav-height: 64px;
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+
+* {
+    text-wrap: pretty;
+}
