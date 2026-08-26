@@ -1483,32 +1483,52 @@
 
 /* Three dishes on the brand panel, so the first screen of a food app
    actually shows food. */
-.auth-brand__dishes { display: flex; gap: 0.9rem; }
+.auth-brand__dishes { display: flex; gap: 1.5rem; align-items: center; }
 
+/* No tile behind the art. The boxed treatment came from the old peach panel,
+   where the illustrations needed a surface to sit on; against the flat
+   terracotta they read better free-standing, and dropping the 12px padding
+   with it gives the artwork the whole box. */
 .auth-brand__dish {
-    width: 92px;
-    height: 92px;
-    border-radius: var(--radius-md);
-    background: var(--color-bg);
+    width: 136px;
+    height: 136px;
     display: grid;
     place-items: center;
-    padding: 12px;
 }
-.auth-brand__dish img { width: 100%; height: 100%; object-fit: contain; }
+/* Size comes from --dish-size, set per dish below. Applied to BOTH axes so the
+   box scales squarely and object-fit: contain shrinks the artwork with it —
+   which is what makes the knob work on every image whatever its shape. */
+.auth-brand__dish img {
+    width: var(--dish-size, 100%);
+    height: var(--dish-size, 100%);
+    object-fit: contain;
+}
 
 /* The middle tile used to be lifted 14px as a staggered flourish, which suited the old
    peach panel. On the flat one it just reads as a tile that failed to line up, so the
    row is level now. */
 
-/* These three illustrations are not the same shape: the chai is portrait (202x320)
-   while the dosa and puff are landscape (320x215, 320x193). object-fit: contain sizes
-   each to the tile, so the portrait one alone fills the full height and lands about 50%
-   taller than its neighbours — level with them, but visually looming. Capping its height
-   matches the optical weight of the other two rather than their bounding boxes.
+/* ---- Dish sizing. These three values are the knobs. ----------------------
+   Percentage of the tile's 68px content box. Lower = smaller.
 
-   Tagged by class rather than :nth-child so it stays correct if the dishes are
-   reordered, which the position-based rule did not. */
-.auth-brand__dish--portrait img { max-height: 72%; }
+   Scales the box on both axes, so it works on every image whatever its shape.
+   max-height did not: it is inert on a width-limited image, so it moved the
+   chai and did nothing at all to the dosa or the puff.
+
+     image     source     shape       limited by
+     -------   ---------  ----------  ----------
+     dosa      320x215    landscape   width
+     puff      320x193    landscape   width
+
+   Both remaining illustrations are landscape and so width-limited, which is why
+   they sit at 100%: the box is square and their height is the short axis. The
+   chai used to be the exception — the only portrait artwork, the only one whose
+   height filled the box — and it has been removed.
+
+   Tagged per dish rather than by :nth-child, so each value stays attached to the
+   artwork it was measured against if the order ever changes. */
+.auth-brand__dish--dosa { --dish-size: 100%; }
+.auth-brand__dish--puff { --dish-size: 100%; }
 
 /* ---------- Password visibility toggle ---------- */
 

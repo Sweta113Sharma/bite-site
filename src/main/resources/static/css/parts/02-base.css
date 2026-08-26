@@ -124,6 +124,10 @@ a:hover { color: var(--color-primary); }
     box-shadow: none;
 }
 
+/* A phone should never scroll sideways. Anything that overflows its container is a
+   bug, but this keeps one from taking the whole page with it. */
+html, body { overflow-x: hidden; }
+
 .navbar-toggler-custom {
     background: transparent;
     border: none;
@@ -333,6 +337,16 @@ a:hover { color: var(--color-primary); }
     padding: 0.6rem 1.4rem;
     transition: transform 120ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
+/* Bootstrap ships .btn-sm, but this file loads after Bootstrap and .btn matches at
+   the same specificity, so the padding above was silently beating it and every
+   "small" button rendered full size. That is fine on a desktop table row and
+   overflows a card on a phone, which is what broke the outlet and admin screens
+   at narrow widths. Restated here so the modifier actually modifies. */
+.btn-sm {
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+}
+
 .btn:active { transform: scale(0.97); }
 .btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 

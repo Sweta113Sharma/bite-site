@@ -739,10 +739,10 @@
 .auth-brand__headline,
 .auth-brand__lockup span { color: #fff; }
 .auth-brand__sub { color: rgba(255, 255, 255, 0.82); }
-.auth-brand__dish {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: var(--radius-md);
-}
+/* The translucent tile is gone with the boxed treatment — the illustrations sit
+   directly on the panel now. Kept as an empty-intent note rather than silently
+   deleted, because this file re-tones the brand panel and its absence is the
+   deliberate choice, not an oversight. */
 
 /* ---------- Buttons, app-wide within the customer surfaces ---------- */
 

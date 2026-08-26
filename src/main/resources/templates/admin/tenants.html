@@ -19,6 +19,7 @@
         <a class="btn btn-primary" th:href="@{/admin/tenants/new}"><i class="ph ph-plus"></i>Onboard a college</a>
     </div>
 
+    <div class="table-responsive">
     <table class="table bg-white" th:if="${!#lists.isEmpty(tenants)}">
         <thead><tr><th>Logo</th><th>Name</th><th>Status</th><th></th></tr></thead>
         <tbody>
@@ -36,6 +37,7 @@
         </tr>
         </tbody>
     </table>
+    </div>
 </div>
 </body>
 </html>

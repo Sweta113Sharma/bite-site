@@ -55,6 +55,7 @@
         <p>Create the first super admin or tech manager account above.</p>
     </div>
 
+    <div class="table-responsive">
     <table class="table bg-white" th:if="${!#lists.isEmpty(users)}">
         <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th></th></tr></thead>
         <tbody>
@@ -89,6 +90,7 @@
         </tr>
         </tbody>
     </table>
+    </div>
 </div>
 </body>
 </html>

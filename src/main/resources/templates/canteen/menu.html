@@ -62,7 +62,7 @@
                     <p class="daily-limit-text mb-0 mt-2" th:if="${!item.hasDailyLimit()}"
                        th:text="${item.soldToday} + ' ordered today · no daily limit'">0 ordered today</p>
 
-                    <div class="d-flex gap-2 mt-3">
+                    <div class="d-flex gap-2 mt-3 flex-wrap">
                         <a class="btn btn-sm btn-outline-secondary" th:href="@{/canteen/menu/{id}/edit(id=${item.id})}"><i class="ph ph-pencil-simple"></i>Edit</a>
                         <form method="post" th:action="@{/canteen/menu/{id}/toggle(id=${item.id})}">
                             <button class="btn btn-sm" type="submit"

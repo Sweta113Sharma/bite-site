@@ -15,6 +15,7 @@
         <p>Add a college you're talking to and track it through the pipeline.</p>
     </div>
 
+    <div class="table-responsive">
     <table class="table bg-white" th:if="${!#lists.isEmpty(leads)}">
         <thead><tr><th>College</th><th>Contact</th><th>Stage</th><th></th></tr></thead>
         <tbody>
@@ -44,6 +45,7 @@
         </tr>
         </tbody>
     </table>
+    </div>
 </div>
 </body>
 </html>

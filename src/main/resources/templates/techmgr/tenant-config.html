@@ -6,6 +6,7 @@
 <div class="container" style="max-width: 640px;">
     <h3 class="mb-4" th:text="${tenant.name} + ' — configuration'">Configuration</h3>
 
+    <div class="table-responsive">
     <table class="table bg-white mb-4" th:if="${!#lists.isEmpty(entries)}">
         <thead><tr><th>Key</th><th>Value</th></tr></thead>
         <tbody>
@@ -15,6 +16,7 @@
         </tr>
         </tbody>
     </table>
+    </div>
     <p class="text-muted" th:if="${#lists.isEmpty(entries)}">No configuration set for this college yet.</p>
 
     <div class="card">
