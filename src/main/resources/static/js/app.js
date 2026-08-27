@@ -175,11 +175,11 @@ function initBottomNav() {
 
         if (isActive) {
             item.classList.add('active');
-            // Swap to filled icon for active tab
-            const icon = item.querySelector('i');
-            if (icon) {
-                icon.className = icon.className.replace(' ph-', ' ph-fill ph-');
-            }
+            // The filled icon is CSS's job now: .bottom-nav-item.active sets
+            // font-variation-settings 'FILL' 1 on the Material Symbol. This used to
+            // rewrite Phosphor class names, which a variable font cannot express and
+            // which silently stopped matching anything when the icons changed.
+
         }
     });
 }
@@ -297,8 +297,7 @@ function initAddToCartForms() {
                     // alone in that case: showing "1" for something that is not in the
                     // cart is worse feedback than none.
                     if (data.blocked) {
-                        showToast(data.message || 'That item can\'t be added right now.',
-                            'ph-fill ph-warning-circle');
+                        showToast(data.message || 'That item can\'t be added right now.', 'warning');
                         return;
                     }
                     const control = form.closest('.cart-control');
@@ -429,7 +428,8 @@ function initNavbarScroll() {
    TOAST — show a brief message at the bottom with icon
    ============================================================ */
 
-function showToast(message, iconClass = 'ph-fill ph-check-circle') {
+/* `icon` is a Material Symbols glyph name, matching the customer app's icon set. */
+function showToast(message, icon = 'check_circle') {
     let container = document.querySelector('.toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -439,7 +439,7 @@ function showToast(message, iconClass = 'ph-fill ph-check-circle') {
 
     const toast = document.createElement('div');
     toast.className = 'toast-msg';
-    toast.innerHTML = `<i class="${iconClass}" style="color:var(--color-primary-soft); font-size:1.15rem;"></i> <span>${message}</span>`;
+    toast.innerHTML = `<span class="material-symbols-outlined is-filled" style="color:var(--color-primary-soft); font-size:1.15rem;">${icon}</span> <span>${message}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => toast.remove(), 2600);
