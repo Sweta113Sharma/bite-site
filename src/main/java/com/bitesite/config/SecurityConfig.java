@@ -69,8 +69,14 @@ public class SecurityConfig {
                     .requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "TECH_MANAGER")
                     .requestMatchers("/techmgr/**").hasAnyRole("SUPER_ADMIN", "TECH_MANAGER")
                     .requestMatchers("/actuator/**").hasAnyRole("SUPER_ADMIN", "TECH_MANAGER")
-                    // Outlet portal routes
-                    .requestMatchers("/canteen/**", "/api/orders/queue").hasRole("CANTEEN_STAFF")
+                    // Outlet portal routes. Coarse on purpose — this rule says only which
+                    // roles may enter the portal. Manager-vs-operator capability is
+                    // enforced per method with PortalGuard + StaffScope, because some
+                    // endpoints under /canteen/menu (the stock toggles) are deliberately
+                    // shared and a second URL rule could not express that without
+                    // contradicting this one.
+                    .requestMatchers("/canteen/**", "/api/orders/queue")
+                            .hasAnyRole("CANTEEN_MANAGER", "CANTEEN_OPERATOR")
                     // App portal routes (was STUDENT, now USER)
                     .requestMatchers("/student/**").hasRole("USER")
                     // Role switching — any authenticated user

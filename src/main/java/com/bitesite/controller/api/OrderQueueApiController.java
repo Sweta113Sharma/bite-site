@@ -1,7 +1,9 @@
 package com.bitesite.controller.api;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.config.PortalGuard;
 import com.bitesite.dto.OrderQueueItem;
+import com.bitesite.model.StaffScope;
 import com.bitesite.model.User;
 import com.bitesite.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,9 @@ public class OrderQueueApiController {
 
     @GetMapping("/queue")
     public List<OrderQueueItem> queue(@AuthenticationPrincipal AppUserPrincipal principal) {
+        // Must carry the same scope as the page it feeds. If these two ever disagree the
+        // queue silently stops refreshing for whichever role the API forgot.
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
         return orderService.kitchenQueue(user.getTenantId(), user.getOutletId()).stream()
                 .map(OrderQueueItem::from)

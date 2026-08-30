@@ -14,8 +14,17 @@ public enum Role {
     SUPER_ADMIN,
     TECH_MANAGER,
 
-    // --- Outlet portal role ---
-    CANTEEN_STAFF,
+    // --- Outlet portal roles ---
+    //
+    // Declaration order is load-bearing. User.roles is an EnumSet, so it iterates in
+    // declaration order, and RoleBasedAuthenticationSuccessHandler takes findFirst() over
+    // the roles eligible for the portal being logged into. For someone holding both,
+    // whichever is declared first is what they log in as. Manager leads deliberately —
+    // the same "more privileged wins on ambiguity" rule the admin portal applies
+    // explicitly for SUPER_ADMIN. Pinned by a test, because nothing else would catch a
+    // reorder.
+    CANTEEN_MANAGER,
+    CANTEEN_OPERATOR,
 
     // --- App portal role (was STUDENT, now USER for broader applicability) ---
     USER;
@@ -27,7 +36,7 @@ public enum Role {
 
     /** True if this role belongs to the outlet portal (outlet.bitesite.in). */
     public boolean isOutletPortalRole() {
-        return this == CANTEEN_STAFF;
+        return this == CANTEEN_MANAGER || this == CANTEEN_OPERATOR;
     }
 
     /** True if this role belongs to the app portal (app.bitesite.in). */

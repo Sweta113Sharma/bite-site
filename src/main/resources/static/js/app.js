@@ -132,7 +132,7 @@ function disablePush(toggle) {
 /* ============================================================
    NAVBAR TOGGLE — hamburger menu for staff/admin roles on mobile
    (the student portal has the bottom nav instead, so this button
-   only renders for CANTEEN_STAFF / SUPER_ADMIN / TECH_MANAGER).
+   only renders for the outlet and admin roles).
    ============================================================ */
 
 function initNavbarToggle() {

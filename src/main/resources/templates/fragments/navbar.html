@@ -21,7 +21,7 @@
              (see app.js initNavbarToggle), matching the rest of this app's hand-rolled JS —
              no Bootstrap JS bundle is loaded here. -->
         <button type="button" class="navbar-toggler-custom d-lg-none"
-                sec:authorize="hasAnyRole('CANTEEN_STAFF', 'SUPER_ADMIN', 'TECH_MANAGER')"
+                sec:authorize="hasAnyRole('CANTEEN_MANAGER', 'CANTEEN_OPERATOR', 'SUPER_ADMIN', 'TECH_MANAGER')"
                 id="navbar-toggle-btn" aria-label="Toggle navigation" aria-expanded="false"
                 aria-controls="navbar-links-collapse">
             <span class="material-symbols-outlined">menu</span>
@@ -55,9 +55,11 @@
                     </select>
                 </form>
 
-                <!-- CANTEEN_STAFF links -->
-                <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link" th:href="@{/canteen/queue}"><span class="material-symbols-outlined">hourglass_top</span>Queue</a>
-                <a sec:authorize="hasRole('CANTEEN_STAFF')" class="nav-link" th:href="@{/canteen/menu}"><span class="material-symbols-outlined">skillet</span>Menu</a>
+                <!-- Outlet links. Both roles get Menu: an operator needs it to reach the
+                     per-item stock toggles, and the manager-only actions inside are
+                     hidden per-row below and refused server-side regardless. -->
+                <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-link" th:href="@{/canteen/queue}"><span class="material-symbols-outlined">hourglass_top</span>Queue</a>
+                <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-link" th:href="@{/canteen/menu}"><span class="material-symbols-outlined">skillet</span>Menu</a>
 
                 <!-- ADMIN links -->
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>

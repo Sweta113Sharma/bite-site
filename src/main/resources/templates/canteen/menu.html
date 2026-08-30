@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -16,7 +17,7 @@
                     <i class="ph ph-arrow-counter-clockwise"></i>Restock all
                 </button>
             </form>
-            <a class="btn btn-primary" th:href="@{/canteen/menu/new}"><i class="ph ph-plus"></i>Add item</a>
+            <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="btn btn-primary" th:href="@{/canteen/menu/new}"><i class="ph ph-plus"></i>Add item</a>
         </div>
     </div>
 
@@ -63,7 +64,7 @@
                        th:text="${item.soldToday} + ' ordered today · no daily limit'">0 ordered today</p>
 
                     <div class="d-flex gap-2 mt-3 flex-wrap">
-                        <a class="btn btn-sm btn-outline-secondary" th:href="@{/canteen/menu/{id}/edit(id=${item.id})}"><i class="ph ph-pencil-simple"></i>Edit</a>
+                        <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="btn btn-sm btn-outline-secondary" th:href="@{/canteen/menu/{id}/edit(id=${item.id})}"><i class="ph ph-pencil-simple"></i>Edit</a>
                         <form method="post" th:action="@{/canteen/menu/{id}/toggle(id=${item.id})}">
                             <button class="btn btn-sm" type="submit"
                                     th:classappend="${item.available} ? 'btn-outline-warning' : 'btn-outline-success'"
@@ -72,7 +73,7 @@
                                 <span th:text="${item.available} ? 'Out of stock' : 'Restock'">Out of stock</span>
                             </button>
                         </form>
-                        <form method="post" th:action="@{/canteen/menu/{id}/delete(id=${item.id})}"
+                        <form sec:authorize="hasRole('CANTEEN_MANAGER')" method="post" th:action="@{/canteen/menu/{id}/delete(id=${item.id})}"
                               onsubmit="return confirm('Delete this item?');">
                             <button class="btn btn-sm btn-outline-danger" type="submit" title="Delete"><i class="ph ph-trash"></i></button>
                         </form>

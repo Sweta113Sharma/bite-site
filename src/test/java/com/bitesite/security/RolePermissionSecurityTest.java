@@ -59,7 +59,7 @@ class RolePermissionSecurityTest {
                 .role(Role.USER).activeRole(Role.USER).active(true).build());
         canteenStaff = userDao.save(User.builder().tenantId(tenant.getId()).name("Canteen")
                 .email("perm-canteen-" + runId + "@test.local").passwordHash(passwordEncoder.encode("x"))
-                .role(Role.CANTEEN_STAFF).activeRole(Role.CANTEEN_STAFF).active(true).build());
+                .role(Role.CANTEEN_MANAGER).activeRole(Role.CANTEEN_MANAGER).active(true).build());
         superAdmin = userDao.save(User.builder().name("Admin")
                 .email("perm-admin-" + runId + "@test.local").passwordHash(passwordEncoder.encode("x"))
                 .role(Role.SUPER_ADMIN).activeRole(Role.SUPER_ADMIN).active(true).build());

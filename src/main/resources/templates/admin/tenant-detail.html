@@ -119,11 +119,16 @@
                     <h5 class="card-title"><i class="ph ph-users-three"></i>Canteen staff accounts</h5>
                     <div class="table-responsive">
                     <table class="table table-sm" th:if="${!#lists.isEmpty(staff)}">
-                        <thead><tr><th>Name</th><th>Email</th></tr></thead>
+                        <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
                         <tbody>
-                        <tr th:each="s : ${staff}" th:if="${s.role.name() == 'CANTEEN_STAFF'}">
+                        <tr th:each="s : ${staff}" th:if="${s.role.isOutletPortalRole()}">
                             <td th:text="${s.name}">Name</td>
                             <td th:text="${s.email}">email</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${s.role.name() == 'CANTEEN_MANAGER'} ? 'bg-primary' : 'bg-secondary'"
+                                      th:text="${s.role.name() == 'CANTEEN_MANAGER'} ? 'Manager' : 'Operator'">Role</span>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
@@ -139,6 +144,17 @@
                                 <option th:each="o : ${outlets}" th:value="${o.id}" th:text="${o.name}"></option>
                             </select>
                             <div class="text-danger small" th:if="${#fields.hasErrors('outletId')}" th:errors="*{outletId}"></div>
+                        </div>
+                        <div class="mb-2">
+                            <!-- Only the two outlet roles are offered, and the controller
+                                 re-checks isOutletPortalRole() — this select must not become
+                                 a route to minting a platform account. -->
+                            <select th:field="*{role}" class="form-select">
+                                <option value="" disabled selected>Choose role</option>
+                                <option value="CANTEEN_MANAGER">Manager — menu, prices, and the queue</option>
+                                <option value="CANTEEN_OPERATOR">Operator — the queue and stock only</option>
+                            </select>
+                            <div class="text-danger small" th:if="${#fields.hasErrors('role')}" th:errors="*{role}"></div>
                         </div>
                         <div class="mb-2">
                             <input type="text" th:field="*{name}" class="form-control" placeholder="Full name"/>

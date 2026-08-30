@@ -143,10 +143,10 @@ class UserServiceTest {
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         when(userDao.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
-        userService.createUser(1L, 10L, "Canteen Staff", "canteen@demo.local", "Password1!", Role.CANTEEN_STAFF);
+        userService.createUser(1L, 10L, "Canteen Staff", "canteen@demo.local", "Password1!", Role.CANTEEN_MANAGER);
 
         User saved = captor.getValue();
-        assertThat(saved.getRole()).isEqualTo(Role.CANTEEN_STAFF);
+        assertThat(saved.getRole()).isEqualTo(Role.CANTEEN_MANAGER);
         assertThat(saved.getOutletId()).isEqualTo(10L);
         assertThat(saved.getTenantId()).isEqualTo(1L);
         assertThat(saved.isPhoneVerified()).isTrue();
@@ -158,7 +158,7 @@ class UserServiceTest {
     void createUserRejectsADuplicateEmailToo() {
         when(userDao.existsByEmail("dup@demo.local")).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.createUser(1L, 10L, "X", "dup@demo.local", "Password1!", Role.CANTEEN_STAFF))
+        assertThatThrownBy(() -> userService.createUser(1L, 10L, "X", "dup@demo.local", "Password1!", Role.CANTEEN_MANAGER))
                 .isInstanceOf(DuplicateEmailException.class);
     }
 

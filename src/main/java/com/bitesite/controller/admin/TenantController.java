@@ -119,10 +119,17 @@ public class TenantController {
             @Valid @ModelAttribute("staffForm") StaffForm form,
             BindingResult bindingResult, RedirectAttributes redirectAttributes) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        // The role now comes from the form, so it has to be checked. Without this, a
+        // hand-crafted post could mint a SUPER_ADMIN through the outlet-staff form — and a
+        // tenant-scoped account holding a platform role is incoherent besides. Already
+        // FULL_ADMIN-gated above; this is the second lock, not the first.
+        if (form.getRole() != null && !form.getRole().isOutletPortalRole()) {
+            bindingResult.rejectValue("role", "invalid", "Outlet staff must be a manager or an operator.");
+        }
         if (!bindingResult.hasErrors()) {
             try {
                 userService.createUser(id, form.getOutletId(), form.getName(), form.getEmail(), form.getPassword(),
-                        Role.CANTEEN_STAFF);
+                        form.getRole());
                 return "redirect:/admin/tenants/" + id;
             } catch (DuplicateEmailException e) {
                 bindingResult.rejectValue("email", "duplicate", e.getMessage());

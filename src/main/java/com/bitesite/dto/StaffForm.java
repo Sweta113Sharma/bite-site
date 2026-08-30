@@ -1,5 +1,6 @@
 package com.bitesite.dto;
 
+import com.bitesite.model.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,4 +27,9 @@ public class StaffForm implements Serializable {
 
     @NotNull(message = "Select a canteen")
     private Long outletId;
+
+    /** Manager or operator. Validated against {@code Role.isOutletPortalRole()} in the
+     * controller as well as here, so this field cannot become a route to a platform role. */
+    @NotNull(message = "Select a role")
+    private Role role;
 }

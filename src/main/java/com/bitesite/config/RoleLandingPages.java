@@ -1,9 +1,6 @@
 package com.bitesite.config;
 
 import com.bitesite.model.Role;
-import org.springframework.security.core.GrantedAuthority;
-
-import java.util.Collection;
 
 /** Single source of truth for "where does this role land after login" — used by the login
  * success handler and by the "/" redirect, so the two never drift apart. */
@@ -21,30 +18,18 @@ public final class RoleLandingPages {
         return switch (activeRole) {
             case SUPER_ADMIN -> "/admin";
             case TECH_MANAGER -> "/techmgr";
-            case CANTEEN_STAFF -> "/canteen/queue";
+            // Both outlet roles land on the queue. It is the shift-opening screen for an
+            // operator, and the manager's own menu work is one nav click away — landing a
+            // manager somewhere the operator never goes would make the two portals feel
+            // like different products.
+            case CANTEEN_MANAGER, CANTEEN_OPERATOR -> "/canteen/queue";
             case USER -> "/student/menu";
         };
     }
 
-    /**
-     * Legacy method — resolves from Spring Security authorities.
-     * Used as fallback when activeRole is not available.
-     */
-    public static String forAuthorities(Collection<? extends GrantedAuthority> authorities) {
-        return authorities.stream()
-                .map(GrantedAuthority::getAuthority)
-                .findFirst()
-                .map(RoleLandingPages::forAuthority)
-                .orElse("/login");
-    }
-
-    private static String forAuthority(String authority) {
-        return switch (authority) {
-            case "ROLE_SUPER_ADMIN" -> "/admin";
-            case "ROLE_TECH_MANAGER" -> "/techmgr";
-            case "ROLE_CANTEEN_STAFF" -> "/canteen/queue";
-            case "ROLE_USER" -> "/student/menu";
-            default -> "/login";
-        };
-    }
+    // forAuthorities/forAuthority were removed here. They duplicated the mapping above by
+    // matching on "ROLE_" strings behind a `default -> "/login"`, which meant a role added
+    // or renamed anywhere else compiled cleanly and silently sent that role to the login
+    // page. Nothing called them. The switch above is exhaustive over Role with no default,
+    // so it fails the build instead — which is exactly how this change was found.
 }

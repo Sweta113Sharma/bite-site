@@ -49,7 +49,8 @@ scoped to any one college.
 |---|---|---|
 | `SUPER_ADMIN` | platform | `/admin` — onboard colleges, upload logos, add canteens, create canteen staff accounts, resolve grievances, view the audit log, run the sales/onboarding pipeline |
 | `TECH_MANAGER` | platform | `/techmgr` — per-college config (feature flags, etc.), system health |
-| `CANTEEN_STAFF` | one college + one canteen (`outlet`) | `/canteen` — menu, prices, discounts, stock, live order queue |
+| `CANTEEN_MANAGER` | one college + one canteen (`outlet`) | `/canteen` — menu, prices, discounts, plus everything an operator can do |
+| `CANTEEN_OPERATOR` | one college + one canteen (`outlet`) | `/canteen` — live order queue, stock toggles, pause orders. No price or menu editing |
 | `STUDENT` | one college | `/student` — browse menu, cart, pay-gated checkout, order tracking, grievances |
 
 A college can have more than one canteen (`outlets` table) — students pick which one
@@ -177,9 +178,10 @@ switching accounts switches which college's data you see:
 |---|---|---|
 | `admin@bitesite.local` | SUPER_ADMIN | — (platform) |
 | `tech@bitesite.local` | TECH_MANAGER | — (platform) |
-| `canteen@demo.local` | CANTEEN_STAFF | Demo College |
+| `canteen@demo.local` | CANTEEN_MANAGER | Demo College |
+| `operator@demo.local` | CANTEEN_OPERATOR | Demo College |
 | `student@demo.local` | STUDENT | Demo College |
-| `canteen@second.local` | CANTEEN_STAFF | Second College |
+| `canteen@second.local` | CANTEEN_MANAGER | Second College |
 | `student@second.local` | STUDENT | Second College |
 
 For a real deploy, just don't set `FLYWAY_LOCATIONS` — there's nothing else to remember.
@@ -345,7 +347,6 @@ docker compose up --build
 - Coupon-code engine (menu items support per-item flat/percent discounts only)
 - Ratings, demand forecasting, delivery-to-class — called out as "Next Phase" in the
   original course PPT, still future scope here
-- Canteen owner/staff permission split (one `CANTEEN_STAFF` role today)
 - A real custom domain + wildcard DNS/TLS if subdomain-per-college ever comes back — the
   code was actually built that way first and deliberately reworked to account-based tenancy
   instead, since standing up real DNS/hosting wasn't in scope yet

@@ -1,8 +1,10 @@
 package com.bitesite.controller.canteen;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.config.PortalGuard;
 import com.bitesite.exception.InvalidOrderStateException;
 import com.bitesite.model.OrderStatus;
+import com.bitesite.model.StaffScope;
 import com.bitesite.model.User;
 import com.bitesite.service.OrderService;
 import com.bitesite.service.OutletService;
@@ -39,6 +41,7 @@ public class OrderQueueController {
 
     @GetMapping
     public String queue(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
         model.addAttribute("orders", orderService.kitchenQueue(user.getTenantId(), user.getOutletId()));
         model.addAttribute("outlet", outletService.get(user.getOutletId(), user.getTenantId()));
@@ -49,6 +52,7 @@ public class OrderQueueController {
     @PostMapping("/{orderId}/status")
     public String updateStatus(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long orderId,
             @RequestParam OrderStatus newStatus) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         if (!STAFF_ADVANCEABLE.contains(newStatus)) {
             throw new InvalidOrderStateException("That status change isn't available from here.");
         }
@@ -65,6 +69,7 @@ public class OrderQueueController {
     @PostMapping("/{orderId}/cancel")
     public String cancel(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long orderId,
             @RequestParam(required = false) String reason) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
         orderService.cancelOrder(orderId, user.getTenantId(), user.getId(), reason);
         return "redirect:/canteen/queue";
@@ -78,6 +83,7 @@ public class OrderQueueController {
     @PostMapping("/{orderId}/collect")
     public String completePickup(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long orderId,
             @RequestParam(required = false) String pickupCode, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
         try {
             orderService.completeWithPickupCode(orderId, user.getTenantId(), pickupCode, user.getId());
@@ -94,6 +100,7 @@ public class OrderQueueController {
     @PostMapping("/accepting")
     public String setAccepting(@AuthenticationPrincipal AppUserPrincipal principal,
             @RequestParam boolean accepting, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
         outletService.setAcceptingOrders(user.getOutletId(), user.getTenantId(), accepting, user.getId());
         redirectAttributes.addFlashAttribute("queueNotice", accepting

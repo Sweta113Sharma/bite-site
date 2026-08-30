@@ -91,8 +91,8 @@ class LoginPortalReconciliationTest {
 
     @Test
     void multiRoleUserLoggingIntoAdminPortalGetsSwitchedToAnEligibleRole() throws Exception {
-        // Holds CANTEEN_STAFF (persisted active) + SUPER_ADMIN, but logs in on admin.localhost.
-        User user = seed("multi-admin", Role.CANTEEN_STAFF, Set.of(Role.SUPER_ADMIN), Role.CANTEEN_STAFF);
+        // Holds CANTEEN_MANAGER (persisted active) + SUPER_ADMIN, but logs in on admin.localhost.
+        User user = seed("multi-admin", Role.CANTEEN_MANAGER, Set.of(Role.SUPER_ADMIN), Role.CANTEEN_MANAGER);
 
         mockMvc.perform(loginRequest(ADMIN_HOST, user))
                 .andExpect(status().is3xxRedirection())
@@ -103,15 +103,36 @@ class LoginPortalReconciliationTest {
     }
 
     @Test
+    void outletUserHoldingBothRolesLogsInAsTheManager() throws Exception {
+        // Pins an otherwise invisible coupling. User.roles is an EnumSet, so it iterates in
+        // declaration order, and the success handler takes findFirst() over the roles
+        // eligible for this portal — meaning whichever outlet role is declared first in
+        // Role.java is what a dual-role account becomes at login. Manager leads on purpose
+        // (more privileged wins on ambiguity, as the admin side does for SUPER_ADMIN).
+        // Reordering the enum would silently flip this, and nothing else would notice.
+        //
+        // The persisted active role is USER, which does not fit the outlet portal, so the
+        // handler is forced down the findFirst() path rather than keeping what it found.
+        User user = seed("both-outlet-roles", Role.CANTEEN_OPERATOR,
+                Set.of(Role.CANTEEN_MANAGER), Role.USER);
+
+        mockMvc.perform(loginRequest(OUTLET_HOST, user))
+                .andExpect(status().is3xxRedirection());
+
+        User reloaded = userDao.findByEmail(user.getEmail()).orElseThrow();
+        assertThat(reloaded.getActiveRole()).isEqualTo(Role.CANTEEN_MANAGER);
+    }
+
+    @Test
     void userWhoseActiveRoleAlreadyFitsThePortalKeepsIt() throws Exception {
-        User user = seed("fits-outlet", Role.CANTEEN_STAFF, Set.of(), Role.CANTEEN_STAFF);
+        User user = seed("fits-outlet", Role.CANTEEN_MANAGER, Set.of(), Role.CANTEEN_MANAGER);
 
         mockMvc.perform(loginRequest(OUTLET_HOST, user))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", "/canteen/queue"));
 
         User reloaded = userDao.findByEmail(user.getEmail()).orElseThrow();
-        assertThat(reloaded.getActiveRole()).isEqualTo(Role.CANTEEN_STAFF);
+        assertThat(reloaded.getActiveRole()).isEqualTo(Role.CANTEEN_MANAGER);
     }
 
     @Test
@@ -130,7 +151,7 @@ class LoginPortalReconciliationTest {
     @Test
     void multiRoleUserCanLogInOnEachEligiblePortalInTurn() throws Exception {
         User user = seed("all-portals", Role.USER,
-                Set.of(Role.CANTEEN_STAFF, Role.SUPER_ADMIN), Role.USER);
+                Set.of(Role.CANTEEN_MANAGER, Role.SUPER_ADMIN), Role.USER);
 
         mockMvc.perform(loginRequest(APP_HOST, user))
                 .andExpect(header().string("Location", "/student/menu"));
@@ -148,7 +169,7 @@ class LoginPortalReconciliationTest {
         // saving it to the SecurityContextRepository only affects the current
         // response — the DB's active_role was correct but the *session* still carried the
         // old, pre-reconciliation authority, so the very next request 403'd.
-        User user = seed("survives-next-req", Role.CANTEEN_STAFF, Set.of(Role.SUPER_ADMIN), Role.CANTEEN_STAFF);
+        User user = seed("survives-next-req", Role.CANTEEN_MANAGER, Set.of(Role.SUPER_ADMIN), Role.CANTEEN_MANAGER);
 
         MvcResult loginResult = mockMvc.perform(loginRequest(ADMIN_HOST, user))
                 .andExpect(header().string("Location", "/admin"))
@@ -161,7 +182,7 @@ class LoginPortalReconciliationTest {
 
     @Test
     void roleSwitchSurvivesIntoTheNextRequestOnTheSameSession() throws Exception {
-        User user = seed("switch-survives", Role.CANTEEN_STAFF,
+        User user = seed("switch-survives", Role.CANTEEN_MANAGER,
                 Set.of(Role.SUPER_ADMIN, Role.TECH_MANAGER), Role.SUPER_ADMIN);
 
         MvcResult loginResult = mockMvc.perform(loginRequest(ADMIN_HOST, user))
