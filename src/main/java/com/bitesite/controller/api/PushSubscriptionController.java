@@ -36,10 +36,20 @@ public class PushSubscriptionController {
         return Map.of("ok", true);
     }
 
+    /**
+     * Unsubscribes one of the caller's own devices. The endpoint alone is not proof of
+     * ownership — it is handed to whatever server the page posts to — so the delete is
+     * scoped to the authenticated user. An endpoint belonging to someone else simply
+     * removes nothing rather than silencing their notifications.
+     */
     @PostMapping("/unsubscribe")
     @ResponseBody
-    public Map<String, Boolean> unsubscribe(@RequestParam String endpoint) {
-        pushNotificationService.unsubscribe(endpoint);
-        return Map.of("ok", true);
+    public Map<String, Boolean> unsubscribe(@AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam String endpoint) {
+        User user = principal.getUser();
+        boolean removed = pushNotificationService.unsubscribe(user.getId(), endpoint);
+        // Reported honestly so the client can tell "you are unsubscribed" from "that was
+        // not yours"; the browser-side toggle only ever sends its own endpoint.
+        return Map.of("ok", true, "removed", removed);
     }
 }

@@ -12,4 +12,12 @@ public interface PushSubscriptionDao {
     List<PushSubscription> findByUserId(Long userId);
 
     void deleteByEndpoint(String endpoint);
+
+    /** Deletes an endpoint only if it belongs to this user. Returns the rows removed, so
+     * callers can tell a genuine unsubscribe from an attempt on someone else's device. */
+    int deleteByEndpointForUser(String endpoint, Long userId);
+
+    /** Every subscription a user holds — used when erasing an account, so a "deleted"
+     * account's devices stop receiving notifications. */
+    void deleteByUserId(Long userId);
 }

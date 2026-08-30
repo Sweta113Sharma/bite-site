@@ -55,13 +55,14 @@ class PushNotificationServiceTest {
     }
 
     @Test
-    void unsubscribeDeletesByEndpoint() {
+    void unsubscribeDeletesTheCallersOwnEndpoint() {
         PushNotificationService service = new PushNotificationService(
                 pushSubscriptionDao, "pub", "priv", "mailto:a@b.com");
 
-        service.unsubscribe("https://push.example/abc");
+        service.unsubscribe(7L, "https://push.example/abc");
 
-        verify(pushSubscriptionDao).deleteByEndpoint("https://push.example/abc");
+        // Scoped to the user: an endpoint alone is not proof of ownership.
+        verify(pushSubscriptionDao).deleteByEndpointForUser("https://push.example/abc", 7L);
     }
 
     // Sending a real push (PushService.send) requires a live, well-formed VAPID key pair

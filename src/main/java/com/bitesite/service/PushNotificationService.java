@@ -57,8 +57,25 @@ public class PushNotificationService {
                 .userId(userId).endpoint(endpoint).p256dhKey(p256dhKey).authKey(authKey).build());
     }
 
-    public void unsubscribe(String endpoint) {
-        pushSubscriptionDao.deleteByEndpoint(endpoint);
+    /**
+     * Removes one of this user's own subscriptions.
+     *
+     * <p>Scoped to the caller. The previous signature took an endpoint alone, so any
+     * authenticated user who learned another person's endpoint string could silence their
+     * notifications — and a push endpoint is not a secret, it travels to whatever server
+     * the page posts it to.
+     *
+     * @return true if a subscription was actually removed
+     */
+    public boolean unsubscribe(Long userId, String endpoint) {
+        return pushSubscriptionDao.deleteByEndpointForUser(endpoint, userId) > 0;
+    }
+
+    /** Drops every device a user has registered. Called when an account is erased: the
+     * users row survives anonymisation, so without this the subscription rows stay live
+     * and the device keeps receiving notifications for a "deleted" account. */
+    public void unsubscribeAll(Long userId) {
+        pushSubscriptionDao.deleteByUserId(userId);
     }
 
     /** Best-effort: never throws. Order-status transitions must succeed even if a push

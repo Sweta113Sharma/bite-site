@@ -30,6 +30,7 @@ class UserServiceTest {
     @Mock private AuditService auditService;
     @Mock private EmailService emailService;
     @Mock private SmsService smsService;
+    @Mock private PushNotificationService pushNotificationService;
 
     // A real encoder, not a mock — this is exactly the kind of "does the password actually
     // verify afterward" property a mock would silently paper over.
@@ -39,7 +40,8 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userDao, passwordEncoder, auditService, emailService, smsService);
+        userService = new UserService(userDao, passwordEncoder, auditService, emailService, smsService,
+                pushNotificationService);
     }
 
     @Test
@@ -169,6 +171,15 @@ class UserServiceTest {
         verify(userDao).anonymize(eq(42L), emailCaptor.capture(), anyString());
         assertThat(emailCaptor.getValue()).matches("deleted-42-\\d+@deleted\\.bitesite\\.local");
         verify(auditService).record(eq(42L), eq(1L), eq("User"), eq(42L), eq("SELF_DELETE_ACCOUNT"), isNull(), isNull());
+    }
+
+    @Test
+    void deleteOwnAccountAlsoDropsEveryPushSubscription() {
+        // The users row survives anonymisation, so the FK from push_subscriptions stays
+        // valid and the device carries on receiving notifications for a "deleted" account.
+        userService.deleteOwnAccount(42L, 1L);
+
+        verify(pushNotificationService).unsubscribeAll(42L);
     }
 
     @Test

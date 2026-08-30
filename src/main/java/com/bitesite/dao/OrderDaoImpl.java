@@ -182,9 +182,14 @@ public class OrderDaoImpl implements OrderDao {
         // Suffix match so a student can hand over the tail of a token ("1984") rather
         // than the whole thing; anchored on the right so it still uses a scan of one
         // short column rather than matching mid-string noise.
-        return jdbcTemplate.query(
+        List<Order> orders = jdbcTemplate.query(
                 "SELECT * FROM orders WHERE token_no LIKE ? ORDER BY created_at DESC LIMIT 25",
                 ORDER_ROW_MAPPER, "%" + token);
+        // Without this the support desk showed no line items for a token search, while a
+        // payment-reference search — which goes through findByIdAndTenantId — showed them.
+        // Same screen, same template, two different answers depending on what was typed.
+        attachItems(orders);
+        return orders;
     }
 
     @Override

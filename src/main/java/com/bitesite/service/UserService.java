@@ -26,6 +26,7 @@ public class UserService {
     private final AuditService auditService;
     private final EmailService emailService;
     private final SmsService smsService;
+    private final PushNotificationService pushNotificationService;
 
     public User registerStudent(Long tenantId, String name, String rawEmail, String rawPassword,
             String phone, String rollNo) {
@@ -126,6 +127,11 @@ public class UserService {
         String placeholderEmail = "deleted-" + userId + "-" + RANDOM.nextInt(1_000_000) + "@deleted.bitesite.local";
         String unusablePasswordHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString());
         userDao.anonymize(userId, placeholderEmail, unusablePasswordHash);
+        // Anonymising the users row is not enough on its own: the row survives (order and
+        // payment history has to keep pointing somewhere), so every push subscription
+        // hanging off it stays valid and the person's phone carries on receiving
+        // notifications for an account they were told was deleted.
+        pushNotificationService.unsubscribeAll(userId);
         auditService.record(userId, tenantId, "User", userId, "SELF_DELETE_ACCOUNT", null, null);
     }
 }

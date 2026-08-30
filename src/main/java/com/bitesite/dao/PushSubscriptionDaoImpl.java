@@ -40,8 +40,23 @@ public class PushSubscriptionDaoImpl implements PushSubscriptionDao {
                 "SELECT * FROM push_subscriptions WHERE user_id = ?", ROW_MAPPER, userId);
     }
 
+    /** Unscoped. Kept for the send path, which deletes an endpoint the push gateway has
+     * just reported as gone (404/410) — there is no user in hand there, and the gateway
+     * saying an endpoint is dead is authority enough. Never call it from a request
+     * handler; use {@link #deleteByEndpointForUser} instead. */
     @Override
     public void deleteByEndpoint(String endpoint) {
         jdbcTemplate.update("DELETE FROM push_subscriptions WHERE endpoint = ?", endpoint);
+    }
+
+    @Override
+    public int deleteByEndpointForUser(String endpoint, Long userId) {
+        return jdbcTemplate.update(
+                "DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?", endpoint, userId);
+    }
+
+    @Override
+    public void deleteByUserId(Long userId) {
+        jdbcTemplate.update("DELETE FROM push_subscriptions WHERE user_id = ?", userId);
     }
 }

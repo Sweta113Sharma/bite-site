@@ -1,5 +1,6 @@
 package com.bitesite.controller.api;
 
+import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.service.OrderService;
 import com.bitesite.service.PaymentGateway;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,19 @@ public class RazorpayWebhookController {
             JSONObject entity = body.getJSONObject("payload").getJSONObject("payment").getJSONObject("entity");
             String gatewayPaymentId = entity.getString("id");
             String gatewayOrderId = entity.getString("order_id");
-            orderService.confirmPayment(gatewayOrderId, gatewayPaymentId, null);
+            try {
+                orderService.confirmPayment(gatewayOrderId, gatewayPaymentId, null);
+            } catch (ResourceNotFoundException e) {
+                // A capture for a gateway order we have no local payment row for. Razorpay
+                // retries non-2xx responses on a schedule, and this will never succeed on a
+                // retry — the row is not going to appear — so answering 200 stops an
+                // indefinite retry loop while the log keeps the money visible for manual
+                // reconciliation. Anything else that throws still surfaces as a 500 and is
+                // retried, which is what we want for a transient fault.
+                log.error("Razorpay captured payment {} for gateway order {} with no matching payment row. "
+                        + "Acknowledged to stop retries; this needs manual reconciliation.",
+                        gatewayPaymentId, gatewayOrderId, e);
+            }
         }
         return ResponseEntity.ok("ok");
     }

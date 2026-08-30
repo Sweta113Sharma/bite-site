@@ -124,7 +124,21 @@ public class OrderService {
                 .amount(total)
                 .status(PaymentStatus.CREATED)
                 .build();
-        paymentDao.save(payment);
+        try {
+            paymentDao.save(payment);
+        } catch (RuntimeException e) {
+            // The dangerous window. A gateway order now exists and is payable, but we have
+            // no local row tying it to this order — so if the student went on to pay,
+            // confirmPayment would look the gateway id up, find nothing, and throw: money
+            // taken, order never marked paid, and nothing anywhere pointing at the two.
+            // Failing the order closes the window: the student never reaches the pay
+            // screen, and the unpaid gateway order is simply abandoned.
+            log.error("Payment row could not be saved for order {} after gateway order {} was created; "
+                    + "failing the order so it cannot be paid against a missing record",
+                    saved.getId(), gatewayOrder.gatewayOrderId(), e);
+            orderDao.updateStatus(saved.getId(), tenantId, OrderStatus.PAYMENT_FAILED);
+            throw e;
+        }
 
         return new CheckoutResult(saved, gatewayOrder);
     }
