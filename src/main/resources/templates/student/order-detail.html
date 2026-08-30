@@ -31,9 +31,18 @@
         <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><span class="material-symbols-outlined">skillet</span></div>
         <div><strong>Preparing now!</strong> The kitchen is working on your food.</div>
     </div>
-    <div class="alert alert-primary d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'READY_FOR_PICKUP'}">
+    <div class="alert alert-primary d-flex align-items-center gap-3 mb-3" th:if="${order.status.name() == 'READY_FOR_PICKUP'}">
         <div class="icon-circle bg-primary text-white" style="background: var(--color-primary) !important;"><span class="material-symbols-outlined">notifications_active</span></div>
-        <div><strong>Ready!</strong> Show your token at the counter to pick up your order.</div>
+        <div><strong>Ready!</strong> Show the code below at the counter.</div>
+    </div>
+
+    <!-- The code, not the token, is what authenticates collection. Shown large because it
+         is read aloud or across a counter, and only while the order is actually waiting. -->
+    <div class="pickup-code-panel mb-4"
+         th:if="${order.status.name() == 'READY_FOR_PICKUP' and order.pickupCode != null}">
+        <p class="pickup-code-panel__label">Pickup code</p>
+        <p class="pickup-code-panel__code" th:text="${order.pickupCode}">0000</p>
+        <p class="pickup-code-panel__hint">Staff will type this in to hand your order over.</p>
     </div>
     <div class="alert alert-success d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'COMPLETED'}">
         <div class="icon-circle bg-success text-white" style="background: var(--color-success) !important;"><span class="material-symbols-outlined">check_circle</span></div>

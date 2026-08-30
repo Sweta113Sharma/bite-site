@@ -153,17 +153,36 @@ public class CartController {
      * a session; 0 removes the line, matching {@link Cart#setQuantity}.
      */
     @PostMapping("/update")
-    public String update(@RequestParam Long menuItemId, @RequestParam int quantity,
+    public String update(@AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam Long menuItemId, @RequestParam int quantity,
             @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String accept,
             HttpServletResponse response) throws IOException {
         int clamped = Math.max(0, Math.min(20, quantity));
         cart.setQuantity(menuItemId, clamped);
 
         if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
+            // Re-read prices from the service (never trust a client) and roll up the
+            // affected line and the whole cart so the cart page can update totals in
+            // place instead of reloading.
+            User user = principal.getUser();
+            BigDecimal lineTotal = BigDecimal.ZERO;
+            BigDecimal total = BigDecimal.ZERO;
+            for (Map.Entry<Long, Integer> entry : cart.getQuantities().entrySet()) {
+                MenuItem item = menuService.get(entry.getKey(), user.getTenantId());
+                BigDecimal lt = item.effectivePrice().multiply(BigDecimal.valueOf(entry.getValue()));
+                total = total.add(lt);
+                if (entry.getKey().equals(menuItemId)) {
+                    lineTotal = lt;
+                }
+            }
             int count = cart.getQuantities().values().stream().mapToInt(Integer::intValue).sum();
+            Map<String, Object> body = new HashMap<>();
+            body.put("count", count);
+            body.put("quantity", clamped);
+            body.put("lineTotal", lineTotal);
+            body.put("total", total);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            objectMapper.writeValue(response.getWriter(),
-                    Map.of("count", count, "quantity", clamped));
+            objectMapper.writeValue(response.getWriter(), body);
             return null;
         }
         return "redirect:/student/cart";

@@ -29,8 +29,10 @@ public class OrderQueueController {
     // deliberately excluded here even though the state machine allows them: marking PAID
     // must only ever happen through a verified payment (see OrderService.confirmPayment),
     // and cancelling needs the refund handling in cancel() below, not a bare status flip.
+    // COMPLETED is no longer here: handing food over is authenticated by the student's
+    // pickup code and goes through completePickup() below, not a bare status flip.
     private static final Set<OrderStatus> STAFF_ADVANCEABLE =
-            EnumSet.of(OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP, OrderStatus.COMPLETED);
+            EnumSet.of(OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP);
 
     private final OrderService orderService;
     private final OutletService outletService;
@@ -65,6 +67,23 @@ public class OrderQueueController {
             @RequestParam(required = false) String reason) {
         User user = principal.getUser();
         orderService.cancelOrder(orderId, user.getTenantId(), user.getId(), reason);
+        return "redirect:/canteen/queue";
+    }
+
+    /**
+     * Hands an order over, against the code on the student's screen. A mismatch is
+     * reported back to the counter rather than thrown as an error page, because the
+     * likeliest cause is a mistyped digit and staff need to just try again.
+     */
+    @PostMapping("/{orderId}/collect")
+    public String completePickup(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long orderId,
+            @RequestParam(required = false) String pickupCode, RedirectAttributes redirectAttributes) {
+        User user = principal.getUser();
+        try {
+            orderService.completeWithPickupCode(orderId, user.getTenantId(), pickupCode, user.getId());
+        } catch (InvalidOrderStateException e) {
+            redirectAttributes.addFlashAttribute("queueError", e.getMessage());
+        }
         return "redirect:/canteen/queue";
     }
 

@@ -20,6 +20,12 @@ public class Order {
     private Long outletId;
     private Long userId;
     private String tokenNo;
+
+    /** Four-digit code the student shows at the counter, issued when the order is marked
+     * ready. Null until then, and never reused while another order at the same outlet is
+     * still waiting on it. */
+    private String pickupCode;
+    private LocalDateTime pickupCodeIssuedAt;
     private BigDecimal totalAmount;
     private OrderStatus status;
     private LocalDateTime createdAt;

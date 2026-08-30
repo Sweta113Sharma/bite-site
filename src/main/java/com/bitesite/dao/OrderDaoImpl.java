@@ -40,6 +40,8 @@ public class OrderDaoImpl implements OrderDao {
             .completedAt(rs.getObject("completed_at", LocalDateTime.class))
             .cancelledAt(rs.getObject("cancelled_at", LocalDateTime.class))
             .cancellationReason(rs.getString("cancellation_reason"))
+            .pickupCode(rs.getString("pickup_code"))
+            .pickupCodeIssuedAt(rs.getObject("pickup_code_issued_at", LocalDateTime.class))
             .build();
 
     private static final RowMapper<OrderItem> ITEM_ROW_MAPPER = (rs, rowNum) -> OrderItem.builder()
@@ -143,6 +145,22 @@ public class OrderDaoImpl implements OrderDao {
                 "UPDATE orders SET status = ?, cancelled_at = CURRENT_TIMESTAMP, cancellation_reason = ? "
                         + "WHERE id = ? AND tenant_id = ?",
                 OrderStatus.CANCELLED.name(), reason, id, tenantId);
+    }
+
+    @Override
+    public void setPickupCode(Long id, Long tenantId, String code) {
+        jdbcTemplate.update(
+                "UPDATE orders SET pickup_code = ?, pickup_code_issued_at = CURRENT_TIMESTAMP "
+                        + "WHERE id = ? AND tenant_id = ?",
+                code, id, tenantId);
+    }
+
+    @Override
+    public List<String> findActivePickupCodes(Long tenantId, Long outletId) {
+        return jdbcTemplate.queryForList(
+                "SELECT pickup_code FROM orders WHERE tenant_id = ? AND outlet_id = ? "
+                        + "AND status = 'READY_FOR_PICKUP' AND pickup_code IS NOT NULL",
+                String.class, tenantId, outletId);
     }
 
     @Override

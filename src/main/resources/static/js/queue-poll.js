@@ -21,8 +21,9 @@
 
     const NEXT_ACTION = {
         PAID: { label: 'Start preparing', next: 'PREPARING', btnClass: 'btn-warning', icon: 'ph-cooking-pot' },
-        PREPARING: { label: 'Mark ready', next: 'READY_FOR_PICKUP', btnClass: 'btn-primary', icon: 'ph-bell-simple-ringing' },
-        READY_FOR_PICKUP: { label: 'Mark picked up', next: 'COMPLETED', btnClass: 'btn-success', icon: 'ph-check-circle' }
+        PREPARING: { label: 'Mark ready', next: 'READY_FOR_PICKUP', btnClass: 'btn-primary', icon: 'ph-bell-simple-ringing' }
+        // READY_FOR_PICKUP is absent on purpose: handover needs the student's pickup
+        // code, so it renders a form below rather than a one-click status button.
     };
 
     const CANCEL_REASONS = [
@@ -55,6 +56,21 @@
         const reasonOptions = CANCEL_REASONS
             .map(r => `<option value="${escapeHtml(r.value)}">${escapeHtml(r.label)}</option>`)
             .join('');
+        // Mirrors the pickup form in canteen/queue.html. This renderer replaces the whole
+        // queue body on every poll, so anything only present there would vanish five
+        // seconds after the page loaded.
+        const pickupHtml = order.status === 'READY_FOR_PICKUP' ? `
+            <form method="post" action="/canteen/queue/${order.id}/collect" class="pickup-form">
+                <label class="form-label small mb-1">Pickup code from the student's screen</label>
+                <div class="d-flex gap-2">
+                    <input type="text" name="pickupCode" class="form-control form-control-sm pickup-input"
+                           inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+                           placeholder="0000" aria-label="Pickup code"/>
+                    <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
+                    <button type="submit" class="btn btn-sm btn-success"><i class="ph ph-check-circle"></i>Hand over</button>
+                </div>
+            </form>` : '';
+
         const cancelHtml = order.status === 'PAID' ? `
             <details class="cancel-panel mt-2">
                 <summary><i class="ph ph-x-circle"></i>Cancel &amp; refund</summary>
@@ -77,6 +93,7 @@
                         </div>
                         <ul class="small text-muted mb-3">${items}</ul>
                         ${actionHtml}
+                        ${pickupHtml}
                         ${cancelHtml}
                     </div>
                 </div>

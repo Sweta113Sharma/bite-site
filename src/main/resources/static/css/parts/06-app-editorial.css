@@ -762,3 +762,56 @@
 }
 
 .btn-lg { padding: 14px 20px; font-size: var(--text-label-lg); }
+
+
+/* ---------- Pickup code ---------- */
+
+/* Read across a counter, often aloud, sometimes one-handed while holding a tray. It
+   gets the largest type on the page and the widest tracking, because legibility at a
+   glance is the entire job. */
+.pickup-code-panel {
+    text-align: center;
+    padding: var(--stack-md);
+    border-radius: var(--radius-md);
+    background: var(--color-primary-tint);
+    border: 1px solid var(--color-primary-soft);
+}
+
+.pickup-code-panel__label {
+    margin: 0 0 var(--stack-xs);
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-primary-dark);
+}
+
+.pickup-code-panel__code {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 48px;
+    line-height: 1.1;
+    font-weight: 800;
+    /* Wide tracking so adjacent digits cannot be misread as one number. */
+    letter-spacing: 0.18em;
+    /* Tabular figures: the code must not reflow as digits change between orders. */
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary);
+}
+
+.pickup-code-panel__hint {
+    margin: var(--stack-xs) 0 0;
+    font-size: var(--text-body-md);
+    color: var(--color-ink-muted);
+}
+
+/* Counter-side entry. Matches the code's tracking so a mistyped digit is obvious. */
+.pickup-input {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}

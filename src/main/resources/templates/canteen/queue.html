@@ -10,6 +10,7 @@
     </div>
 
     <div class="alert alert-success" th:if="${queueNotice}" th:text="${queueNotice}"></div>
+    <div class="alert alert-danger" th:if="${queueError}" th:text="${queueError}"></div>
 
     <!-- Pause switch. Lives on the queue rather than in a settings page because the moment
          you need it is the moment you are staring at twenty tokens. Pausing only stops new
@@ -82,10 +83,17 @@
                         <input type="hidden" name="newStatus" value="READY_FOR_PICKUP"/>
                         <button type="submit" class="btn btn-sm btn-primary w-100"><i class="ph ph-bell-simple-ringing"></i>Mark ready</button>
                     </form>
+                    <!-- Handover is authenticated: the student shows the code on their
+                         order page and staff type it here. -->
                     <form method="post" th:if="${order.status.name() == 'READY_FOR_PICKUP'}"
-                          th:action="@{/canteen/queue/{id}/status(id=${order.id})}">
-                        <input type="hidden" name="newStatus" value="COMPLETED"/>
-                        <button type="submit" class="btn btn-sm btn-success w-100"><i class="ph ph-check-circle"></i>Mark picked up</button>
+                          th:action="@{/canteen/queue/{id}/collect(id=${order.id})}" class="pickup-form">
+                        <label class="form-label small mb-1">Pickup code from the student's screen</label>
+                        <div class="d-flex gap-2">
+                            <input type="text" name="pickupCode" class="form-control form-control-sm pickup-input"
+                                   inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+                                   placeholder="0000" aria-label="Pickup code"/>
+                            <button type="submit" class="btn btn-sm btn-success"><i class="ph ph-check-circle"></i>Hand over</button>
+                        </div>
                     </form>
                 </div>
             </div>

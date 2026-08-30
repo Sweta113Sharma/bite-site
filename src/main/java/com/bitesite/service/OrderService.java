@@ -21,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -34,6 +36,7 @@ public class OrderService {
     private static final int TOKEN_GENERATION_ATTEMPTS = 10;
     /** Matches the orders.cancellation_reason column width. */
     private static final int MAX_REASON_LENGTH = 200;
+    private static final int PICKUP_CODE_ATTEMPTS = 10;
 
     private final OrderDao orderDao;
     private final PaymentDao paymentDao;
@@ -239,9 +242,61 @@ public class OrderService {
         auditService.record(actorUserId, tenantId, "Order", orderId, "STATUS_" + newStatus,
                 order.getStatus(), newStatus);
         if (newStatus == OrderStatus.READY_FOR_PICKUP) {
+            String code = issuePickupCode(orderId, tenantId, order.getOutletId());
             pushNotificationService.notifyUser(order.getUserId(), "Order ready for pickup",
-                    "Your order " + order.getTokenNo() + " is ready — come grab it!");
+                    "Your order " + order.getTokenNo() + " is ready — show code " + code + " at the counter.");
         }
+    }
+
+    /**
+     * Issues the code a student shows at the counter. Generated here rather than at
+     * checkout so it exists only while the order is actually on the ready shelf — a
+     * screenshot taken earlier carries nothing usable.
+     *
+     * <p>Uniqueness is only enforced against the codes currently live at this outlet,
+     * because that is the only set a counter can confuse. Across outlets, or across days,
+     * a repeat is meaningless.
+     */
+    private String issuePickupCode(Long orderId, Long tenantId, Long outletId) {
+        Set<String> taken = new HashSet<>(orderDao.findActivePickupCodes(tenantId, outletId));
+        String code = null;
+        for (int attempt = 0; attempt < PICKUP_CODE_ATTEMPTS && code == null; attempt++) {
+            String candidate = String.format("%04d", RANDOM.nextInt(10000));
+            if (!taken.contains(candidate)) {
+                code = candidate;
+            }
+        }
+        if (code == null) {
+            // 10 collisions means ~10k orders are simultaneously awaiting collection at one
+            // counter, which is not a real canteen. Failing loudly beats issuing a duplicate.
+            throw new IllegalStateException("Could not issue a unique pickup code");
+        }
+        orderDao.setPickupCode(orderId, tenantId, code);
+        return code;
+    }
+
+    /**
+     * Marks an order collected, but only against the code the student is showing.
+     *
+     * <p>This is the authentication event for handover. Before it, staff marked orders
+     * collected with a bare button and the only thing linking a person to an order was a
+     * token number on a screen — which is screenshot-shareable and gave no answer at all
+     * to "I never received it".
+     */
+    public void completeWithPickupCode(Long orderId, Long tenantId, String submittedCode, Long actorUserId) {
+        Order order = getForTenant(orderId, tenantId);
+        if (order.getStatus() != OrderStatus.READY_FOR_PICKUP) {
+            throw new InvalidOrderStateException("Only an order waiting for collection can be handed over.");
+        }
+        String expected = order.getPickupCode();
+        String given = submittedCode == null ? "" : submittedCode.trim();
+        // Orders that reached ready before this feature shipped have no code; they cannot
+        // be held hostage to one, so those fall back to the old bare confirmation.
+        if (expected != null && !expected.equals(given)) {
+            auditService.record(actorUserId, tenantId, "Order", orderId, "PICKUP_CODE_REJECTED", expected != null, false);
+            throw new InvalidOrderStateException("That code doesn't match this order. Check the student's screen.");
+        }
+        advanceStatus(orderId, tenantId, OrderStatus.COMPLETED, actorUserId);
     }
 
     /**

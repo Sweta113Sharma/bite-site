@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initBodyClass();
     initAddToCartForms();
     initCartControls();
+    initCartPageControls();
     initNavbarToggle();
     initNavbarScroll();
     registerServiceWorker();
@@ -384,6 +385,122 @@ function initCartControls() {
     });
 }
 
+/* ============================================================
+   CART PAGE CONTROLS — quantity steppers and remove buttons on the
+   cart page (student/cart.html) talk to the server via fetch() so
+   the line subtotal, grand total and badge update in place instead
+   of a full page reload. Each control is wrapped in a form that
+   still posts normally if JS never runs, so the non-JS path stays
+   correct. The /update endpoint returns {count, quantity, lineTotal,
+   total} when asked for JSON.
+   ============================================================ */
+
+function initCartPageControls() {
+    const updateUrl = document.body.dataset.cartUpdateUrl || '/student/cart/update';
+    const removeUrl = document.body.dataset.cartRemoveUrl || '/student/cart/remove';
+
+    const formatMoney = (n) => '₹' + Number(n).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    const setBusy = (form, busy) => {
+        form.querySelectorAll('button').forEach(b => {
+            b.disabled = busy;
+        });
+        form.classList.toggle('is-busy', busy);
+    };
+
+    const refreshTotals = (data) => {
+        if (typeof data.lineTotal !== 'undefined') {
+            const card = document.querySelector('[data-cart-line]');
+            const sub = card && card.querySelector('.cart-item-subtotal');
+            if (sub) sub.textContent = formatMoney(data.lineTotal);
+        }
+        if (typeof data.total !== 'undefined') {
+            document.querySelectorAll('.cart-summary dd, .sticky-pay-total span')
+                .forEach(el => { el.textContent = formatMoney(data.total); });
+        }
+        if (typeof data.count !== 'undefined') {
+            updateCartCount(data.count);
+        }
+    };
+
+    // Quantity steppers: +/- on each line.
+    document.querySelectorAll('form[data-cart-update]').forEach(form => {
+        const input = form.querySelector('input[name="quantity"]');
+        const display = form.querySelector('.qty-value');
+        const minusBtn = form.querySelector('.qty-minus');
+        const plusBtn = form.querySelector('.qty-plus');
+        if (!input || !display || !minusBtn || !plusBtn) return;
+
+        const itemId = form.querySelector('input[name="menuItemId"]')?.value;
+
+        const send = (next) => {
+            if (next < 1 || next > 20) return;
+            setBusy(form, true);
+            const body = csrfParams();
+            body.set('menuItemId', itemId);
+            body.set('quantity', next);
+
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: { Accept: 'application/json' },
+                body
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('cart update failed');
+                    return response.json();
+                })
+                .then(data => {
+                    input.value = data.quantity;
+                    display.textContent = data.quantity;
+                    refreshTotals(data);
+                })
+                .catch(() => showToast("Couldn't update your cart", 'error'))
+                .finally(() => setBusy(form, false));
+        };
+
+        minusBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const current = parseInt(input.value, 10) || 1;
+            if (current > 1) send(current - 1);
+        });
+        plusBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const current = parseInt(input.value, 10) || 1;
+            if (current < 20) send(current + 1);
+        });
+    });
+
+    // Remove buttons: delete the line via fetch, then reload so the
+    // (possibly empty) cart state and any server-side warnings re-render.
+    document.querySelectorAll('form[data-cart-remove]').forEach(form => {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const itemId = form.querySelector('input[name="menuItemId"]')?.value;
+
+            setBusy(form, true);
+            const body = csrfParams();
+            body.set('menuItemId', itemId);
+
+            fetch(removeUrl, {
+                method: 'POST',
+                headers: { Accept: 'application/json' },
+                body
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('cart remove failed');
+                    window.location.reload();
+                })
+                .catch(() => {
+                    setBusy(form, false);
+                    showToast("Couldn't remove that item", 'error');
+                });
+        });
+    });
+}
+
 function updateCartCount(count) {
     const badge = document.getElementById('cart-badge');
     if (badge) {
@@ -456,6 +573,17 @@ function initCategoryChips() {
     const container = document.getElementById('category-chips');
     if (!container) return;
 
+    const chips = () => container.querySelectorAll('.category-chip');
+
+    const setActive = (chip) => {
+        chips().forEach(c => {
+            c.classList.toggle('active', c === chip);
+            c.classList.toggle('is-scroll-active', c === chip);
+        });
+        // Keep the highlighted chip visible inside the horizontal strip.
+        chip?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    };
+
     container.addEventListener('click', (e) => {
         const chip = e.target.closest('.category-chip');
         if (!chip) return;
@@ -466,8 +594,47 @@ function initCategoryChips() {
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        container.querySelectorAll('.category-chip').forEach(c => {
-            c.classList.toggle('active', c === chip);
+        setActive(chip);
+    });
+
+    // While scrolling the menu, highlight the chip for whichever category
+    // section is currently nearest the top of the viewport, so the pinned
+    // chip strip always shows where you are.
+    const sections = document.querySelectorAll('.menu-category-section[id]');
+    if (!sections.length || !('IntersectionObserver' in window)) return;
+
+    let scrollLock = null; // category id of a programmatic scroll in progress
+    const visible = new Map(); // id -> intersection ratio
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            visible.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
         });
+        if (scrollLock) return; // don't fight a click-driven scroll
+
+        let best = null;
+        let bestRatio = 0;
+        visible.forEach((ratio, id) => {
+            if (ratio > bestRatio) { bestRatio = ratio; best = id; }
+        });
+        if (best) {
+            setActive(container.querySelector(`.category-chip[data-category="${best}"]`));
+        }
+    }, { rootMargin: '-15% 0px -60% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
+
+    sections.forEach(s => observer.observe(s));
+
+    // A click starts a programmatic scroll: suppress observer-driven
+    // highlight changes until the target section actually arrives.
+    container.addEventListener('click', () => {
+        const activeChip = container.querySelector('.category-chip.active');
+        scrollLock = activeChip?.dataset.category || null;
+        const unlock = () => {
+            scrollLock = null;
+            window.removeEventListener('scrollend', unlock);
+            clearTimeout(timer);
+        };
+        const timer = setTimeout(unlock, 1200);
+        window.addEventListener('scrollend', unlock, { once: true });
     });
 }

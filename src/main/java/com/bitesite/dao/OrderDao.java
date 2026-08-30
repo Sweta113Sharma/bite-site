@@ -25,6 +25,13 @@ public interface OrderDao {
      * say what happened instead of just showing a red badge. */
     void cancel(Long id, Long tenantId, String reason);
 
+    /** Stores the pickup code issued when an order is marked ready. */
+    void setPickupCode(Long id, Long tenantId, String code);
+
+    /** Codes currently in use on the ready shelf at one outlet — the only window in which
+     * two identical codes could be confused at the counter. */
+    List<String> findActivePickupCodes(Long tenantId, Long outletId);
+
     /**
      * How many of each menu item this outlet has committed to today —
      * menuItemId → total quantity. Backs the per-item daily cap.
