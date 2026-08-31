@@ -35,8 +35,14 @@
         </div>
         <div class="mb-3">
             <label class="form-label">Category</label>
-            <input type="text" th:field="*{category}" class="form-control" placeholder="Snacks, Meals, Beverages..."/>
-            <div class="text-danger small" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></div>
+            <select th:field="*{categoryId}" class="form-select">
+                <option value="" disabled="disabled">Choose a category</option>
+                <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}"></option>
+            </select>
+            <div class="text-danger small" th:if="${#fields.hasErrors('categoryId')}" th:errors="*{categoryId}"></div>
+            <div class="form-text">
+                Manage the list on the <a th:href="@{/canteen/categories}">categories</a> screen.
+            </div>
         </div>
         <div class="mb-3">
             <label class="form-label">Price (₹)</label>

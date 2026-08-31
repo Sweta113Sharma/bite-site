@@ -18,6 +18,15 @@ public class MenuItem {
     private Long tenantId;
     private Long outletId;
     private String name;
+    private Long categoryId;
+
+    /**
+     * The category's name, joined in at read time — this is no longer a column.
+     *
+     * <p>Kept on the model because it does real work: {@link #fallbackIllustration()}
+     * matches on it to choose an illustration, and the student menu groups sections by it.
+     * Writes go through categoryId; setting this changes nothing in the database.
+     */
     private String category;
     private String photoPath;
     private BigDecimal price;

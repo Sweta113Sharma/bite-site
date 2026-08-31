@@ -17,8 +17,8 @@ public class MenuItemForm implements Serializable {
     @NotBlank(message = "Name is required")
     private String name;
 
-    @NotBlank(message = "Category is required")
-    private String category;
+    @NotNull(message = "Choose a category")
+    private Long categoryId;
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", message = "Price cannot be negative")

@@ -6,6 +6,7 @@ import com.bitesite.dto.MenuItemForm;
 import com.bitesite.model.MenuItem;
 import com.bitesite.model.StaffScope;
 import com.bitesite.model.User;
+import com.bitesite.service.CategoryService;
 import com.bitesite.service.MenuService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class MenuController {
 
     private final MenuService menuService;
+    private final CategoryService categoryService;
 
     /** Both roles: an operator needs this list to reach the stock toggles below. */
     @GetMapping
@@ -39,9 +41,11 @@ public class MenuController {
     @GetMapping("/new")
     public String newForm(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
+        User user = principal.getUser();
         if (!model.containsAttribute("form")) {
             model.addAttribute("form", new MenuItemForm());
         }
+        model.addAttribute("categories", categoryService.listForOutlet(user.getOutletId(), user.getTenantId()));
         model.addAttribute("pageTitle", "Add menu item");
         return "canteen/menu-form";
     }
@@ -51,11 +55,12 @@ public class MenuController {
             @Valid @ModelAttribute("form") MenuItemForm form, BindingResult bindingResult,
             @RequestParam(value = "photo", required = false) MultipartFile photo, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
+        User user = principal.getUser();
         if (bindingResult.hasErrors()) {
+            model.addAttribute("categories", categoryService.listForOutlet(user.getOutletId(), user.getTenantId()));
             model.addAttribute("pageTitle", "Add menu item");
             return "canteen/menu-form";
         }
-        User user = principal.getUser();
         menuService.create(user.getTenantId(), user.getOutletId(), form, photo, user.getId());
         return "redirect:/canteen/menu";
     }
@@ -67,7 +72,7 @@ public class MenuController {
         MenuItem item = menuService.getWithTodayCount(id, user.getTenantId());
         MenuItemForm form = new MenuItemForm();
         form.setName(item.getName());
-        form.setCategory(item.getCategory());
+        form.setCategoryId(item.getCategoryId());
         form.setPrice(item.getPrice());
         form.setDiscountPrice(item.getDiscountPrice());
         form.setDiscountPercent(item.getDiscountPercent());
@@ -76,6 +81,7 @@ public class MenuController {
         model.addAttribute("itemId", id);
         model.addAttribute("currentPhotoPath", item.getPhotoPath());
         model.addAttribute("soldToday", item.getSoldToday());
+        model.addAttribute("categories", categoryService.listForOutlet(user.getOutletId(), user.getTenantId()));
         model.addAttribute("pageTitle", "Edit menu item");
         return "canteen/menu-form";
     }
@@ -91,6 +97,7 @@ public class MenuController {
             model.addAttribute("itemId", id);
             model.addAttribute("currentPhotoPath", existing.getPhotoPath());
             model.addAttribute("soldToday", existing.getSoldToday());
+            model.addAttribute("categories", categoryService.listForOutlet(user.getOutletId(), user.getTenantId()));
             model.addAttribute("pageTitle", "Edit menu item");
             return "canteen/menu-form";
         }

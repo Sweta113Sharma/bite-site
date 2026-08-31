@@ -37,16 +37,19 @@ class MenuServiceTest {
     private static final Long TENANT_ID = 1L;
     private static final Long OUTLET_ID = 10L;
     private static final Long ACTOR_ID = 100L;
+    private static final long CATEGORY_ID = 55L;
 
     @BeforeEach
     void setUp() {
         menuService = new MenuService(menuItemDao, orderDao, auditService, fileStorageService);
     }
 
-    private MenuItemForm form(String name, String category, String price) {
+    /** {@code category} is now a category id rather than free text — see V18. The label is
+     * kept as a parameter so each test still reads as "a form for a snack". */
+    private MenuItemForm form(String name, long categoryId, String price) {
         MenuItemForm form = new MenuItemForm();
         form.setName(name);
-        form.setCategory(category);
+        form.setCategoryId(categoryId);
         form.setPrice(new BigDecimal(price));
         return form;
     }
@@ -67,7 +70,7 @@ class MenuServiceTest {
             return item;
         });
 
-        MenuItem saved = menuService.create(TENANT_ID, OUTLET_ID, form("Samosa", "Snacks", "30.00"), null, ACTOR_ID);
+        MenuItem saved = menuService.create(TENANT_ID, OUTLET_ID, form("Samosa", CATEGORY_ID, "30.00"), null, ACTOR_ID);
 
         assertThat(saved.isAvailable()).isTrue();
         assertThat(saved.getTenantId()).isEqualTo(TENANT_ID);
@@ -80,7 +83,7 @@ class MenuServiceTest {
     @Test
     void createCarriesTheDailyLimitThrough() {
         when(menuItemDao.save(any(MenuItem.class))).thenAnswer(inv -> inv.getArgument(0));
-        MenuItemForm form = form("Masala Dosa", "Meals", "60.00");
+        MenuItemForm form = form("Masala Dosa", CATEGORY_ID, "60.00");
         form.setDailyLimit(40);
 
         MenuItem saved = menuService.create(TENANT_ID, OUTLET_ID, form, null, ACTOR_ID);
@@ -94,7 +97,7 @@ class MenuServiceTest {
         MockMultipartFile photo = new MockMultipartFile("photo", "samosa.png", "image/png", new byte[]{1, 2, 3});
         when(fileStorageService.storeMenuItemPhoto(TENANT_ID, photo)).thenReturn("/uploads/menu-photos/samosa.png");
 
-        MenuItem saved = menuService.create(TENANT_ID, OUTLET_ID, form("Samosa", "Snacks", "30.00"), photo, ACTOR_ID);
+        MenuItem saved = menuService.create(TENANT_ID, OUTLET_ID, form("Samosa", CATEGORY_ID, "30.00"), photo, ACTOR_ID);
 
         assertThat(saved.getPhotoPath()).isEqualTo("/uploads/menu-photos/samosa.png");
     }
@@ -108,7 +111,7 @@ class MenuServiceTest {
         ArgumentCaptor<MenuItem> captor = ArgumentCaptor.forClass(MenuItem.class);
         when(menuItemDao.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
-        menuService.update(5L, TENANT_ID, form("New Name", "Meals", "50.00"), null, ACTOR_ID);
+        menuService.update(5L, TENANT_ID, form("New Name", CATEGORY_ID, "50.00"), null, ACTOR_ID);
 
         MenuItem updated = captor.getValue();
         assertThat(updated.getOutletId()).isEqualTo(OUTLET_ID); // carried over, not client-suppliable
@@ -125,7 +128,7 @@ class MenuServiceTest {
         when(menuItemDao.findByIdAndTenantId(5L, TENANT_ID)).thenReturn(Optional.of(existing));
         when(menuItemDao.save(any(MenuItem.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        MenuItem updated = menuService.update(5L, TENANT_ID, form("New Name", "Snacks", "20.00"), null, ACTOR_ID);
+        MenuItem updated = menuService.update(5L, TENANT_ID, form("New Name", CATEGORY_ID, "20.00"), null, ACTOR_ID);
 
         assertThat(updated.getPhotoPath()).isEqualTo("/uploads/menu-photos/old.png");
         verifyNoInteractions(fileStorageService);
@@ -141,7 +144,7 @@ class MenuServiceTest {
         MockMultipartFile photo = new MockMultipartFile("photo", "new.png", "image/png", new byte[]{1, 2, 3});
         when(fileStorageService.storeMenuItemPhoto(TENANT_ID, photo)).thenReturn("/uploads/menu-photos/new.png");
 
-        MenuItem updated = menuService.update(5L, TENANT_ID, form("New Name", "Snacks", "20.00"), photo, ACTOR_ID);
+        MenuItem updated = menuService.update(5L, TENANT_ID, form("New Name", CATEGORY_ID, "20.00"), photo, ACTOR_ID);
 
         assertThat(updated.getPhotoPath()).isEqualTo("/uploads/menu-photos/new.png");
     }
@@ -153,7 +156,7 @@ class MenuServiceTest {
                 .price(new BigDecimal("20.00")).available(true).build();
         when(menuItemDao.findByIdAndTenantId(5L, TENANT_ID)).thenReturn(Optional.of(existing));
         when(menuItemDao.save(any(MenuItem.class))).thenAnswer(inv -> inv.getArgument(0));
-        MenuItemForm form = form("Samosa", "Snacks", "20.00");
+        MenuItemForm form = form("Samosa", CATEGORY_ID, "20.00");
         form.setRemovePhoto(true);
 
         MenuItem updated = menuService.update(5L, TENANT_ID, form, null, ACTOR_ID);
@@ -171,7 +174,7 @@ class MenuServiceTest {
         when(menuItemDao.save(any(MenuItem.class))).thenAnswer(inv -> inv.getArgument(0));
         MockMultipartFile photo = new MockMultipartFile("photo", "new.png", "image/png", new byte[]{1, 2, 3});
         when(fileStorageService.storeMenuItemPhoto(TENANT_ID, photo)).thenReturn("/uploads/menu-photos/new.png");
-        MenuItemForm form = form("Samosa", "Snacks", "20.00");
+        MenuItemForm form = form("Samosa", CATEGORY_ID, "20.00");
         form.setRemovePhoto(true);
 
         MenuItem updated = menuService.update(5L, TENANT_ID, form, photo, ACTOR_ID);
@@ -182,9 +185,9 @@ class MenuServiceTest {
     @Test
     void listForOutletAttachesTodaysOrderedCountToEachItem() {
         MenuItem dosa = MenuItem.builder().id(1L).tenantId(TENANT_ID).outletId(OUTLET_ID)
-                .name("Dosa").category("Meals").price(BigDecimal.TEN).available(true).dailyLimit(30).build();
+                .name("Dosa").categoryId(CATEGORY_ID).price(BigDecimal.TEN).available(true).dailyLimit(30).build();
         MenuItem chai = MenuItem.builder().id(2L).tenantId(TENANT_ID).outletId(OUTLET_ID)
-                .name("Chai").category("Beverages").price(BigDecimal.ONE).available(true).build();
+                .name("Chai").categoryId(CATEGORY_ID).price(BigDecimal.ONE).available(true).build();
         when(menuItemDao.findByOutletId(OUTLET_ID, TENANT_ID)).thenReturn(List.of(dosa, chai));
         when(orderDao.sumQuantitiesByMenuItemToday(TENANT_ID, OUTLET_ID)).thenReturn(Map.of(1L, 28));
 

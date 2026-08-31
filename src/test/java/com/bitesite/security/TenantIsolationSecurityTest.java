@@ -1,10 +1,12 @@
 package com.bitesite.security;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.dao.CategoryDao;
 import com.bitesite.dao.MenuItemDao;
 import com.bitesite.dao.OrderDao;
 import com.bitesite.dao.OutletDao;
 import com.bitesite.dao.UserDao;
+import com.bitesite.model.Category;
 import com.bitesite.model.MenuItem;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderStatus;
@@ -48,6 +50,7 @@ class TenantIsolationSecurityTest {
     @Autowired private OutletDao outletDao;
     @Autowired private UserDao userDao;
     @Autowired private MenuItemDao menuItemDao;
+    @Autowired private CategoryDao categoryDao;
     @Autowired private OrderDao orderDao;
     @Autowired private PasswordEncoder passwordEncoder;
 
@@ -77,9 +80,14 @@ class TenantIsolationSecurityTest {
                 .tenantId(collegeB.getId()).name("Student B").email("isolation-student-b-" + runId + "@test.local")
                 .passwordHash(passwordEncoder.encode("irrelevant")).role(Role.USER).activeRole(Role.USER).active(true).build());
 
+        // menu_items.category_id is NOT NULL since V18, so the section must exist first.
+        Long categoryIdB = categoryDao.save(Category.builder()
+                .tenantId(collegeB.getId()).outletId(outletB.getId())
+                .name("Meals " + runId).sortOrder(0).build()).getId();
+
         menuItemInCollegeB = menuItemDao.save(MenuItem.builder()
                 .tenantId(collegeB.getId()).outletId(outletB.getId())
-                .name("College B Special").category("Meals").price(new BigDecimal("50.00")).available(true).build());
+                .name("College B Special").categoryId(categoryIdB).price(new BigDecimal("50.00")).available(true).build());
 
         Order order = Order.builder()
                 .tenantId(collegeA.getId()).outletId(outletA.getId()).userId(studentA.getId())

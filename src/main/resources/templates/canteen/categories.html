@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 640px;">
+    <div class="page-header">
+        <h3 class="page-header-title">Categories</h3>
+        <p class="page-header-sub">The sections students see on your menu, in this order.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${categoryNotice}" th:text="${categoryNotice}"></div>
+    <div class="alert alert-danger" th:if="${categoryError}" th:text="${categoryError}"></div>
+
+    <div class="outlet-admin-card" th:each="c : ${categories}">
+        <div class="outlet-admin-card__head">
+            <span class="outlet-admin-card__name" th:text="${c.name}">Category</span>
+            <span class="badge bg-secondary"
+                  th:text="${c.itemCount} + (${c.itemCount} == 1 ? ' item' : ' items')">0 items</span>
+        </div>
+
+        <form method="post" class="d-flex gap-2 mb-2"
+              th:action="@{/canteen/categories/{id}/rename(id=${c.id})}">
+            <input type="text" name="name" class="form-control form-control-sm" th:value="${c.name}"
+                   maxlength="80" required="required" aria-label="Category name"/>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Rename</button>
+        </form>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <form method="post" class="d-flex gap-2" th:action="@{/canteen/categories/{id}/order(id=${c.id})}">
+                <input type="number" name="sortOrder" class="form-control form-control-sm" style="width:90px;"
+                       th:value="${c.sortOrder}" aria-label="Sort order"/>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Set order</button>
+            </form>
+
+            <!-- Offered only when the section is empty. A category with items in it cannot
+                 be deleted: the server refuses, and hiding the button here means the
+                 manager is not invited to try. -->
+            <form method="post" th:if="${c.itemCount == 0}"
+                  th:action="@{/canteen/categories/{id}/delete(id=${c.id})}"
+                  onsubmit="return confirm('Delete this category?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+            <span class="text-muted small align-self-center" th:if="${c.itemCount > 0}">
+                Move its items elsewhere to delete this.
+            </span>
+        </div>
+    </div>
+
+    <hr/>
+    <h6>Add a category</h6>
+    <form method="post" th:action="@{/canteen/categories}" class="d-flex gap-2">
+        <input type="text" name="name" class="form-control" placeholder="e.g. Beverages"
+               maxlength="80" required="required"/>
+        <button type="submit" class="btn btn-primary"><i class="ph ph-plus"></i>Add</button>
+    </form>
+</div>
+</body>
+</html>

@@ -61,6 +61,7 @@
                 <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-link" th:href="@{/canteen/queue}"><span class="material-symbols-outlined">hourglass_top</span>Queue</a>
                 <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-link" th:href="@{/canteen/menu}"><span class="material-symbols-outlined">skillet</span>Menu</a>
                 <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-link" th:href="@{/canteen/orders}"><span class="material-symbols-outlined">receipt_long</span>History</a>
+                <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-link" th:href="@{/canteen/categories}"><span class="material-symbols-outlined">filter_alt</span>Categories</a>
                 <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-link" th:href="@{/canteen/reports}"><span class="material-symbols-outlined">assignment</span>Sales</a>
                 <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-link" th:href="@{/canteen/staff}"><span class="material-symbols-outlined">group</span>Staff</a>
                 <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-link" th:href="@{/canteen/settings}"><span class="material-symbols-outlined">settings</span>Settings</a>

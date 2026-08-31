@@ -1,9 +1,11 @@
 package com.bitesite.security;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.dao.CategoryDao;
 import com.bitesite.dao.MenuItemDao;
 import com.bitesite.dao.OutletDao;
 import com.bitesite.dao.UserDao;
+import com.bitesite.model.Category;
 import com.bitesite.model.MenuItem;
 import com.bitesite.model.Outlet;
 import com.bitesite.model.Role;
@@ -53,6 +55,7 @@ class OutletRoleSeparationSecurityTest {
     @Autowired private OutletDao outletDao;
     @Autowired private UserDao userDao;
     @Autowired private MenuItemDao menuItemDao;
+    @Autowired private CategoryDao categoryDao;
     @Autowired private PasswordEncoder passwordEncoder;
 
     private User manager;
@@ -76,9 +79,13 @@ class OutletRoleSeparationSecurityTest {
                 .passwordHash(passwordEncoder.encode("x"))
                 .role(Role.CANTEEN_OPERATOR).activeRole(Role.CANTEEN_OPERATOR).active(true).build());
 
+        // menu_items.category_id is NOT NULL since V18, so the section must exist first.
+        Long categoryId = categoryDao.save(Category.builder().tenantId(tenant.getId())
+                .outletId(outlet.getId()).name("Snacks " + runId).sortOrder(0).build()).getId();
+
         // A real row, so the {id} routes exercise the guard rather than a 404.
         itemId = menuItemDao.save(MenuItem.builder().tenantId(tenant.getId()).outletId(outlet.getId())
-                .name("Split Samosa").category("Snacks").price(new BigDecimal("20.00"))
+                .name("Split Samosa").categoryId(categoryId).price(new BigDecimal("20.00"))
                 .available(true).build()).getId();
     }
 

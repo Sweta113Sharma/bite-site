@@ -21,11 +21,22 @@ public class MenuItemDaoImpl implements MenuItemDao {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * Every read joins the category for its name. `category` is no longer a column on
+     * menu_items (V18), but the model still exposes it: the illustration matcher and the
+     * student menu's grouping both key off the text. Aliasing it here keeps the row mapper
+     * and every caller unchanged.
+     */
+    private static final String SELECT_ITEM =
+            "SELECT mi.*, c.name AS category FROM menu_items mi "
+                    + "JOIN categories c ON c.id = mi.category_id ";
+
     private static final RowMapper<MenuItem> ROW_MAPPER = (rs, rowNum) -> MenuItem.builder()
             .id(rs.getLong("id"))
             .tenantId(rs.getLong("tenant_id"))
             .outletId(rs.getLong("outlet_id"))
             .name(rs.getString("name"))
+            .categoryId(rs.getLong("category_id"))
             .category(rs.getString("category"))
             .photoPath(rs.getString("photo_path"))
             .price(rs.getBigDecimal("price"))
@@ -40,22 +51,23 @@ public class MenuItemDaoImpl implements MenuItemDao {
     @Override
     public Optional<MenuItem> findByIdAndTenantId(Long id, Long tenantId) {
         return jdbcTemplate.query(
-                "SELECT * FROM menu_items WHERE id = ? AND tenant_id = ?", ROW_MAPPER, id, tenantId)
+                SELECT_ITEM + "WHERE mi.id = ? AND mi.tenant_id = ?", ROW_MAPPER, id, tenantId)
                 .stream().findFirst();
     }
 
     @Override
     public List<MenuItem> findByOutletId(Long outletId, Long tenantId) {
         return jdbcTemplate.query(
-                "SELECT * FROM menu_items WHERE outlet_id = ? AND tenant_id = ? ORDER BY category, name",
+                SELECT_ITEM + "WHERE mi.outlet_id = ? AND mi.tenant_id = ? "
+                        + "ORDER BY c.sort_order, c.name, mi.name",
                 ROW_MAPPER, outletId, tenantId);
     }
 
     @Override
     public List<MenuItem> findAvailableByOutletId(Long outletId, Long tenantId) {
         return jdbcTemplate.query(
-                "SELECT * FROM menu_items WHERE outlet_id = ? AND tenant_id = ? AND is_available = TRUE "
-                        + "ORDER BY category, name",
+                SELECT_ITEM + "WHERE mi.outlet_id = ? AND mi.tenant_id = ? AND mi.is_available = TRUE "
+                        + "ORDER BY c.sort_order, c.name, mi.name",
                 ROW_MAPPER, outletId, tenantId);
     }
 
@@ -65,14 +77,14 @@ public class MenuItemDaoImpl implements MenuItemDao {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(
-                        "INSERT INTO menu_items (tenant_id, outlet_id, name, category, photo_path, price, "
+                        "INSERT INTO menu_items (tenant_id, outlet_id, name, category_id, photo_path, price, "
                                 + "discount_price, discount_percent, is_available, daily_limit) "
                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         Statement.RETURN_GENERATED_KEYS);
                 ps.setLong(1, item.getTenantId());
                 ps.setLong(2, item.getOutletId());
                 ps.setString(3, item.getName());
-                ps.setString(4, item.getCategory());
+                ps.setLong(4, item.getCategoryId());
                 ps.setString(5, item.getPhotoPath());
                 ps.setBigDecimal(6, item.getPrice());
                 ps.setBigDecimal(7, item.getDiscountPrice());
@@ -84,9 +96,9 @@ public class MenuItemDaoImpl implements MenuItemDao {
             item.setId(keyHolder.getKey().longValue());
         } else {
             jdbcTemplate.update(
-                    "UPDATE menu_items SET name = ?, category = ?, photo_path = ?, price = ?, discount_price = ?, "
+                    "UPDATE menu_items SET name = ?, category_id = ?, photo_path = ?, price = ?, discount_price = ?, "
                             + "discount_percent = ?, is_available = ?, daily_limit = ? WHERE id = ? AND tenant_id = ?",
-                    item.getName(), item.getCategory(), item.getPhotoPath(), item.getPrice(), item.getDiscountPrice(),
+                    item.getName(), item.getCategoryId(), item.getPhotoPath(), item.getPrice(), item.getDiscountPrice(),
                     item.getDiscountPercent(), item.isAvailable(), item.getDailyLimit(), item.getId(),
                     item.getTenantId());
         }
