@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Order history</h3>
+        <form method="get" th:action="@{/canteen/orders}">
+            <select name="status" class="form-select" onchange="this.form.submit()" aria-label="Filter by status">
+                <option value="">All statuses</option>
+                <option th:each="s : ${statuses}" th:value="${s}" th:selected="${s == selectedStatus}"
+                        th:text="${s.name().replace('_',' ')}">STATUS</option>
+            </select>
+        </form>
+    </div>
+
+    <div th:if="${#lists.isEmpty(orders)}" class="state-panel">
+        <div th:replace="~{fragments/state :: medallion('receipt_long','neutral')}"></div>
+        <h4>Nothing here yet</h4>
+        <p th:if="${selectedStatus == null}">Completed and cancelled orders will appear here.</p>
+        <p th:if="${selectedStatus != null}">No orders with that status.</p>
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(orders)}">
+        <table class="table bg-white align-middle">
+            <thead><tr><th>Token</th><th>Placed</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody>
+            <tr th:each="o : ${orders}">
+                <td>
+                    <a th:href="@{/canteen/orders/{id}(id=${o.id})}" class="fw-bold text-decoration-none"
+                       th:text="${o.tokenNo}">TOKEN</a>
+                </td>
+                <td class="small text-muted" th:text="${#temporals.format(o.createdAt, 'dd MMM HH:mm')}">date</td>
+                <td class="small text-muted"
+                    th:text="${#lists.size(o.items)} + (${#lists.size(o.items)} == 1 ? ' item' : ' items')">0 items</td>
+                <td th:text="'₹' + ${o.totalAmount}">₹0</td>
+                <td><span th:replace="~{fragments/order-status :: statusBadge(${o.status})}"></span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Said out loud rather than implied by a short list: this screen is capped, not paged. -->
+    <p class="text-muted small" th:if="${#lists.size(orders) >= limit}"
+       th:text="'Showing the most recent ' + ${limit} + ' orders.'">Showing the most recent 200 orders.</p>
+</div>
+</body>
+</html>

@@ -117,6 +117,28 @@ public class UserService {
         }
     }
 
+    /** Staff at one outlet, for that outlet's own manager. */
+    public List<User> findByOutlet(Long outletId, Long tenantId) {
+        return userDao.findByOutletId(outletId, tenantId);
+    }
+
+    /**
+     * Switches off a staff account, but only one belonging to the manager's own outlet.
+     *
+     * <p>The outlet and tenant are checked against the target rather than trusted from the
+     * request, so a crafted user id cannot reach across to another canteen — or to a
+     * platform account, which has no outlet at all and therefore never matches.
+     */
+    public void deactivateOutletstaff(Long userId, Long outletId, Long tenantId, Long actorUserId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff account not found"));
+        if (!outletId.equals(target.getOutletId()) || !tenantId.equals(target.getTenantId())) {
+            throw new ResourceNotFoundException("Staff account not found");
+        }
+        userDao.setActive(userId, false);
+        auditService.record(actorUserId, tenantId, "User", userId, "DEACTIVATE_STAFF", true, false);
+    }
+
     /**
      * Self-service right-to-erasure: scrubs the account's PII and deactivates it. Order,
      * payment, and grievance history is deliberately left in place — the canteen has a

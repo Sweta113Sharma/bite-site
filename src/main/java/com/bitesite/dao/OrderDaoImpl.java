@@ -15,6 +15,7 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,44 @@ public class OrderDaoImpl implements OrderDao {
                 ORDER_ROW_MAPPER, userId, tenantId);
         attachItems(orders);
         return orders;
+    }
+
+    @Override
+    public List<Order> findByOutlet(Long tenantId, Long outletId, OrderStatus status, int limit) {
+        // idx_orders_outlet_created (outlet_id, created_at) covers both the filter and the
+        // sort. The status predicate is appended rather than always-present so the common
+        // "everything" case stays a clean index range scan.
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM orders WHERE tenant_id = ? AND outlet_id = ?");
+        List<Object> args = new ArrayList<>(List.of(tenantId, outletId));
+        if (status != null) {
+            sql.append(" AND status = ?");
+            args.add(status.name());
+        }
+        sql.append(" ORDER BY created_at DESC LIMIT ?");
+        args.add(limit);
+
+        List<Order> orders = jdbcTemplate.query(sql.toString(), ORDER_ROW_MAPPER, args.toArray());
+        attachItems(orders);
+        return orders;
+    }
+
+    @Override
+    public List<DailySales> dailySales(Long tenantId, Long outletId, int days) {
+        // token_day is the stored generated DATE(created_at). Grouping on it keeps the day
+        // boundary in the database, where created_at is written — a Java-side date would be
+        // shifted by the server's UTC offset (see findExpiredAwaitingPayment).
+        return jdbcTemplate.query(
+                "SELECT token_day, COUNT(*) AS order_count, COALESCE(SUM(total_amount), 0) AS revenue "
+                        + "FROM orders WHERE tenant_id = ? AND outlet_id = ? "
+                        + "AND status NOT IN ('CANCELLED','EXPIRED','PAYMENT_FAILED','AWAITING_PAYMENT') "
+                        + "AND token_day >= CURDATE() - INTERVAL ? DAY "
+                        + "GROUP BY token_day ORDER BY token_day DESC",
+                (rs, n) -> new DailySales(
+                        rs.getObject("token_day", java.time.LocalDate.class),
+                        rs.getInt("order_count"),
+                        rs.getBigDecimal("revenue")),
+                tenantId, outletId, days);
     }
 
     private void attachItems(List<Order> orders) {

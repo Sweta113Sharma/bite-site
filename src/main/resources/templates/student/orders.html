@@ -62,6 +62,16 @@
                     <span>Track order</span><span class="material-symbols-outlined">arrow_forward</span>
                 </div>
             </a>
+
+            <!-- Outside the card's anchor: a form nested in an <a> is invalid markup.
+                 Offered only on finished orders — there is no sense reordering something
+                 that is still being made. -->
+            <form method="post" th:action="@{/student/orders/{id}/reorder(id=${order.id})}" class="mt-2"
+                  th:if="${order.status.name() == 'COMPLETED' or order.status.name() == 'CANCELLED'}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
+                    <span class="material-symbols-outlined ms-16">refresh</span> Order this again
+                </button>
+            </form>
         </div>
     </div>
 </div>

@@ -71,6 +71,27 @@ public class OutletService {
                 active ? "ACTIVATE" : "DEACTIVATE", before.isActive(), active);
     }
 
+    /**
+     * Opening hours, contact and notice, set by the outlet's own manager.
+     *
+     * <p>Goes through updateSettings rather than save() so it cannot touch isActive or
+     * acceptingOrders: a manager editing their hours must not be able to reactivate a
+     * canteen the platform admin disabled, which a full-object save would happily do.
+     */
+    public void updateSettings(Long id, Long tenantId, java.time.LocalTime opensAt,
+            java.time.LocalTime closesAt, String contactPhone, String notice, Long actorUserId) {
+        Outlet before = get(id, tenantId);
+        outletDao.updateSettings(id, tenantId, opensAt, closesAt,
+                blankToNull(contactPhone), blankToNull(notice));
+        auditService.record(actorUserId, tenantId, "Outlet", id, "UPDATE_SETTINGS", before, get(id, tenantId));
+    }
+
+    /** An empty form field means "not set", not an empty string — otherwise the templates
+     * would have to distinguish null from "" everywhere they show these. */
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     /** The outlet's own "we're taking orders / we're paused" switch. */
     public void setAcceptingOrders(Long id, Long tenantId, boolean acceptingOrders, Long actorUserId) {
         Outlet before = get(id, tenantId);

@@ -19,6 +19,29 @@ public interface OrderDao {
 
     List<Order> findByUserId(Long userId, Long tenantId);
 
+    /**
+     * One outlet's orders, newest first, optionally narrowed to a single status.
+     * Bounded by an explicit limit rather than paged — the same shape AuditLogDao uses,
+     * and the only bounding convention this codebase has.
+     *
+     * @param status null for every status
+     */
+    List<Order> findByOutlet(Long tenantId, Long outletId, OrderStatus status, int limit);
+
+    /**
+     * Per-day totals for one outlet, newest day first: how many orders and how much money.
+     *
+     * <p>Grouped on {@code token_day}, the stored generated DATE(created_at) column, rather
+     * than on created_at directly. That column is materialised and already indexed, and
+     * critically it keeps the day boundary inside the database — see the note on
+     * {@link #sumQuantitiesByMenuItemToday} for why a Java-side date here would be wrong.
+     */
+    List<DailySales> dailySales(Long tenantId, Long outletId, int days);
+
+    /** One row of {@link #dailySales}. Cancelled, expired and failed orders are excluded:
+     * this is a sales report, not an activity log. */
+    record DailySales(java.time.LocalDate day, int orderCount, java.math.BigDecimal revenue) {}
+
     void updateStatus(Long id, Long tenantId, OrderStatus status);
 
     /** Cancels an order and records why, in one statement, so the student's order page can

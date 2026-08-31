@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 560px;">
+    <div class="page-header">
+        <h3 class="page-header-title" th:text="${outlet.name}">Outlet</h3>
+        <p class="page-header-sub">What students see about this canteen.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${settingsNotice}" th:text="${settingsNotice}"></div>
+
+    <form method="post" th:action="@{/canteen/settings}">
+        <div class="row g-2 mb-3">
+            <div class="col">
+                <label class="form-label" for="opensAt">Opens at</label>
+                <input type="time" id="opensAt" name="opensAt" class="form-control"
+                       th:value="${outlet.opensAt != null} ? ${#temporals.format(outlet.opensAt, 'HH:mm')} : ''"/>
+            </div>
+            <div class="col">
+                <label class="form-label" for="closesAt">Closes at</label>
+                <input type="time" id="closesAt" name="closesAt" class="form-control"
+                       th:value="${outlet.closesAt != null} ? ${#temporals.format(outlet.closesAt, 'HH:mm')} : ''"/>
+            </div>
+        </div>
+        <div class="form-text mb-3">
+            Hours are shown to students but don't block ordering on their own — use
+            <a th:href="@{/canteen/queue}">pause new orders</a> for that.
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="contactPhone">Contact number</label>
+            <input type="text" id="contactPhone" name="contactPhone" class="form-control" maxlength="20"
+                   th:value="${outlet.contactPhone}" placeholder="Optional"/>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="notice">Notice</label>
+            <input type="text" id="notice" name="notice" class="form-control" maxlength="200"
+                   th:value="${outlet.notice}" placeholder="e.g. Closed for the festival on Friday"/>
+            <div class="form-text">A short line shown on your menu.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-check"></i>Save settings</button>
+    </form>
+</div>
+</body>
+</html>

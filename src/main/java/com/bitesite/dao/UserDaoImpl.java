@@ -70,6 +70,15 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
+    public List<User> findByOutletId(Long outletId, Long tenantId) {
+        List<User> users = jdbcTemplate.query(
+                "SELECT * FROM users WHERE outlet_id = ? AND tenant_id = ? ORDER BY name",
+                ROW_MAPPER, outletId, tenantId);
+        users.forEach(this::loadRoles);
+        return users;
+    }
+
+    @Override
     public List<User> findPlatformUsers() {
         List<User> users = jdbcTemplate.query(
                 "SELECT * FROM users WHERE tenant_id IS NULL ORDER BY created_at DESC", ROW_MAPPER);

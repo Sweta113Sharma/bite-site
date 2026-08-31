@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="page-header">
+        <h3 class="page-header-title">Sales</h3>
+        <p class="page-header-sub" th:text="'Last ' + ${days} + ' days. Cancelled, expired and unpaid orders are excluded.'">
+            Last 30 days.</p>
+    </div>
+
+    <div class="row row-cols-2 g-3 mb-4">
+        <div class="col">
+            <div class="card"><div class="card-body">
+                <p class="section-label mb-1">Orders</p>
+                <p class="h3 m-0" th:text="${totalOrders}">0</p>
+            </div></div>
+        </div>
+        <div class="col">
+            <div class="card"><div class="card-body">
+                <p class="section-label mb-1">Revenue</p>
+                <p class="h3 m-0" th:text="'₹' + ${totalRevenue}">₹0</p>
+            </div></div>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(rows)}" class="state-panel">
+        <div th:replace="~{fragments/state :: medallion('assignment','neutral')}"></div>
+        <h4>No sales yet</h4>
+        <p>Once orders are collected they'll be totalled here by day.</p>
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(rows)}">
+        <table class="table bg-white">
+            <thead><tr><th>Day</th><th class="text-end">Orders</th><th class="text-end">Revenue</th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${rows}">
+                <td th:text="${#temporals.format(r.day, 'EEE dd MMM')}">day</td>
+                <td class="text-end" th:text="${r.orderCount}">0</td>
+                <td class="text-end" th:text="'₹' + ${r.revenue}">₹0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

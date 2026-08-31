@@ -27,6 +27,10 @@ public class OutletDaoImpl implements OutletDao {
             .name(rs.getString("name"))
             .active(rs.getBoolean("is_active"))
             .acceptingOrders(rs.getBoolean("accepting_orders"))
+            .opensAt(rs.getObject("opens_at", java.time.LocalTime.class))
+            .closesAt(rs.getObject("closes_at", java.time.LocalTime.class))
+            .contactPhone(rs.getString("contact_phone"))
+            .notice(rs.getString("notice"))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
 
@@ -78,6 +82,15 @@ public class OutletDaoImpl implements OutletDao {
                     outlet.getTenantId());
         }
         return findById(outlet.getId()).orElseThrow();
+    }
+
+    @Override
+    public void updateSettings(Long id, Long tenantId, java.time.LocalTime opensAt,
+            java.time.LocalTime closesAt, String contactPhone, String notice) {
+        jdbcTemplate.update(
+                "UPDATE outlets SET opens_at = ?, closes_at = ?, contact_phone = ?, notice = ? "
+                        + "WHERE id = ? AND tenant_id = ?",
+                opensAt, closesAt, contactPhone, notice, id, tenantId);
     }
 
     @Override

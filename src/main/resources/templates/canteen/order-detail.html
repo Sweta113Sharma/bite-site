@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 620px;">
+    <a th:href="@{/canteen/orders}" class="detail-back">
+        <i class="ph ph-arrow-left"></i><span>Back to history</span>
+    </a>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="token-badge m-0" th:text="${order.tokenNo}">TOKEN</h3>
+        <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex justify-content-between px-0" th:each="i : ${order.items}">
+                    <span><strong th:text="${i.quantity}">1</strong>× <span th:text="${i.itemNameSnapshot}">Item</span></span>
+                    <span th:text="'₹' + ${i.subtotal}">₹0</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between px-0 fw-bold">
+                    <span>Total</span><span th:text="'₹' + ${order.totalAmount}">₹0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body small">
+            <div class="d-flex justify-content-between"><span class="text-muted">Placed</span>
+                <span th:text="${#temporals.format(order.createdAt, 'dd MMM yyyy, HH:mm')}">-</span></div>
+            <div class="d-flex justify-content-between" th:if="${order.paidAt != null}"><span class="text-muted">Paid</span>
+                <span th:text="${#temporals.format(order.paidAt, 'dd MMM yyyy, HH:mm')}">-</span></div>
+            <div class="d-flex justify-content-between" th:if="${order.readyAt != null}"><span class="text-muted">Ready</span>
+                <span th:text="${#temporals.format(order.readyAt, 'dd MMM yyyy, HH:mm')}">-</span></div>
+            <div class="d-flex justify-content-between" th:if="${order.completedAt != null}"><span class="text-muted">Collected</span>
+                <span th:text="${#temporals.format(order.completedAt, 'dd MMM yyyy, HH:mm')}">-</span></div>
+            <div class="d-flex justify-content-between" th:if="${order.cancelledAt != null}"><span class="text-muted">Cancelled</span>
+                <span th:text="${#temporals.format(order.cancelledAt, 'dd MMM yyyy, HH:mm')}">-</span></div>
+            <div class="d-flex justify-content-between" th:if="${payment != null}"><span class="text-muted">Payment</span>
+                <span th:text="${payment.status}">-</span></div>
+        </div>
+    </div>
+
+    <!-- The reason the student was given. Shown here so staff answering a complaint see
+         exactly what the customer saw, rather than guessing. -->
+    <div class="alert alert-warning" th:if="${order.cancellationReason != null}">
+        <strong>Cancellation reason</strong>
+        <div th:text="${order.cancellationReason}">reason</div>
+    </div>
+</div>
+</body>
+</html>

@@ -16,6 +16,10 @@ public interface UserDao {
 
     List<User> findByTenantId(Long tenantId);
 
+    /** Staff attached to one outlet. Tenant-scoped as well as outlet-scoped so an outlet
+     * id from another college cannot be used to read its staff list. */
+    List<User> findByOutletId(Long outletId, Long tenantId);
+
     List<User> findPlatformUsers();
 
     User save(User user);

@@ -65,8 +65,13 @@ class RoleVocabularyMigrationTest {
     void bothNewRoleNamesAreAccepted() {
         // The mirror of the above — a constraint re-added with the wrong vocabulary would
         // reject the values the application now writes.
+        // Scoped to DATABASE(). information_schema is server-wide, so without this the
+        // assertion counts every schema on the machine that happens to hold a constraint
+        // by that name — it passed only while this was the sole migrated database, and
+        // started failing the moment the dev database was migrated too. The count was
+        // never the point; the vocabulary is.
         assertThat(count("SELECT COUNT(*) FROM information_schema.CHECK_CONSTRAINTS "
-                + "WHERE CONSTRAINT_NAME = 'chk_users_role' "
+                + "WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = 'chk_users_role' "
                 + "AND CHECK_CLAUSE LIKE '%CANTEEN_MANAGER%' AND CHECK_CLAUSE LIKE '%CANTEEN_OPERATOR%'"))
                 .isEqualTo(1);
     }

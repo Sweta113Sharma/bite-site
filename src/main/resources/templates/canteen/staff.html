@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 720px;">
+    <div class="page-header">
+        <h3 class="page-header-title">Staff</h3>
+        <p class="page-header-sub">Who can sign in to this canteen's console.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${staffNotice}" th:text="${staffNotice}"></div>
+    <div class="alert alert-danger" th:if="${staffError}" th:text="${staffError}"></div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(staff)}">
+        <table class="table bg-white align-middle">
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="s : ${staff}">
+                <td th:text="${s.name}">Name</td>
+                <td class="small text-muted" th:text="${s.email}">email</td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${s.role.name() == 'CANTEEN_MANAGER'} ? 'bg-primary' : 'bg-secondary'"
+                          th:text="${s.role.name() == 'CANTEEN_MANAGER'} ? 'Manager' : 'Operator'">Role</span>
+                </td>
+                <td>
+                    <span class="badge" th:classappend="${s.active} ? 'bg-success' : 'bg-secondary'"
+                          th:text="${s.active} ? 'Active' : 'Off'">Active</span>
+                </td>
+                <td class="text-end">
+                    <form method="post" th:if="${s.active}"
+                          th:action="@{/canteen/staff/{id}/deactivate(id=${s.id})}"
+                          onsubmit="return confirm('Deactivate this account? They will not be able to sign in.');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Deactivate</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <hr/>
+    <h6>Add a staff account</h6>
+    <form method="post" th:action="@{/canteen/staff}">
+        <div class="mb-2">
+            <select name="role" class="form-select" required="required">
+                <option value="CANTEEN_OPERATOR" selected="selected">Operator — the queue and stock only</option>
+                <option value="CANTEEN_MANAGER">Manager — menu, prices, and the queue</option>
+            </select>
+        </div>
+        <div class="mb-2"><input type="text" name="name" class="form-control" placeholder="Full name" required="required"/></div>
+        <div class="mb-2"><input type="email" name="email" class="form-control" placeholder="Email" required="required"/></div>
+        <div class="mb-2"><input type="password" name="password" class="form-control" placeholder="Temporary password" minlength="8" required="required"/></div>
+        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-user-plus"></i>Create account</button>
+    </form>
+</div>
+</body>
+</html>
