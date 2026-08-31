@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <h3 class="mb-3">All orders</h3>
+
+    <form method="get" th:action="@{/admin/orders}" class="d-flex gap-2 mb-3 flex-wrap">
+        <select name="tenantId" class="form-select" style="width:auto;" onchange="this.form.submit()">
+            <option value="">All colleges</option>
+            <option th:each="t : ${tenants}" th:value="${t.id}" th:selected="${t.id == selectedTenantId}"
+                    th:text="${t.name}"></option>
+        </select>
+        <select name="status" class="form-select" style="width:auto;" onchange="this.form.submit()">
+            <option value="">All statuses</option>
+            <option th:each="s : ${statuses}" th:value="${s}" th:selected="${s == selectedStatus}"
+                    th:text="${s.name().replace('_',' ')}"></option>
+        </select>
+    </form>
+
+    <div th:if="${#lists.isEmpty(orders)}" class="alert alert-secondary">No orders match that filter.</div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(orders)}">
+        <table class="table bg-white align-middle">
+            <thead><tr><th>Token</th><th>College</th><th>Student</th><th>Placed</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody>
+            <tr th:each="o : ${orders}">
+                <td class="fw-bold" th:text="${o.tokenNo}">TOKEN</td>
+                <td class="small text-muted" th:text="${collegeNames.get(o.tenantId)} ?: '(unknown)'">College</td>
+                <td class="small" th:text="${studentNames.get(o.userId)}">Student</td>
+                <td class="small text-muted" th:text="${#temporals.format(o.createdAt,'dd MMM HH:mm')}">date</td>
+                <td th:text="'₹' + ${o.totalAmount}">₹0</td>
+                <td><span th:replace="~{fragments/order-status :: statusBadge(${o.status})}"></span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p class="text-muted small" th:if="${#lists.size(orders) >= limit}"
+       th:text="'Showing the most recent ' + ${limit} + '. Narrow the filters to see older orders.'"></p>
+</div>
+</body>
+</html>

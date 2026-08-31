@@ -69,6 +69,9 @@
                 <!-- ADMIN links -->
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Pipeline</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/outlets}"><span class="material-symbols-outlined">storefront</span>Canteens</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/orders}"><span class="material-symbols-outlined">receipt_long</span>Orders</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/payments}"><span class="material-symbols-outlined">credit_card</span>Payments</a>
                 <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/support}"><span class="material-symbols-outlined">support_agent</span>Support desk</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/grievances}"><span class="material-symbols-outlined">error</span>Grievances</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/audit-log}"><span class="material-symbols-outlined">assignment</span>Audit log</a>

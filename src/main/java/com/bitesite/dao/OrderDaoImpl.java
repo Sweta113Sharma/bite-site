@@ -232,6 +232,25 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    public List<Order> findRecentAcrossTenants(Long tenantId, OrderStatus status, int limit) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM orders WHERE 1 = 1");
+        List<Object> args = new ArrayList<>();
+        if (tenantId != null) {
+            sql.append(" AND tenant_id = ?");
+            args.add(tenantId);
+        }
+        if (status != null) {
+            sql.append(" AND status = ?");
+            args.add(status.name());
+        }
+        sql.append(" ORDER BY created_at DESC LIMIT ?");
+        args.add(limit);
+        List<Order> orders = jdbcTemplate.query(sql.toString(), ORDER_ROW_MAPPER, args.toArray());
+        attachItems(orders);
+        return orders;
+    }
+
+    @Override
     public boolean existsTokenForTenantToday(Long tenantId, String token) {
         // token_day is the generated DATE(created_at) the uniqueness constraint sits on, so
         // the check and the constraint agree by construction, and both are resolved by the

@@ -92,6 +92,15 @@ public interface OrderDao {
      */
     List<Order> searchByTokenAcrossTenants(String token);
 
+    /**
+     * Recent orders across every tenant, newest first, optionally narrowed by tenant or
+     * status. Admin console only — same gating contract as the finder above.
+     *
+     * @param tenantId null for every tenant
+     * @param status   null for every status
+     */
+    List<Order> findRecentAcrossTenants(Long tenantId, OrderStatus status, int limit);
+
     /** Orders still AWAITING_PAYMENT for longer than {@code timeoutMinutes} — used by the
      * expiry sweep. Takes the timeout rather than a cutoff instant for the same reason as
      * {@link #sumQuantitiesByMenuItemToday}: the comparison has to be made against the

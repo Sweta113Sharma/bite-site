@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">All canteens</h3>
+        <span class="text-muted small" th:text="${#lists.size(outlets)} + ' across the platform'">0</span>
+    </div>
+
+    <div th:if="${#lists.isEmpty(outlets)}" class="state-panel">
+        <div th:replace="~{fragments/state :: medallion('storefront','neutral')}"></div>
+        <h4>No canteens yet</h4>
+        <p>Onboard a college and add its first canteen to see it here.</p>
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(outlets)}">
+        <table class="table bg-white align-middle">
+            <thead><tr><th>Canteen</th><th>College</th><th>Status</th><th>Taking orders</th><th>Hours</th></tr></thead>
+            <tbody>
+            <tr th:each="o : ${outlets}">
+                <td class="fw-bold" th:text="${o.name}">Canteen</td>
+                <!-- Printed per row: an admin holds no tenant, so there is no ambient
+                     college name for the page to inherit. -->
+                <td class="small text-muted" th:text="${collegeNames.get(o.tenantId)} ?: '(unknown)'">College</td>
+                <td><span class="badge" th:classappend="${o.active} ? 'bg-success' : 'bg-secondary'"
+                          th:text="${o.active} ? 'Active' : 'Disabled'">Active</span></td>
+                <td><span class="badge" th:classappend="${o.acceptingOrders} ? 'bg-success' : 'bg-warning text-dark'"
+                          th:text="${o.acceptingOrders} ? 'Yes' : 'Paused'">Yes</span></td>
+                <td class="small text-muted"
+                    th:text="${o.opensAt != null and o.closesAt != null}
+                             ? ${#temporals.format(o.opensAt,'HH:mm')} + '–' + ${#temporals.format(o.closesAt,'HH:mm')}
+                             : 'Not set'">Not set</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

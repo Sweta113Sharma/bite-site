@@ -12,6 +12,15 @@ public interface OutletDao {
 
     List<Outlet> findByTenantId(Long tenantId);
 
+    /**
+     * Every outlet on the platform, regardless of tenant.
+     *
+     * <p>Deliberately unscoped, for the admin console only. A super admin holds no
+     * tenantId, so there is nothing to scope by. Callers must gate this on the admin role
+     * — the same contract as the two cross-tenant finders on OrderDao and PaymentDao.
+     */
+    List<Outlet> findAllAcrossTenants();
+
     List<Outlet> findActiveByTenantId(Long tenantId);
 
     Outlet save(Outlet outlet);

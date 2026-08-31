@@ -3,6 +3,7 @@ package com.bitesite.dao;
 import com.bitesite.model.Payment;
 import com.bitesite.model.PaymentStatus;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PaymentDao {
@@ -18,6 +19,12 @@ public interface PaymentDao {
      * bank statement. Not tenant-scoped — gate on the admin role.
      */
     Optional<Payment> findByAnyGatewayReference(String reference);
+
+    /**
+     * Recent payments across every tenant, newest first, optionally narrowed by status.
+     * Admin reconciliation only — gate on the admin role, as with the finder above.
+     */
+    List<Payment> findRecentAcrossTenants(PaymentStatus status, int limit);
 
     void markVerified(Long id, String razorpayPaymentId, String razorpaySignature, PaymentStatus status);
 

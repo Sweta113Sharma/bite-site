@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -72,6 +73,19 @@ public class PaymentDaoImpl implements PaymentDao {
                 "SELECT * FROM payments WHERE razorpay_order_id = ? OR razorpay_payment_id = ? LIMIT 1",
                 ROW_MAPPER, reference, reference)
                 .stream().findFirst();
+    }
+
+    @Override
+    public List<Payment> findRecentAcrossTenants(PaymentStatus status, int limit) {
+        // idx_payments_status_created / idx_payments_created (V19) keep both shapes off a
+        // full scan.
+        if (status == null) {
+            return jdbcTemplate.query(
+                    "SELECT * FROM payments ORDER BY created_at DESC LIMIT ?", ROW_MAPPER, limit);
+        }
+        return jdbcTemplate.query(
+                "SELECT * FROM payments WHERE status = ? ORDER BY created_at DESC LIMIT ?",
+                ROW_MAPPER, status.name(), limit);
     }
 
     @Override

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0">Payments</h3>
+        <form method="get" th:action="@{/admin/payments}">
+            <select name="status" class="form-select" onchange="this.form.submit()">
+                <option value="">All statuses</option>
+                <option th:each="s : ${statuses}" th:value="${s}" th:selected="${s == selectedStatus}"
+                        th:text="${s}"></option>
+            </select>
+        </form>
+    </div>
+
+    <p class="text-muted small">
+        Read-only. Refunds are issued from the
+        <a th:href="@{/admin/support}">support desk</a>, which is restricted to super admins.
+    </p>
+
+    <div th:if="${#lists.isEmpty(payments)}" class="alert alert-secondary">No payments match that filter.</div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(payments)}">
+        <table class="table bg-white align-middle">
+            <thead><tr><th>Gateway order</th><th>Payment id</th><th>College</th><th>Amount</th><th>Status</th><th>Created</th></tr></thead>
+            <tbody>
+            <tr th:each="p : ${payments}">
+                <td class="small font-monospace" th:text="${p.razorpayOrderId}">rp_order</td>
+                <td class="small font-monospace text-muted" th:text="${p.razorpayPaymentId} ?: '—'">—</td>
+                <td class="small text-muted" th:text="${collegeNames.get(p.tenantId)} ?: '(unknown)'">College</td>
+                <td th:text="'₹' + ${p.amount}">₹0</td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${p.status.name() == 'CAPTURED'} ? 'bg-success' :
+                                          (${p.status.name() == 'REFUNDED'} ? 'bg-info text-dark' :
+                                          (${p.status.name() == 'FAILED'} ? 'bg-danger' : 'bg-secondary'))"
+                          th:text="${p.status}">STATUS</span>
+                </td>
+                <td class="small text-muted" th:text="${#temporals.format(p.createdAt,'dd MMM HH:mm')}">date</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p class="text-muted small" th:if="${#lists.size(payments) >= limit}"
+       th:text="'Showing the most recent ' + ${limit} + '.'"></p>
+</div>
+</body>
+</html>

@@ -60,6 +60,11 @@ public class OutletDaoImpl implements OutletDao {
     }
 
     @Override
+    public List<Outlet> findAllAcrossTenants() {
+        return jdbcTemplate.query("SELECT * FROM outlets ORDER BY tenant_id, name", ROW_MAPPER);
+    }
+
+    @Override
     public Outlet save(Outlet outlet) {
         if (outlet.getId() == null) {
             KeyHolder keyHolder = new GeneratedKeyHolder();
