@@ -1,6 +1,7 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.PushSubscriptionDao;
+import com.bitesite.dao.UserDao;
 import com.bitesite.model.PushSubscription;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,16 +12,18 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PushNotificationServiceTest {
 
     @Mock private PushSubscriptionDao pushSubscriptionDao;
+    @Mock private UserDao userDao;
 
     @Test
     void isNotConfiguredWhenKeysAreBlank() {
-        PushNotificationService service = new PushNotificationService(pushSubscriptionDao, "", "", "mailto:a@b.com");
+        PushNotificationService service = new PushNotificationService(pushSubscriptionDao, userDao, "", "", "mailto:a@b.com");
 
         assertThat(service.isConfigured()).isFalse();
     }
@@ -28,14 +31,14 @@ class PushNotificationServiceTest {
     @Test
     void isConfiguredWhenBothKeysArePresent() {
         PushNotificationService service = new PushNotificationService(
-                pushSubscriptionDao, "pub", "priv", "mailto:a@b.com");
+                pushSubscriptionDao, userDao, "pub", "priv", "mailto:a@b.com");
 
         assertThat(service.isConfigured()).isTrue();
     }
 
     @Test
     void notifyUserDoesNothingWhenNotConfigured() {
-        PushNotificationService service = new PushNotificationService(pushSubscriptionDao, "", "", "mailto:a@b.com");
+        PushNotificationService service = new PushNotificationService(pushSubscriptionDao, userDao, "", "", "mailto:a@b.com");
 
         service.notifyUser(1L, "Title", "Body");
 
@@ -45,7 +48,7 @@ class PushNotificationServiceTest {
     @Test
     void subscribeSavesTheSubscription() {
         PushNotificationService service = new PushNotificationService(
-                pushSubscriptionDao, "pub", "priv", "mailto:a@b.com");
+                pushSubscriptionDao, userDao, "pub", "priv", "mailto:a@b.com");
 
         service.subscribe(7L, "https://push.example/abc", "p256dh-key", "auth-key");
 
@@ -57,7 +60,7 @@ class PushNotificationServiceTest {
     @Test
     void unsubscribeDeletesTheCallersOwnEndpoint() {
         PushNotificationService service = new PushNotificationService(
-                pushSubscriptionDao, "pub", "priv", "mailto:a@b.com");
+                pushSubscriptionDao, userDao, "pub", "priv", "mailto:a@b.com");
 
         service.unsubscribe(7L, "https://push.example/abc");
 
@@ -74,7 +77,10 @@ class PushNotificationServiceTest {
     @Test
     void notifyUserNeverThrowsEvenWhenTheGatewayCallFails() {
         PushNotificationService service = new PushNotificationService(
-                pushSubscriptionDao, "pub", "priv", "mailto:a@b.com");
+                pushSubscriptionDao, userDao, "pub", "priv", "mailto:a@b.com");
+        // Opted in, or notifyUser returns before it ever reaches a subscription.
+        when(userDao.findById(1L)).thenReturn(java.util.Optional.of(
+                com.bitesite.model.User.builder().id(1L).notifyOrderUpdates(true).build()));
         when(pushSubscriptionDao.findByUserId(1L)).thenReturn(List.of(PushSubscription.builder()
                 .id(1L).userId(1L).endpoint("https://push.example/abc")
                 .p256dhKey("not-a-real-key").authKey("not-a-real-key").build()));
@@ -84,5 +90,31 @@ class PushNotificationServiceTest {
         // No exception propagated — that's the assertion. Also confirm it didn't
         // mistake a crypto failure for a dead subscription and delete it.
         verify(pushSubscriptionDao, never()).deleteByEndpoint(any());
+    }
+
+    @Test
+    void notifyUserSendsNothingToSomeoneWhoTurnedOrderUpdatesOff() {
+        PushNotificationService service = new PushNotificationService(
+                pushSubscriptionDao, userDao, "pub", "priv", "mailto:a@b.com");
+        when(userDao.findById(1L)).thenReturn(java.util.Optional.of(
+                com.bitesite.model.User.builder().id(1L).notifyOrderUpdates(false).build()));
+
+        service.notifyUser(1L, "Title", "Body");
+
+        // Checked once here rather than at each call site, so a future caller cannot
+        // forget it and quietly message someone who opted out.
+        verify(pushSubscriptionDao, never()).findByUserId(anyLong());
+    }
+
+    @Test
+    void anUnknownUserIsTreatedAsOptedOut() {
+        PushNotificationService service = new PushNotificationService(
+                pushSubscriptionDao, userDao, "pub", "priv", "mailto:a@b.com");
+        when(userDao.findById(99L)).thenReturn(java.util.Optional.empty());
+
+        service.notifyUser(99L, "Title", "Body");
+
+        // Fails closed: silence is the safe default for a message.
+        verify(pushSubscriptionDao, never()).findByUserId(anyLong());
     }
 }

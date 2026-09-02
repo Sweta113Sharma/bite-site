@@ -26,6 +26,10 @@ public interface UserDao {
 
     void setActive(Long id, boolean active);
 
+    /** Per-category notification preferences. Server-side, so they hold across devices —
+     * the old push toggle read its state from the browser and desynced. */
+    void updateNotificationPreferences(Long id, boolean orderUpdates, boolean marketing);
+
     /** Clears a staff account's outlet assignment and switches the account off, used when
      * the outlet they belonged to is deleted. The row survives so their audit-log entries
      * still resolve to a person. */

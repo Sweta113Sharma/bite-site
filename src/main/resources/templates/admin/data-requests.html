@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="console-head">
+        <h3 class="m-0">Data requests</h3>
+        <form method="get" th:action="@{/admin/dpdp}">
+            <select name="status" class="form-select" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option th:each="s : ${statuses}" th:value="${s}" th:selected="${s == selectedStatus}" th:text="${s}"></option>
+            </select>
+        </form>
+    </div>
+
+    <div th:if="${#lists.isEmpty(requests)}" class="state-panel">
+        <div th:replace="~{fragments/state :: medallion('assignment','neutral')}"></div>
+        <h4>Nothing outstanding</h4>
+        <p>Access, correction and erasure requests from students arrive here.</p>
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(requests)}">
+        <table class="table bg-white align-middle">
+            <thead><tr><th>Student</th><th>Kind</th><th>Raised</th><th>Note</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${requests}">
+                <td>
+                    <div th:text="${r.userName}">Name</div>
+                    <div class="small text-muted" th:text="${r.userEmail}">email</div>
+                </td>
+                <td><span class="badge bg-secondary" th:text="${r.kind}">KIND</span></td>
+                <td class="small text-muted" th:text="${#temporals.format(r.createdAt,'dd MMM HH:mm')}">date</td>
+                <td class="small" th:text="${r.note} ?: '—'">—</td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${r.status.name() == 'RESOLVED'} ? 'bg-success' :
+                                          (${r.status.name() == 'REJECTED'} ? 'bg-danger' :
+                                          (${r.status.name() == 'IN_PROGRESS'} ? 'bg-warning text-dark' : 'bg-secondary'))"
+                          th:text="${r.status}">STATUS</span>
+                </td>
+                <td class="text-end">
+                    <form method="post" th:action="@{/admin/dpdp/{id}/status(id=${r.id})}" class="d-flex gap-1">
+                        <select name="status" class="form-select form-select-sm" style="width:auto;">
+                            <option th:each="s : ${statuses}" th:value="${s}" th:selected="${s == r.status}" th:text="${s}"></option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Set</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

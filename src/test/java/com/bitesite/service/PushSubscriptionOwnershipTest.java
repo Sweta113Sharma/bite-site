@@ -1,6 +1,7 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.PushSubscriptionDao;
+import com.bitesite.dao.UserDao;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -17,10 +18,11 @@ import static org.mockito.Mockito.*;
 class PushSubscriptionOwnershipTest {
 
     @Mock private PushSubscriptionDao pushSubscriptionDao;
+    @Mock private UserDao userDao;
 
     /** VAPID keys blank: these tests are about subscription bookkeeping, not sending. */
     private PushNotificationService service() {
-        return new PushNotificationService(pushSubscriptionDao, "", "", "mailto:x@y.z");
+        return new PushNotificationService(pushSubscriptionDao, userDao, "", "", "mailto:x@y.z");
     }
 
     @Test

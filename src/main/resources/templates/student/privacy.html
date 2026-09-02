@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
+<div th:replace="~{fragments/navbar :: bottomNav}"></div>
+
+<div class="container" style="max-width: 640px;">
+    <div class="page-header">
+        <h3 class="page-header-title">Your data</h3>
+        <p class="page-header-sub">What we hold, what you agreed to, and how to change either.</p>
+    </div>
+
+    <div class="alert alert-success" th:if="${privacyNotice}" th:text="${privacyNotice}"></div>
+
+    <p class="section-label">Notifications</p>
+    <form method="post" th:action="@{/student/privacy/notifications}" class="card mb-4">
+        <div class="card-body">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="orderUpdates" name="orderUpdates" value="true"
+                       th:checked="${user.notifyOrderUpdates}"/>
+                <label class="form-check-label" for="orderUpdates">
+                    <strong>Order updates</strong>
+                    <div class="text-muted small">When your order is ready, cancelled, or refunded.</div>
+                </label>
+            </div>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="marketing" name="marketing" value="true"
+                       th:checked="${user.notifyMarketing}"/>
+                <label class="form-check-label" for="marketing">
+                    <strong>Offers and news</strong>
+                    <div class="text-muted small">Occasional messages about deals. Off unless you turn it on.</div>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Save preferences</button>
+        </div>
+    </form>
+
+    <p class="section-label">Get a copy of your data</p>
+    <div class="card mb-4"><div class="card-body">
+        <p class="mb-3 small text-muted">
+            A JSON file with your profile, every order, your support requests, and your consent history.
+        </p>
+        <a class="btn btn-outline-secondary w-100" th:href="@{/student/privacy/export}">
+            <span class="material-symbols-outlined">download</span> Download my data
+        </a>
+    </div></div>
+
+    <p class="section-label">Consent history</p>
+    <div class="card mb-4"><div class="card-body">
+        <p class="text-muted small mb-2" th:if="${#lists.isEmpty(consents)}">Nothing recorded yet.</p>
+        <div class="d-flex justify-content-between small py-1" th:each="c : ${consents}">
+            <span th:text="${c.purpose().name().replace('_',' ')}">PURPOSE</span>
+            <span class="text-muted">
+                <span th:text="${#temporals.format(c.grantedAt(),'dd MMM yyyy')}">date</span>
+                <span class="badge ms-1" th:classappend="${c.live()} ? 'bg-success' : 'bg-secondary'"
+                      th:text="${c.live()} ? 'Given' : 'Withdrawn'">Given</span>
+            </span>
+        </div>
+        <p class="text-muted small mb-0 mt-2" th:text="'Current policy version: ' + ${policyVersion}"></p>
+    </div></div>
+
+    <p class="section-label">Ask us to act</p>
+    <form method="post" th:action="@{/student/privacy/requests}" class="card mb-4">
+        <div class="card-body">
+            <div class="mb-2">
+                <select name="kind" class="form-select">
+                    <option value="ACCESS">Access — tell me what you hold</option>
+                    <option value="CORRECTION">Correction — something is wrong</option>
+                    <option value="ERASURE">Erasure — delete my data</option>
+                </select>
+            </div>
+            <div class="mb-2">
+                <input type="text" name="note" class="form-control" maxlength="500" placeholder="Anything to add (optional)"/>
+            </div>
+            <button type="submit" class="btn btn-outline-secondary w-100">Send request</button>
+            <div class="form-text">
+                To delete your account immediately instead, use
+                <a th:href="@{/student/account}">your account page</a>.
+            </div>
+        </div>
+    </form>
+</div>
+</body>
+</html>

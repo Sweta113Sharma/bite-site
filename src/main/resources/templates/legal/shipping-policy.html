@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 720px;">
+    <h1 class="detail-name">Shipping &amp; delivery</h1>
+    <p class="text-muted">Short, because there isn't any.</p>
+
+    <h5 class="mt-4">We don't deliver</h5>
+    <p>BiteSite is a pre-ordering and collection service. You order ahead, pay online, and
+       collect from the canteen counter you chose. Nothing is shipped, couriered, or brought
+       to you.</p>
+
+    <h5 class="mt-4">How collection works</h5>
+    <p>When the kitchen marks your order ready, your order page shows a four-digit pickup
+       code. Show it at the counter and staff enter it to hand your order over. The code
+       appears only while the order is waiting, and only on your own order page.</p>
+
+    <h5 class="mt-4">When it's ready</h5>
+    <p>Preparation times are set by each canteen and vary with how busy they are. We notify
+       you when your order is ready if you've turned notifications on.</p>
+
+    <h5 class="mt-4">Uncollected orders</h5>
+    <p>Orders not collected on the day they were placed are the canteen's to dispose of. If
+       something prevented you collecting, raise it through
+       <a th:href="@{/student/grievances}">Support</a> and it will be reviewed against our
+       <a th:href="@{/refund-policy}">refund policy</a>.</p>
+
+    <p class="text-muted small mt-4">
+        This page exists because payment providers require a shipping policy to be published.
+        For this service, the honest version is the one above.
+    </p>
+</div>
+</body>
+</html>

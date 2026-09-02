@@ -43,6 +43,15 @@ public class User implements Serializable {
 
     private boolean active;
 
+    /** Order-ready and cancellation alerts. On by default: a student who has paid for food
+     * needs to know when it is ready, which is the notification this product exists for. */
+    @Builder.Default
+    private boolean notifyOrderUpdates = true;
+
+    /** Off unless explicitly given — silence is not consent. */
+    @Builder.Default
+    private boolean notifyMarketing = false;
+
     // Fail-closed by default (Lombok's default for an unset boolean): a User built without
     // explicitly verifying email is treated as unverified, since email is required for
     // every account. phoneVerified defaults the other way — true — because phone

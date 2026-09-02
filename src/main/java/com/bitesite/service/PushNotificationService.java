@@ -1,6 +1,8 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.PushSubscriptionDao;
+import com.bitesite.dao.UserDao;
+import com.bitesite.model.User;
 import com.bitesite.model.PushSubscription;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,15 +32,17 @@ public class PushNotificationService {
     }
 
     private final PushSubscriptionDao pushSubscriptionDao;
+    private final UserDao userDao;
     private final String publicKey;
     private final String privateKey;
     private final String subject;
 
-    public PushNotificationService(PushSubscriptionDao pushSubscriptionDao,
+    public PushNotificationService(PushSubscriptionDao pushSubscriptionDao, UserDao userDao,
             @Value("${vapid.public-key}") String publicKey,
             @Value("${vapid.private-key}") String privateKey,
             @Value("${vapid.subject}") String subject) {
         this.pushSubscriptionDao = pushSubscriptionDao;
+        this.userDao = userDao;
         this.publicKey = publicKey;
         this.privateKey = privateKey;
         this.subject = subject;
@@ -84,6 +88,12 @@ public class PushNotificationService {
      * the subscription, so we drop it too rather than retry it forever. */
     public void notifyUser(Long userId, String title, String body) {
         if (!isConfigured()) {
+            return;
+        }
+        // Checked here rather than at each of the three call sites, so a future caller
+        // cannot forget it and quietly send to someone who opted out. A missing user is
+        // treated as opted out — failing closed is the right default for a message.
+        if (!userDao.findById(userId).map(User::isNotifyOrderUpdates).orElse(false)) {
             return;
         }
         for (PushSubscription sub : pushSubscriptionDao.findByUserId(userId)) {

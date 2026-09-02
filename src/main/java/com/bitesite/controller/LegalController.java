@@ -24,4 +24,16 @@ public class LegalController {
         model.addAttribute("pageTitle", "Refund policy");
         return "legal/refund-policy";
     }
+
+    @GetMapping("/shipping-policy")
+    public String shippingPolicy(Model model) {
+        model.addAttribute("pageTitle", "Shipping & delivery");
+        return "legal/shipping-policy";
+    }
+
+    @GetMapping("/grievance-policy")
+    public String grievancePolicy(Model model) {
+        model.addAttribute("pageTitle", "Grievance redressal");
+        return "legal/grievance-policy";
+    }
 }

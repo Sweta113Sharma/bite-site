@@ -35,6 +35,8 @@ public class UserDaoImpl implements UserDao {
             .role(Role.valueOf(rs.getString("role")))
             .activeRole(Role.valueOf(rs.getString("active_role")))
             .active(rs.getBoolean("is_active"))
+            .notifyOrderUpdates(rs.getBoolean("notify_order_updates"))
+            .notifyMarketing(rs.getBoolean("notify_marketing"))
             .emailVerified(rs.getBoolean("email_verified"))
             .phoneVerified(rs.getBoolean("phone_verified"))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
@@ -134,6 +136,13 @@ public class UserDaoImpl implements UserDao {
                     user.getId());
         }
         return findById(user.getId()).orElseThrow();
+    }
+
+    @Override
+    public void updateNotificationPreferences(Long id, boolean orderUpdates, boolean marketing) {
+        jdbcTemplate.update(
+                "UPDATE users SET notify_order_updates = ?, notify_marketing = ? WHERE id = ?",
+                orderUpdates, marketing, id);
     }
 
     @Override

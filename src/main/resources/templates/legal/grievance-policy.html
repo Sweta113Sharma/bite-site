@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 720px;">
+    <h1 class="detail-name">Grievance redressal</h1>
+    <p class="text-muted">How to raise a complaint, and what happens to it.</p>
+
+    <h5 class="mt-4">Raise it in the app first</h5>
+    <p>Use <a th:href="@{/student/grievances}">Support</a>. A complaint raised there is tied
+       to your account and, where relevant, to the specific order — which means whoever picks
+       it up can actually see what you're describing rather than asking you to repeat it.</p>
+
+    <h5 class="mt-4">What to include</h5>
+    <p>Your order token if it's about an order, and what you expected to happen. If it
+       concerns a payment, the payment reference from your confirmation helps us find it
+       immediately.</p>
+
+    <h5 class="mt-4">What happens next</h5>
+    <p>Complaints are visible to platform staff, who respond in the app. You'll see the
+       response on your <a th:href="@{/student/grievances}">Support</a> page. Refunds are
+       handled according to the <a th:href="@{/refund-policy}">refund policy</a>.</p>
+
+    <h5 class="mt-4">Data protection concerns</h5>
+    <p>For anything about your personal data — access, correction, or deletion — use
+       <a th:href="@{/student/privacy}">Your data</a>, which routes to the same team through
+       a queue built for those requests specifically.</p>
+
+    <h5 class="mt-4">Grievance officer</h5>
+    <p>A named grievance officer and a published response deadline are required under
+       India's Digital Personal Data Protection Act, 2025.</p>
+    <div class="alert alert-warning">
+        <strong>Not yet appointed.</strong> This section must name a real person, their
+        contact address, and a response timeframe before this service is offered to the
+        public. It is left explicitly blank rather than filled with a placeholder, because a
+        fake officer is worse than a missing one.
+    </div>
+</div>
+</body>
+</html>

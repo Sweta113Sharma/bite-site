@@ -1,6 +1,7 @@
 package com.bitesite.controller.auth;
 
 import com.bitesite.config.RateLimiter;
+import com.bitesite.privacy.PrivacyService;
 import com.bitesite.dto.StudentRegistrationForm;
 import com.bitesite.exception.DuplicateEmailException;
 import com.bitesite.model.User;
@@ -39,6 +40,7 @@ public class RegistrationController {
     private final TenantDao tenantDao;
     private final OtpService otpService;
     private final RateLimiter rateLimiter;
+    private final PrivacyService privacyService;
 
     @GetMapping
     public String showForm(Model model) {
@@ -73,6 +75,10 @@ public class RegistrationController {
             try {
                 User saved = userService.registerStudent(form.getTenantId(), form.getName(), form.getEmail(),
                         form.getPassword(), form.getPhone(), form.getRollNo());
+                // The registration page has always said "by creating an account you agree
+                // to our terms"; nothing recorded that it happened, or which version of the
+                // text they saw. Now both are stored.
+                privacyService.recordRegistrationConsent(saved.getId());
                 if (!saved.isEmailVerified() || !saved.isPhoneVerified()) {
                     otpService.issueEmailOtp(saved);
                     otpService.issuePhoneOtp(saved);
