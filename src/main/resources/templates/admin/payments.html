@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="console-head">
         <h3 class="m-0">Payments</h3>
         <form method="get" th:action="@{/admin/payments}">
             <select name="status" class="form-select" onchange="this.form.submit()">

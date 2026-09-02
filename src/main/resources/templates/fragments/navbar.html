@@ -3,10 +3,23 @@
 <body>
 
 <!-- ============================================================
-     TOP NAVBAR — brand, admin/staff links, logout
-     On mobile for USER role: only shows brand + logout (bottom nav handles the rest)
+     APP CHROME — the top bar, plus (for staff and admin) a second
+     strip carrying that portal's destinations.
+
+     Why two bars for staff: the admin portal has ten destinations.
+     Squeezed into the top bar they overflowed at 1280px — "Platform
+     users" was clipped to "P" and the last links were unreachable
+     without a hamburger. A console with ten equally-ranked places to
+     be wants them all visible, so they moved to their own strip that
+     scrolls horizontally when it must. That also retires the mobile
+     hamburger dropdown: the same strip works at 390px.
+
+     Students keep the single bar — five links plus the bottom tab
+     nav, which already fits.
      ============================================================ -->
-<nav th:fragment="navbar" class="navbar navbar-expand-lg mb-4">
+<div th:fragment="navbar" class="app-chrome">
+
+<nav class="navbar navbar-expand-lg">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="/">
             <img th:if="${currentTenant != null and currentTenant.logoPath != null}"
@@ -16,19 +29,18 @@
             <span th:text="${currentTenant != null ? currentTenant.name : 'BiteSite'}">BiteSite</span>
         </a>
 
-        <!-- Hamburger toggle — only relevant for staff/admin roles, which have no bottom-nav
-             fallback on mobile the way the student portal does. Plain vanilla-JS toggle
-             (see app.js initNavbarToggle), matching the rest of this app's hand-rolled JS —
-             no Bootstrap JS bundle is loaded here. -->
-        <button type="button" class="navbar-toggler-custom d-lg-none"
-                sec:authorize="hasAnyRole('CANTEEN_MANAGER', 'CANTEEN_OPERATOR', 'SUPER_ADMIN', 'TECH_MANAGER')"
-                id="navbar-toggle-btn" aria-label="Toggle navigation" aria-expanded="false"
-                aria-controls="navbar-links-collapse">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
+        <!-- Right-side cluster: menu button, identity, role switcher, logout. -->
+        <div class="navbar-right d-flex align-items-center gap-3">
+            <!-- Opens the full destination list. The bottom tab bar carries five places
+                 and the console strip scrolls; this is where everything is visible at
+                 once, including the pages neither of those has room for. -->
+            <button sec:authorize="isAuthenticated()" type="button"
+                    class="nav-drawer-btn" id="nav-drawer-btn"
+                    aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
 
-        <div class="d-flex align-items-center gap-3">
-            <span sec:authorize="isAuthenticated()" class="navbar-text small d-none d-md-inline" sec:authentication="name">user</span>
+            <span sec:authorize="isAuthenticated()" class="navbar-text small d-none d-lg-inline" sec:authentication="name">user</span>
 
             <!-- USER links — hidden on mobile (bottom nav takes over) -->
             <div sec:authorize="hasRole('USER')" class="top-nav-links d-flex align-items-center gap-2">
@@ -39,56 +51,265 @@
                 <a class="nav-link" th:href="@{/student/account}"><span class="material-symbols-outlined">account_circle</span>Account</a>
             </div>
 
-            <!-- Staff/admin links + role switcher — collapse behind the hamburger on mobile,
-                 always inline on desktop (see .navbar-links-collapse in style.css). -->
-            <div id="navbar-links-collapse" class="navbar-links-collapse">
-                <!-- Role switcher — only rendered when this account holds more than one role
-                     valid on the portal it's currently viewing (see GlobalModelAttributes).
-                     Plain <select> + auto-submit, matching the outlet switcher elsewhere. -->
-                <form th:if="${switchableRoles != null and !#lists.isEmpty(switchableRoles)}"
-                      method="post" th:action="@{/api/role/switch}" class="d-inline">
-                    <select name="role" class="form-select form-select-sm" style="width:auto;"
-                            onchange="this.form.submit()" aria-label="Switch role">
-                        <option value="" disabled selected>Switch role&hellip;</option>
-                        <option th:each="r : ${switchableRoles}" th:value="${r}"
-                                th:text="${r.name().replace('_', ' ')}"></option>
-                    </select>
-                </form>
-
-                <!-- Outlet links. Both roles get Menu: an operator needs it to reach the
-                     per-item stock toggles, and the manager-only actions inside are
-                     hidden per-row below and refused server-side regardless. -->
-                <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-link" th:href="@{/canteen/queue}"><span class="material-symbols-outlined">hourglass_top</span>Queue</a>
-                <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-link" th:href="@{/canteen/menu}"><span class="material-symbols-outlined">skillet</span>Menu</a>
-                <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-link" th:href="@{/canteen/orders}"><span class="material-symbols-outlined">receipt_long</span>History</a>
-                <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-link" th:href="@{/canteen/categories}"><span class="material-symbols-outlined">filter_alt</span>Categories</a>
-                <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-link" th:href="@{/canteen/reports}"><span class="material-symbols-outlined">assignment</span>Sales</a>
-                <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-link" th:href="@{/canteen/staff}"><span class="material-symbols-outlined">group</span>Staff</a>
-                <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-link" th:href="@{/canteen/settings}"><span class="material-symbols-outlined">settings</span>Settings</a>
-
-                <!-- ADMIN links -->
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Pipeline</a>
-                <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/outlets}"><span class="material-symbols-outlined">storefront</span>Canteens</a>
-                <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/orders}"><span class="material-symbols-outlined">receipt_long</span>Orders</a>
-                <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/payments}"><span class="material-symbols-outlined">credit_card</span>Payments</a>
-                <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-link" th:href="@{/admin/support}"><span class="material-symbols-outlined">support_agent</span>Support desk</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/grievances}"><span class="material-symbols-outlined">error</span>Grievances</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/audit-log}"><span class="material-symbols-outlined">assignment</span>Audit log</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-link" th:href="@{/admin/users}"><span class="material-symbols-outlined">group</span>Platform users</a>
-
-                <!-- TECH_MANAGER links -->
-                <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link" th:href="@{/techmgr}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
-                <a sec:authorize="hasRole('TECH_MANAGER')" class="nav-link" th:href="@{/techmgr/health}"><span class="material-symbols-outlined">monitor_heart</span>Health</a>
-            </div>
+            <!-- Role switcher — only rendered when this account holds more than one role
+                 valid on the portal it's currently viewing (see GlobalModelAttributes).
+                 Plain <select> + auto-submit, matching the outlet switcher elsewhere. -->
+            <form th:if="${switchableRoles != null and !#lists.isEmpty(switchableRoles)}"
+                  method="post" th:action="@{/api/role/switch}" class="d-inline">
+                <select name="role" class="form-select form-select-sm" style="width:auto;"
+                        onchange="this.form.submit()" aria-label="Switch role">
+                    <option value="" disabled selected>Switch role&hellip;</option>
+                    <option th:each="r : ${switchableRoles}" th:value="${r}"
+                            th:text="${r.name().replace('_', ' ')}"></option>
+                </select>
+            </form>
 
             <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="d-inline m-0">
-                <button class="btn btn-sm btn-outline-secondary" type="submit"><span class="material-symbols-outlined">logout</span>Logout</button>
+                <button class="btn btn-sm btn-outline-secondary" type="submit"><span class="material-symbols-outlined">logout</span><span class="btn-label">Logout</span></button>
             </form>
-            <a sec:authorize="!isAuthenticated()" class="btn btn-sm btn-outline-secondary" th:href="@{/login}"><span class="material-symbols-outlined">login</span>Login</a>
+            <a sec:authorize="!isAuthenticated()" class="btn btn-sm btn-outline-secondary" th:href="@{/login}"><span class="material-symbols-outlined">login</span><span class="btn-label">Login</span></a>
         </div>
     </div>
 </nav>
+
+<!-- ============================================================
+     CONSOLE NAV — staff and admin destinations.
+
+     One horizontal strip, scrollable rather than collapsible, so no
+     destination is ever more than one tap away. `aria-current="page"`
+     drives the active styling and is what a screen reader announces;
+     currentPath comes from GlobalModelAttributes because Thymeleaf 3.1
+     removed request access from expressions.
+     ============================================================ -->
+<nav class="console-nav"
+     sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR','SUPER_ADMIN','TECH_MANAGER')"
+     aria-label="Portal sections">
+    <div class="container">
+        <div class="console-nav__strip">
+            <!-- Outlet. Both roles get Menu: an operator needs it to reach the per-item
+                 stock toggles, and the manager-only actions inside are hidden per-row and
+                 refused server-side regardless. -->
+            <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="console-nav__link" th:href="@{/canteen/queue}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/canteen/queue')} ? 'page' : null">
+                <span class="material-symbols-outlined">hourglass_top</span>Queue</a>
+            <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="console-nav__link" th:href="@{/canteen/menu}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/canteen/menu')} ? 'page' : null">
+                <span class="material-symbols-outlined">skillet</span>Menu</a>
+            <a sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="console-nav__link" th:href="@{/canteen/orders}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/canteen/orders')} ? 'page' : null">
+                <span class="material-symbols-outlined">receipt_long</span>History</a>
+            <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="console-nav__link" th:href="@{/canteen/categories}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/canteen/categories')} ? 'page' : null">
+                <span class="material-symbols-outlined">sell</span>Categories</a>
+            <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="console-nav__link" th:href="@{/canteen/reports}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/canteen/reports')} ? 'page' : null">
+                <span class="material-symbols-outlined">bar_chart</span>Sales</a>
+            <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="console-nav__link" th:href="@{/canteen/staff}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/canteen/staff')} ? 'page' : null">
+                <span class="material-symbols-outlined">group</span>Staff</a>
+            <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="console-nav__link" th:href="@{/canteen/settings}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/canteen/settings')} ? 'page' : null">
+                <span class="material-symbols-outlined">settings</span>Settings</a>
+
+            <!-- Admin -->
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/tenants}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/tenants')} ? 'page' : null">
+                <span class="material-symbols-outlined">apartment</span>Colleges</a>
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/onboarding}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/onboarding')} ? 'page' : null">
+                <span class="material-symbols-outlined">filter_alt</span>Pipeline</a>
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/outlets}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/outlets')} ? 'page' : null">
+                <span class="material-symbols-outlined">storefront</span>Canteens</a>
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/orders}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/orders')} ? 'page' : null">
+                <span class="material-symbols-outlined">receipt_long</span>Orders</a>
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/payments}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/payments')} ? 'page' : null">
+                <span class="material-symbols-outlined">credit_card</span>Payments</a>
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/support}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/support')} ? 'page' : null">
+                <span class="material-symbols-outlined">support_agent</span>Support</a>
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/grievances}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/grievances')} ? 'page' : null">
+                <span class="material-symbols-outlined">flag</span>Grievances</a>
+            <!-- Data-principal requests. Had no link at all until now: the screen existed
+                 and was reachable only by typing the URL. -->
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/dpdp}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/dpdp')} ? 'page' : null">
+                <span class="material-symbols-outlined">privacy_tip</span>Data requests</a>
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/audit-log}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/audit-log')} ? 'page' : null">
+                <span class="material-symbols-outlined">history</span>Audit log</a>
+            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/users}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/users')} ? 'page' : null">
+                <span class="material-symbols-outlined">manage_accounts</span>Platform users</a>
+
+            <!-- Tech manager -->
+            <a sec:authorize="hasRole('TECH_MANAGER')" class="console-nav__link" th:href="@{/techmgr}"
+               th:attrappend="aria-current=${currentPath != null and currentPath == '/techmgr'} ? 'page' : null">
+                <span class="material-symbols-outlined">apartment</span>Colleges</a>
+            <a sec:authorize="hasRole('TECH_MANAGER')" class="console-nav__link" th:href="@{/techmgr/health}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/techmgr/health')} ? 'page' : null">
+                <span class="material-symbols-outlined">monitor_heart</span>Health</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Rendered inside the navbar fragment so every page that already includes the chrome
+     gets the drawer too, rather than needing a second include in forty templates. The
+     panel is position: fixed, and no ancestor here sets transform/filter/perspective, so
+     it still positions against the viewport. -->
+<div th:replace="~{fragments/navbar :: navDrawer}"></div>
+
+</div>
+
+<!-- ============================================================
+     NAV DRAWER — every destination for the signed-in role.
+
+     The bottom tab bar shows five places and the console strip scrolls horizontally;
+     neither can show everything at once, and several pages (privacy and data, the legal
+     documents, choosing a different canteen) had no navigation at all — they were only
+     reachable from inside another page or by typing the URL.
+
+     Plain vanilla JS in app.js, matching the rest of this app — no Bootstrap bundle is
+     loaded. The backdrop and panel are always in the DOM so the drawer can animate, and
+     `inert`/`aria-hidden` keep them out of the tab order and the accessibility tree while
+     closed.
+     ============================================================ -->
+<div th:fragment="navDrawer" sec:authorize="isAuthenticated()">
+    <div class="nav-drawer-backdrop" id="nav-drawer-backdrop" hidden></div>
+
+    <aside class="nav-drawer" id="nav-drawer" aria-hidden="true" aria-label="All sections" inert>
+        <div class="nav-drawer__head">
+            <span class="nav-drawer__who">
+                <span class="material-symbols-outlined">account_circle</span>
+                <span sec:authentication="name">user</span>
+            </span>
+            <button type="button" class="nav-drawer__close" id="nav-drawer-close" aria-label="Close menu">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <nav class="nav-drawer__body">
+            <!-- Customer -->
+            <div sec:authorize="hasRole('USER')" class="nav-drawer__group">
+                <p class="nav-drawer__label">Order</p>
+                <a class="nav-drawer__link" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Menu</a>
+                <a class="nav-drawer__link" th:href="@{/student/cart}"><span class="material-symbols-outlined">shopping_cart</span>Cart
+                    <span class="nav-drawer__count" th:if="${cartItemCount != null and cartItemCount > 0}" th:text="${cartItemCount}">0</span></a>
+                <a class="nav-drawer__link" th:href="@{/student/orders}"><span class="material-symbols-outlined">receipt_long</span>My orders
+                    <span class="nav-drawer__count" th:if="${activeOrders != null and !#lists.isEmpty(activeOrders)}" th:text="${#lists.size(activeOrders)}">0</span></a>
+                <a class="nav-drawer__link" th:href="@{/student/menu/select}"><span class="material-symbols-outlined">storefront</span>Change canteen</a>
+            </div>
+
+            <div sec:authorize="hasRole('USER')" class="nav-drawer__group">
+                <p class="nav-drawer__label">Account</p>
+                <a class="nav-drawer__link" th:href="@{/student/account}"><span class="material-symbols-outlined">manage_accounts</span>Account</a>
+                <a class="nav-drawer__link" th:href="@{/student/privacy}"><span class="material-symbols-outlined">privacy_tip</span>Privacy &amp; data</a>
+                <a class="nav-drawer__link" th:href="@{/student/grievances}"><span class="material-symbols-outlined">support_agent</span>Support</a>
+            </div>
+
+            <!-- Outlet -->
+            <div sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR')" class="nav-drawer__group">
+                <p class="nav-drawer__label">Kitchen</p>
+                <a class="nav-drawer__link" th:href="@{/canteen/queue}"><span class="material-symbols-outlined">hourglass_top</span>Queue</a>
+                <a class="nav-drawer__link" th:href="@{/canteen/menu}"><span class="material-symbols-outlined">skillet</span>Menu</a>
+                <a class="nav-drawer__link" th:href="@{/canteen/orders}"><span class="material-symbols-outlined">receipt_long</span>Order history</a>
+            </div>
+            <div sec:authorize="hasRole('CANTEEN_MANAGER')" class="nav-drawer__group">
+                <p class="nav-drawer__label">Manage</p>
+                <a class="nav-drawer__link" th:href="@{/canteen/categories}"><span class="material-symbols-outlined">sell</span>Categories</a>
+                <a class="nav-drawer__link" th:href="@{/canteen/reports}"><span class="material-symbols-outlined">bar_chart</span>Sales</a>
+                <a class="nav-drawer__link" th:href="@{/canteen/staff}"><span class="material-symbols-outlined">group</span>Staff</a>
+                <a class="nav-drawer__link" th:href="@{/canteen/settings}"><span class="material-symbols-outlined">settings</span>Outlet settings</a>
+            </div>
+
+            <!-- Admin -->
+            <div sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-drawer__group">
+                <p class="nav-drawer__label">Platform</p>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Onboarding pipeline</a>
+                <a class="nav-drawer__link" th:href="@{/admin/outlets}"><span class="material-symbols-outlined">storefront</span>Canteens</a>
+                <a class="nav-drawer__link" th:href="@{/admin/orders}"><span class="material-symbols-outlined">receipt_long</span>Orders</a>
+                <a class="nav-drawer__link" th:href="@{/admin/payments}"><span class="material-symbols-outlined">credit_card</span>Payments</a>
+            </div>
+            <div sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-drawer__group">
+                <p class="nav-drawer__label">Oversight</p>
+                <a class="nav-drawer__link" th:href="@{/admin/support}"><span class="material-symbols-outlined">support_agent</span>Support desk</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/grievances}"><span class="material-symbols-outlined">flag</span>Grievances</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/dpdp}"><span class="material-symbols-outlined">privacy_tip</span>Data requests</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/audit-log}"><span class="material-symbols-outlined">history</span>Audit log</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/users}"><span class="material-symbols-outlined">manage_accounts</span>Platform users</a>
+            </div>
+
+            <!-- Tech manager -->
+            <div sec:authorize="hasRole('TECH_MANAGER')" class="nav-drawer__group">
+                <p class="nav-drawer__label">Operations</p>
+                <a class="nav-drawer__link" th:href="@{/techmgr}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
+                <a class="nav-drawer__link" th:href="@{/techmgr/health}"><span class="material-symbols-outlined">monitor_heart</span>System health</a>
+            </div>
+
+            <!-- Legal. Published pages that previously had no navigation at all. -->
+            <div class="nav-drawer__group nav-drawer__group--quiet">
+                <p class="nav-drawer__label">Legal</p>
+                <a class="nav-drawer__link" th:href="@{/privacy-policy}">Privacy policy</a>
+                <a class="nav-drawer__link" th:href="@{/terms}">Terms</a>
+                <a class="nav-drawer__link" th:href="@{/refund-policy}">Refunds</a>
+                <a class="nav-drawer__link" th:href="@{/shipping-policy}">Collection</a>
+                <a class="nav-drawer__link" th:href="@{/grievance-policy}">Grievance officer</a>
+            </div>
+        </nav>
+
+        <form th:action="@{/logout}" method="post" class="nav-drawer__foot">
+            <button class="btn btn-primary w-100" type="submit">
+                <span class="material-symbols-outlined">logout</span>Sign out
+            </button>
+        </form>
+    </aside>
+</div>
+
+<!-- ============================================================
+     ACTIVE ORDER STRIP
+
+     A live order used to exist only as one card inside /student/orders, in a flat
+     chronological list. READY_FOR_PICKUP in particular is time-critical — the food is
+     already on the counter — and a student browsing the menu had no way to know.
+
+     This sits under the top bar on every customer page. It shows the single most urgent
+     live order (see OrderStatus.attentionRank) and counts the rest, so it never grows
+     into a second list.
+     ============================================================ -->
+<a th:fragment="activeOrderStrip"
+   sec:authorize="hasRole('USER')"
+   th:if="${activeOrders != null and !#lists.isEmpty(activeOrders)}"
+   th:with="top=${activeOrders[0]}, s=${activeOrders[0].status.name()}"
+   class="active-order-strip"
+   th:classappend="${s == 'READY_FOR_PICKUP'} ? 'is-ready' :
+                   (${s == 'PREPARING'} ? 'is-preparing' :
+                   (${s == 'AWAITING_PAYMENT' or s == 'PAYMENT_FAILED'} ? 'is-unpaid' : 'is-paid'))"
+   th:href="@{/student/orders/{id}(id=${top.id})}">
+
+    <span class="active-order-strip__pulse" aria-hidden="true"></span>
+
+    <span class="active-order-strip__text">
+        <strong th:text="${s == 'READY_FOR_PICKUP'} ? 'Ready to collect' :
+                         (${s == 'PREPARING'} ? 'Being prepared' :
+                         (${s == 'PAID'} ? 'Order confirmed' :
+                         (${s == 'PAYMENT_FAILED'} ? 'Payment failed' : 'Payment pending')))">Status</strong>
+        <span class="active-order-strip__meta">
+            <span th:text="${top.tokenNo}">BITE-0000</span>
+            <span th:if="${#lists.size(activeOrders) > 1}"
+                  th:text="' · +' + (${#lists.size(activeOrders)} - 1) + ' more'"></span>
+        </span>
+    </span>
+
+    <span class="active-order-strip__cta">
+        <span th:text="${s == 'READY_FOR_PICKUP'} ? 'Show code' :
+                       (${s == 'AWAITING_PAYMENT' or s == 'PAYMENT_FAILED'} ? 'Pay now' : 'Track')">Track</span>
+        <span class="material-symbols-outlined">arrow_forward</span>
+    </span>
+</a>
 
 <!-- ============================================================
      BOTTOM TAB NAV — mobile only, USER role only
@@ -112,6 +333,10 @@
     <a th:href="@{/student/orders}" class="bottom-nav-item" data-page="orders">
         <span class="material-symbols-outlined">receipt_long</span>
         <span>Orders</span>
+        <!-- Mirrors the cart badge: server-rendered so it is right on first paint. -->
+        <span class="bottom-nav-badge"
+              th:if="${activeOrders != null and !#lists.isEmpty(activeOrders)}"
+              th:text="${#lists.size(activeOrders)}">0</span>
     </a>
     <a th:href="@{/student/grievances}" class="bottom-nav-item" data-page="support">
         <span class="material-symbols-outlined">support_agent</span>

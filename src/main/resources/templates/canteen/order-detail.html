@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 620px;">
     <a th:href="@{/canteen/orders}" class="detail-back">
-        <i class="ph ph-arrow-left"></i><span>Back to history</span>
+        <span class="material-symbols-outlined">arrow_back</span><span>Back to history</span>
     </a>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="console-head">
         <h3 class="token-badge m-0" th:text="${order.tokenNo}">TOKEN</h3>
         <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
     </div>

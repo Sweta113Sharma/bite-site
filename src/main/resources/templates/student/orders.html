@@ -3,26 +3,44 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
 <!-- Mobile Bottom Nav -->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container">
     <div class="page-header">
-        <h3 class="page-header-title">Order history</h3>
-        <p class="page-header-sub">Review your past orders and track anything still on the way.</p>
+        <h3 class="page-header-title">My orders</h3>
+        <p class="page-header-sub">Anything still in progress is pinned at the top.</p>
     </div>
 
-    <div th:if="${#lists.isEmpty(orders)}" class="state-panel">
+    <!-- Both groups must be empty. Keying this off the past-orders list alone would show
+         "No orders yet" to someone whose only order is still being cooked. -->
+    <div th:if="${#lists.isEmpty(pastOrders) and (activeOrders == null or #lists.isEmpty(activeOrders))}" class="state-panel">
         <div th:replace="~{fragments/state :: medallion('receipt_long','neutral')}"></div>
         <h4>No orders yet</h4>
         <p>Once you place an order, you'll be able to track it here.</p>
         <a class="btn btn-primary" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Browse the menu</a>
     </div>
 
-    <div class="row row-cols-1 row-cols-md-2 g-3" th:if="${!#lists.isEmpty(orders)}">
-        <div class="col" th:each="order : ${orders}">
-            <a th:href="@{/student/orders/{id}(id=${order.id})}" class="order-card">
+    <!-- Active group. `activeOrders` comes from GlobalModelAttributes already sorted by
+         urgency, so the order needing attention soonest is first on the screen. -->
+    <div th:if="${activeOrders != null and !#lists.isEmpty(activeOrders)}" class="orders-group orders-group--active">
+        <p class="section-label">
+            <span class="live-dot" aria-hidden="true"></span>Active now
+        </p>
+        <div class="row row-cols-1 row-cols-md-2 g-3">
+            <div class="col" th:each="order : ${activeOrders}">
+                <div th:replace="~{student/orders :: orderCard(${order})}"></div>
+            </div>
+        </div>
+    </div>
+
+    <p class="section-label" th:if="${pastOrders != null and !#lists.isEmpty(pastOrders)}">Past orders</p>
+
+    <div class="row row-cols-1 row-cols-md-2 g-3" th:if="${pastOrders != null and !#lists.isEmpty(pastOrders)}">
+        <div class="col" th:each="order : ${pastOrders}">
+            <a th:fragment="orderCard(order)" th:href="@{/student/orders/{id}(id=${order.id})}" class="order-card">
                 <div class="order-card-header">
                     <div>
                         <div class="text-muted small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.04em;">Order Token</div>

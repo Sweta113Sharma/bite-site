@@ -1,27 +1,23 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="page-header">
-        <h3 class="page-header-title">Sales</h3>
-        <p class="page-header-sub" th:text="'Last ' + ${days} + ' days. Cancelled, expired and unpaid orders are excluded.'">
+    <div class="console-head">
+        <h3 class="console-head__title">Sales</h3>
+        <p class="console-head__blurb" th:text="'Last ' + ${days} + ' days. Cancelled, expired and unpaid orders are excluded.'">
             Last 30 days.</p>
     </div>
 
-    <div class="row row-cols-2 g-3 mb-4">
-        <div class="col">
-            <div class="card"><div class="card-body">
-                <p class="section-label mb-1">Orders</p>
-                <p class="h3 m-0" th:text="${totalOrders}">0</p>
-            </div></div>
+    <div class="stat-row">
+        <div class="stat">
+            <span class="stat__label">Orders</span>
+            <span class="stat__value" th:text="${totalOrders}">0</span>
         </div>
-        <div class="col">
-            <div class="card"><div class="card-body">
-                <p class="section-label mb-1">Revenue</p>
-                <p class="h3 m-0" th:text="'₹' + ${totalRevenue}">₹0</p>
-            </div></div>
+        <div class="stat stat--accent">
+            <span class="stat__label">Revenue</span>
+            <span class="stat__value" th:text="'₹' + ${totalRevenue}">₹0</span>
         </div>
     </div>
 
@@ -33,12 +29,12 @@
 
     <div class="table-responsive" th:if="${!#lists.isEmpty(rows)}">
         <table class="table bg-white">
-            <thead><tr><th>Day</th><th class="text-end">Orders</th><th class="text-end">Revenue</th></tr></thead>
+            <thead><tr><th>Day</th><th class="num">Orders</th><th class="money">Revenue</th></tr></thead>
             <tbody>
             <tr th:each="r : ${rows}">
                 <td th:text="${#temporals.format(r.day, 'EEE dd MMM')}">day</td>
-                <td class="text-end" th:text="${r.orderCount}">0</td>
-                <td class="text-end" th:text="'₹' + ${r.revenue}">₹0</td>
+                <td class="num" th:text="${r.orderCount}">0</td>
+                <td class="money" th:text="'₹' + ${r.revenue}">₹0</td>
             </tr>
             </tbody>
         </table>

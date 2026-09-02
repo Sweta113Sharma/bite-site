@@ -3,6 +3,7 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
 <!-- Mobile Bottom Nav -->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
@@ -46,6 +47,14 @@
             <div class="account-row-content">
                 <div class="account-row-label">Terms &amp; policies</div>
                 <div class="account-row-detail">Terms, privacy and refunds</div>
+            </div>
+            <span class="material-symbols-outlined account-row-chevron">chevron_right</span>
+        </a>
+<a th:href="@{/student/privacy}" class="account-row">
+            <span class="material-symbols-outlined">info</span>
+            <div class="account-row-content">
+                <div class="account-row-label">Your data</div>
+                <div class="account-row-detail">Download your data, consent, and notifications</div>
             </div>
             <span class="material-symbols-outlined account-row-chevron">chevron_right</span>
         </a>

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="console-head">
         <h3 class="m-0">Colleges</h3>
-        <a class="btn btn-outline-secondary" th:href="@{/techmgr/health}"><i class="ph ph-heartbeat"></i>System health</a>
+        <a class="btn btn-outline-secondary" th:href="@{/techmgr/health}"><span class="material-symbols-outlined">monitor_heart</span>System health</a>
     </div>
     <div class="table-responsive">
     <table class="table bg-white">
@@ -15,7 +15,7 @@
         <tr th:each="t : ${tenants}">
             <td th:text="${t.name}">College</td>
             <td><span class="badge" th:classappend="${t.status.name() == 'ACTIVE'} ? 'bg-success' : 'bg-secondary'" th:text="${t.status}"></span></td>
-            <td><a class="btn btn-sm btn-outline-secondary" th:href="@{/techmgr/tenants/{id}(id=${t.id})}"><i class="ph ph-sliders"></i>Configure</a></td>
+            <td><a class="btn btn-sm btn-outline-secondary" th:href="@{/techmgr/tenants/{id}(id=${t.id})}"><span class="material-symbols-outlined">tune</span>Configure</a></td>
         </tr>
         </tbody>
     </table>

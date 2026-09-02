@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 480px;">
     <h3 class="mb-4" th:text="${pageTitle}">Add a lead</h3>
@@ -29,7 +29,7 @@
             <label class="form-label">Notes (optional)</label>
             <textarea th:field="*{notes}" class="form-control" rows="3"></textarea>
         </div>
-        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-plus"></i>Add lead</button>
+        <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">add</span>Add lead</button>
     </form>
 </div>
 </body>

@@ -3,6 +3,7 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container" style="max-width: 720px;">
@@ -12,7 +13,10 @@
     </a>
 
     <div class="detail-hero" th:classappend="${item.usesIllustration()} ? 'is-illustration'">
-        <img th:src="@{${item.displayImage()}}" th:alt="${item.name}"/>
+        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+        <div th:if="${item.usesIllustration()}" class="photo-placeholder">
+            <span class="material-symbols-outlined">restaurant</span>
+        </div>
         <div th:if="${item.hasDiscount()}" class="discount-tag"
              th:text="${item.discountPercentDisplay()} + '% OFF'">20% OFF</div>
     </div>

@@ -3,6 +3,7 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
 <!-- Mobile Bottom Nav -->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
@@ -26,7 +27,7 @@
     <button id="pay-btn" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
         <span class="material-symbols-outlined">lock</span> Pay Securely via UPI
     </button>
-    <a th:href="@{/student/cart}" class="text-muted small text-decoration-none">Cancel and return to cart</a>
+    <a th:href="@{/student/cart}" class="text-muted small text-decoration-none d-inline-block mt-2">Cancel and return to cart</a>
 </div>
 
 <form id="confirm-form" method="post" th:action="@{/student/checkout/{id}/confirm(id=${order.id})}" style="display:none;">

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 480px;">
     <h3 class="mb-4">System health</h3>
@@ -9,7 +9,7 @@
         <div class="card-body d-flex align-items-center gap-3">
             <span class="icon-circle" th:classappend="${up} ? '' : 'text-danger'"
                   th:style="${up} ? '' : 'background: var(--color-danger-tint); color: var(--color-danger);'">
-                <i class="ph ph-heartbeat"></i>
+                <span class="material-symbols-outlined">monitor_heart</span>
             </span>
             <div>
                 <span class="badge fs-6" th:classappend="${up} ? 'bg-success' : 'bg-danger'" th:text="${status}">UP</span>
@@ -22,7 +22,7 @@
             <div class="d-flex align-items-center gap-3 mb-3">
                 <span class="icon-circle"
                       th:style="${paymentsUp} ? '' : 'background: var(--color-danger-tint); color: var(--color-danger);'">
-                    <i class="ph ph-credit-card"></i>
+                    <span class="material-symbols-outlined">credit_card</span>
                 </span>
                 <div>
                     <strong>Payments</strong>

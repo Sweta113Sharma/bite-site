@@ -3,6 +3,7 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
 <!-- Mobile Bottom Nav -->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
@@ -30,7 +31,7 @@
         <a class="btn btn-primary" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Browse the menu</a>
     </div>
 
-    <div th:if="${!#lists.isEmpty(lines)}" style="padding-bottom: 90px;"> <!-- padding for sticky pay bar -->
+    <div th:if="${!#lists.isEmpty(lines)}" class="cart-page-body"> <!-- clearance for the sticky pay bar lives in CSS, next to the bar itself -->
         <div th:if="${outlet != null}">
             <p class="section-label">Pickup location</p>
             <div class="pickup-card">
@@ -47,7 +48,8 @@
         <div class="cart-items mb-4">
             <div class="cart-item-card" th:each="line : ${lines}">
                 <div class="cart-item-photo" th:classappend="${line.item().usesIllustration()} ? 'is-illustration'">
-                    <img th:src="@{${line.item().displayImage()}}" th:alt="${line.item().name}"/>
+                    <img th:if="${!line.item().usesIllustration()}" th:src="@{${line.item().photoPath}}" th:alt="${line.item().name}"/>
+                    <span th:if="${line.item().usesIllustration()}" class="material-symbols-outlined">restaurant</span>
                 </div>
                 
                 <div class="cart-item-info">

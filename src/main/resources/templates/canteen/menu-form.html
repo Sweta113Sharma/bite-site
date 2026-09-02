@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 480px;">
     <h3 class="mb-4" th:text="${pageTitle}">Menu item</h3>
@@ -71,7 +71,7 @@
                       th:text="'Ordered so far today: ' + ${soldToday} + '.'">Ordered so far today: 0.</span>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-check"></i>Save</button>
+        <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">check</span>Save</button>
     </form>
 </div>
 <script th:src="@{/js/menu-photo-upload.js}"></script>

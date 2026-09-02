@@ -2,10 +2,10 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="console-head">
         <h3 class="m-0">Menu</h3>
         <div class="d-flex gap-2">
             <!-- Opening-time reset. Only offered when there is actually something switched
@@ -14,10 +14,10 @@
                   th:if="${#lists.size(items.?[!available]) > 0}"
                   onsubmit="return confirm('Put every out-of-stock item back on sale?');">
                 <button class="btn btn-outline-secondary" type="submit">
-                    <i class="ph ph-arrow-counter-clockwise"></i>Restock all
+                    <span class="material-symbols-outlined">restart_alt</span>Restock all
                 </button>
             </form>
-            <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="btn btn-primary" th:href="@{/canteen/menu/new}"><i class="ph ph-plus"></i>Add item</a>
+            <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="btn btn-primary" th:href="@{/canteen/menu/new}"><span class="material-symbols-outlined">add</span>Add item</a>
         </div>
     </div>
 
@@ -29,59 +29,75 @@
         <p>Add your first item to start taking orders.</p>
     </div>
 
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3" th:if="${!#lists.isEmpty(items)}">
-        <div class="col" th:each="item : ${items}">
-            <div class="card h-100">
-                <div class="menu-photo-frame" th:classappend="${item.photoPath == null} ? 'is-placeholder'">
-                    <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
-                    <img th:if="${item.photoPath == null}" th:src="@{/img/plate-placeholder.svg}" alt=""/>
-                    <!-- Switched off by staff and sold out against the day's cap are
-                         different facts; the overlay says which one is in play. -->
-                    <div class="badge-unavailable" th:if="${!item.available}">Out of stock</div>
-                    <div class="badge-unavailable" th:if="${item.available and item.soldOutToday()}">Sold out today</div>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="card-title mb-0" th:text="${item.name}">Item</h6>
-                        <span class="badge bg-secondary" th:text="${item.category}">Category</span>
-                    </div>
-                    <div class="card-price mb-1">
-                        <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
-                        <span th:text="'₹' + ${item.effectivePrice()}"></span>
-                    </div>
-                    <p class="mb-2 small text-muted" th:if="${item.discountPrice != null}" th:text="'Flat ₹' + ${item.discountPrice} + ' off'"></p>
-                    <p class="mb-2 small text-muted" th:if="${item.discountPercent != null}" th:text="${item.discountPercent} + '% off'"></p>
+    <!-- A management list, not a storefront. The previous grid gave each item a 4:3
+         photo panel, which for an item with no photo uploaded was a flat block of
+         colour carrying no information — six items ran to 3,225px of scroll on a
+         phone. Staff scanning this screen want name, price, today's count and the
+         stock toggle, many rows at a time. -->
+    <ul class="menu-admin" th:if="${!#lists.isEmpty(items)}">
+        <li class="menu-admin__row" th:each="item : ${items}"
+            th:classappend="${!item.available} ? 'is-off'">
 
-                    <div class="daily-limit-row" th:if="${item.hasDailyLimit()}">
-                        <div class="daily-limit-bar" aria-hidden="true">
-                            <span th:style="'width:' + ${item.dailyLimitPercent()} + '%'"></span>
-                        </div>
-                        <span class="daily-limit-text"
-                              th:classappend="${item.soldOutToday()} ? 'is-out' : (${item.runningLowToday()} ? 'is-low' : '')"
-                              th:text="${item.soldToday} + ' of ' + ${item.dailyLimit} + ' made today'">0 of 30 made today</span>
-                    </div>
-                    <p class="daily-limit-text mb-0 mt-2" th:if="${!item.hasDailyLimit()}"
-                       th:text="${item.soldToday} + ' ordered today · no daily limit'">0 ordered today</p>
-
-                    <div class="d-flex gap-2 mt-3 flex-wrap">
-                        <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="btn btn-sm btn-outline-secondary" th:href="@{/canteen/menu/{id}/edit(id=${item.id})}"><i class="ph ph-pencil-simple"></i>Edit</a>
-                        <form method="post" th:action="@{/canteen/menu/{id}/toggle(id=${item.id})}">
-                            <button class="btn btn-sm" type="submit"
-                                    th:classappend="${item.available} ? 'btn-outline-warning' : 'btn-outline-success'"
-                                    th:title="${item.available} ? 'Mark out of stock' : 'Mark available'">
-                                <i class="ph" th:classappend="${item.available} ? 'ph-x-circle' : 'ph-check-circle'"></i>
-                                <span th:text="${item.available} ? 'Out of stock' : 'Restock'">Out of stock</span>
-                            </button>
-                        </form>
-                        <form sec:authorize="hasRole('CANTEEN_MANAGER')" method="post" th:action="@{/canteen/menu/{id}/delete(id=${item.id})}"
-                              onsubmit="return confirm('Delete this item?');">
-                            <button class="btn btn-sm btn-outline-danger" type="submit" title="Delete"><i class="ph ph-trash"></i></button>
-                        </form>
-                    </div>
-                </div>
+            <div class="menu-admin__thumb" th:classappend="${item.photoPath == null} ? 'is-placeholder'">
+                <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                <span th:if="${item.photoPath == null}" class="material-symbols-outlined" aria-hidden="true">restaurant</span>
             </div>
-        </div>
-    </div>
+
+            <div class="menu-admin__main">
+                <div class="menu-admin__name">
+                    <span th:text="${item.name}">Item</span>
+                    <!-- Switched off by staff and sold out against the day's cap are
+                         different facts, so they read as different badges. -->
+                    <span class="badge bg-danger" th:if="${!item.available}">Out of stock</span>
+                    <span class="badge bg-warning" th:if="${item.available and item.soldOutToday()}">Sold out today</span>
+                </div>
+                <div class="menu-admin__meta">
+                    <span class="menu-admin__price">
+                        <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
+                        <span th:text="'₹' + ${item.effectivePrice()}">₹0</span>
+                    </span>
+                    <span class="badge bg-secondary" th:text="${item.category}">Category</span>
+                    <span th:if="${item.discountPrice != null}" th:text="'Flat ₹' + ${item.discountPrice} + ' off'"></span>
+                    <span th:if="${item.discountPercent != null}" th:text="${item.discountPercent} + '% off'"></span>
+                </div>
+
+                <div class="daily-limit-row" th:if="${item.hasDailyLimit()}">
+                    <div class="daily-limit-bar" aria-hidden="true">
+                        <span th:style="'width:' + ${item.dailyLimitPercent()} + '%'"></span>
+                    </div>
+                    <span class="daily-limit-text"
+                          th:classappend="${item.soldOutToday()} ? 'is-out' : (${item.runningLowToday()} ? 'is-low' : '')"
+                          th:text="${item.soldToday} + ' of ' + ${item.dailyLimit} + ' made today'">0 of 30 made today</span>
+                </div>
+                <div class="daily-limit-text" th:if="${!item.hasDailyLimit()}"
+                     th:text="${item.soldToday} + ' ordered today · no daily limit'">0 ordered today</div>
+            </div>
+
+            <div class="menu-admin__actions">
+                <!-- The label says what the button will do, not what the item currently
+                     is — the badge above already states the state. Reading "Out of stock"
+                     on a button left it ambiguous whether it was a status or an action. -->
+                <form method="post" th:action="@{/canteen/menu/{id}/toggle(id=${item.id})}">
+                    <button class="btn btn-sm" type="submit"
+                            th:classappend="${item.available} ? 'btn-outline-secondary' : 'btn-accent'"
+                            th:title="${item.available} ? 'Mark out of stock' : 'Put back on sale'">
+                        <span class="material-symbols-outlined" th:text="${item.available} ? 'cancel' : 'check_circle'"></span>
+                        <span th:text="${item.available} ? 'Sold out' : 'Restock'">Sold out</span>
+                    </button>
+                </form>
+                <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="btn btn-sm btn-outline-secondary"
+                   th:href="@{/canteen/menu/{id}/edit(id=${item.id})}" th:title="'Edit ' + ${item.name}">
+                    <span class="material-symbols-outlined">edit</span>Edit</a>
+                <form sec:authorize="hasRole('CANTEEN_MANAGER')" method="post" th:action="@{/canteen/menu/{id}/delete(id=${item.id})}"
+                      onsubmit="return confirm('Delete this item?');">
+                    <button class="btn btn-sm btn-outline-danger is-icon-only" type="submit"
+                            th:title="'Delete ' + ${item.name}" th:aria-label="'Delete ' + ${item.name}">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                </form>
+            </div>
+        </li>
+    </ul>
 </div>
 </body>
 </html>

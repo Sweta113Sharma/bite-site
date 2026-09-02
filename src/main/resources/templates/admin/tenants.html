@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="console-head">
         <h3 class="m-0">Colleges</h3>
         <div>
-            <a class="btn btn-outline-secondary" th:href="@{/admin/onboarding}"><i class="ph ph-funnel"></i>Onboarding pipeline</a>
-            <a class="btn btn-primary" th:href="@{/admin/tenants/new}"><i class="ph ph-plus"></i>Onboard a college</a>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Onboarding pipeline</a>
+            <a class="btn btn-primary" th:href="@{/admin/tenants/new}"><span class="material-symbols-outlined">add</span>Onboard a college</a>
         </div>
     </div>
 
@@ -16,24 +16,24 @@
         <div th:replace="~{fragments/state :: medallion('apartment','neutral')}"></div>
         <h4>No colleges yet</h4>
         <p>Onboard your first college to get started.</p>
-        <a class="btn btn-primary" th:href="@{/admin/tenants/new}"><i class="ph ph-plus"></i>Onboard a college</a>
+        <a class="btn btn-primary" th:href="@{/admin/tenants/new}"><span class="material-symbols-outlined">add</span>Onboard a college</a>
     </div>
 
     <div class="table-responsive">
     <table class="table bg-white" th:if="${!#lists.isEmpty(tenants)}">
-        <thead><tr><th>Logo</th><th>Name</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th class="col-optional">Logo</th><th>Name</th><th>Status</th><th></th></tr></thead>
         <tbody>
         <tr th:each="t : ${tenants}">
-            <td>
+            <td class="col-optional">
                 <img th:if="${t.logoPath != null}" th:src="@{${t.logoPath}}" height="32" alt="logo"/>
-                <i th:if="${t.logoPath == null}" class="ph ph-buildings text-muted fs-4"></i>
+                <span th:if="${t.logoPath == null}" class="material-symbols-outlined text-muted fs-4">apartment</span>
             </td>
             <td th:text="${t.name}">College</td>
             <td>
                 <span class="badge" th:classappend="${t.status.name() == 'ACTIVE'} ? 'bg-success' : (${t.status.name() == 'PENDING'} ? 'bg-secondary' : 'bg-danger')"
                       th:text="${t.status}"></span>
             </td>
-            <td><a class="btn btn-sm btn-outline-secondary" th:href="@{/admin/tenants/{id}(id=${t.id})}"><i class="ph ph-gear"></i>Manage</a></td>
+            <td class="row-actions"><a class="btn btn-sm btn-outline-secondary" th:href="@{/admin/tenants/{id}(id=${t.id})}"><span class="material-symbols-outlined">settings</span>Manage</a></td>
         </tr>
         </tbody>
     </table>

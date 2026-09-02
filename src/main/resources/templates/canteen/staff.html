@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 720px;">
-    <div class="page-header">
-        <h3 class="page-header-title">Staff</h3>
-        <p class="page-header-sub">Who can sign in to this canteen's console.</p>
+    <div class="console-head">
+        <h3 class="console-head__title">Staff</h3>
+        <p class="console-head__blurb">Who can sign in to this canteen's console.</p>
     </div>
 
     <div class="alert alert-success" th:if="${staffNotice}" th:text="${staffNotice}"></div>
@@ -52,7 +52,7 @@
         <div class="mb-2"><input type="text" name="name" class="form-control" placeholder="Full name" required="required"/></div>
         <div class="mb-2"><input type="email" name="email" class="form-control" placeholder="Email" required="required"/></div>
         <div class="mb-2"><input type="password" name="password" class="form-control" placeholder="Temporary password" minlength="8" required="required"/></div>
-        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-user-plus"></i>Create account</button>
+        <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">person_add</span>Create account</button>
     </form>
 </div>
 </body>

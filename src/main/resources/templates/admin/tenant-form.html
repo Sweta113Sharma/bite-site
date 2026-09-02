@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 480px;">
     <h3 class="mb-4" th:text="${pageTitle}">Onboard a college</h3>
@@ -11,7 +11,7 @@
             <input type="text" th:field="*{name}" class="form-control"/>
             <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
         </div>
-        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-buildings"></i>Create</button>
+        <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">apartment</span>Create</button>
     </form>
 </div>
 </body>

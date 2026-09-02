@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="console-head">
         <h3 class="m-0">Platform users</h3>
     </div>
     <p class="text-muted" style="max-width: 640px;">
@@ -17,7 +17,7 @@
 
     <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title"><i class="ph ph-user-plus"></i>Create platform user</h5>
+            <h5 class="card-title"><span class="material-symbols-outlined">person_add</span>Create platform user</h5>
             <form method="post" th:action="@{/admin/users}" th:object="${form}" class="row g-2 align-items-end">
                 <div class="col-sm-3">
                     <label class="form-label">Name</label>
@@ -44,7 +44,13 @@
                     <div class="text-danger small" th:if="${#fields.hasErrors('role')}" th:errors="*{role}"></div>
                 </div>
                 <div class="col-sm-1">
-                    <button type="submit" class="btn btn-primary w-100"><i class="ph ph-plus"></i></button>
+                    <!-- The label is hidden only where the column is genuinely one-twelfth wide. Below
+                         the sm breakpoint the column goes full width, and a full-width red bar
+                         containing nothing but a "+" does not say what it creates. -->
+                    <button type="submit" class="btn btn-primary w-100">
+                        <span class="material-symbols-outlined">add</span>
+                        <span class="d-sm-none">Create user</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -69,7 +75,7 @@
                           onsubmit="return confirm('Revoke this role?');">
                         <input type="hidden" name="role" th:value="${r}"/>
                         <button type="submit" class="btn btn-sm p-0 border-0 text-white" style="line-height:1;"
-                                th:title="'Revoke ' + ${r}"><i class="ph ph-x"></i></button>
+                                th:title="'Revoke ' + ${r}"><span class="material-symbols-outlined">close</span></button>
                     </form>
                 </span>
                 <form method="post" th:action="@{/admin/users/{id}/roles/grant(id=${u.id})}"

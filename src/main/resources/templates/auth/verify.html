@@ -31,7 +31,7 @@
         </div>
 
         <div th:if="${needsPhone}" class="mb-2">
-            <h6 class="mb-2 d-flex align-items-center gap-2"><span class="material-symbols-outlined">smartphone</span>Phone verification</h6>
+            <h6 class="mb-2 d-flex align-items-center gap-2"><span class="material-symbols-outlined">call</span>Phone verification</h6>
             <div class="alert alert-danger py-2" th:if="${phoneError}">That code is invalid or has expired.</div>
             <form method="post" th:action="@{/verify/phone}" class="d-flex gap-2">
                 <input type="text" name="code" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"

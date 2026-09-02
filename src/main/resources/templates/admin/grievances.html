@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
     <h3 class="mb-4">Grievances</h3>
@@ -27,13 +27,13 @@
             <!-- The whole point of the order link: from a complaint, one click to the
                  order and its payment, instead of asking the student to repeat it. -->
             <p class="mb-2 small" th:if="${row.orderToken() != null}">
-                <i class="ph ph-receipt"></i>
+                <span class="material-symbols-outlined">receipt_long</span>
                 About order <strong th:text="${row.orderToken()}">TOKEN</strong>
                 &middot;
                 <a th:href="@{/admin/support(q=${row.orderToken()})}">Open in support desk</a>
             </p>
             <p class="mb-2 small text-muted" th:if="${row.orderToken() == null}">
-                <i class="ph ph-info"></i> Not linked to a specific order.
+                <span class="material-symbols-outlined">info</span> Not linked to a specific order.
             </p>
 
             <p class="mb-2 small" th:if="${row.grievance().adminResponse != null}">
@@ -43,7 +43,7 @@
             <form method="post" th:if="${row.grievance().status.name() != 'RESOLVED'}"
                   th:action="@{/admin/grievances/{id}/resolve(id=${row.grievance().id})}" class="d-flex gap-2">
                 <input type="text" name="response" class="form-control form-control-sm" placeholder="Your response" required="required"/>
-                <button type="submit" class="btn btn-sm btn-success"><i class="ph ph-check-circle"></i>Resolve</button>
+                <button type="submit" class="btn btn-sm btn-success"><span class="material-symbols-outlined">check_circle</span>Resolve</button>
             </form>
         </div>
     </div>

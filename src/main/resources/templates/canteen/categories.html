@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 640px;">
-    <div class="page-header">
-        <h3 class="page-header-title">Categories</h3>
-        <p class="page-header-sub">The sections students see on your menu, in this order.</p>
+    <div class="console-head">
+        <h3 class="console-head__title">Categories</h3>
+        <p class="console-head__blurb">The sections students see on your menu, in this order.</p>
     </div>
 
     <div class="alert alert-success" th:if="${categoryNotice}" th:text="${categoryNotice}"></div>
@@ -52,7 +52,7 @@
     <form method="post" th:action="@{/canteen/categories}" class="d-flex gap-2">
         <input type="text" name="name" class="form-control" placeholder="e.g. Beverages"
                maxlength="80" required="required"/>
-        <button type="submit" class="btn btn-primary"><i class="ph ph-plus"></i>Add</button>
+        <button type="submit" class="btn btn-primary"><span class="material-symbols-outlined">add</span>Add</button>
     </form>
 </div>
 </body>

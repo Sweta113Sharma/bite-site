@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="console-head">
         <h3 class="m-0">Onboarding pipeline</h3>
-        <a class="btn btn-primary" th:href="@{/admin/onboarding/new}"><i class="ph ph-plus"></i>Add a lead</a>
+        <a class="btn btn-primary" th:href="@{/admin/onboarding/new}"><span class="material-symbols-outlined">add</span>Add a lead</a>
     </div>
 
     <div th:if="${#lists.isEmpty(leads)}" class="state-panel">
@@ -31,7 +31,7 @@
                     <select name="stage" class="form-select form-select-sm">
                         <option th:each="s : ${stages}" th:value="${s}" th:text="${s}" th:selected="${s == lead.stage}"></option>
                     </select>
-                    <button type="submit" class="btn btn-sm btn-outline-primary"><i class="ph ph-check"></i></button>
+                    <button type="submit" class="btn btn-sm btn-outline-primary"><span class="material-symbols-outlined">check</span></button>
                 </form>
                 <span th:if="${lead.stage.name() == 'ONBOARDED'}" class="badge bg-success">ONBOARDED</span>
             </td>
@@ -39,7 +39,7 @@
                 <form method="post" th:action="@{/admin/onboarding/{id}/convert(id=${lead.id})}"
                       th:if="${lead.stage.name() != 'ONBOARDED'}"
                       onsubmit="return confirm('Create a live college for ' + '&quot;' + [[${lead.collegeName}]] + '&quot;' + '?');">
-                    <button type="submit" class="btn btn-sm btn-success"><i class="ph ph-buildings"></i>Convert to college</button>
+                    <button type="submit" class="btn btn-sm btn-success"><span class="material-symbols-outlined">apartment</span>Convert to college</button>
                 </form>
             </td>
         </tr>

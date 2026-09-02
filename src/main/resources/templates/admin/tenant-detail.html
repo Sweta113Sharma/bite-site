@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="console-head">
         <div class="d-flex align-items-center gap-3">
             <img th:if="${tenant.logoPath != null}" th:src="@{${tenant.logoPath}}" height="40" alt="logo"/>
             <h3 class="m-0" th:text="${tenant.name}">College</h3>
@@ -19,29 +19,29 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="ph ph-toggle-left"></i>Status</h5>
+                    <h5 class="card-title"><span class="material-symbols-outlined">toggle_off</span>Status</h5>
                     <form method="post" th:action="@{/admin/tenants/{id}/status(id=${tenant.id})}" class="d-flex gap-2">
                         <select name="status" class="form-select">
                             <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == tenant.status}"></option>
                         </select>
-                        <button type="submit" class="btn btn-outline-primary"><i class="ph ph-check"></i>Update</button>
+                        <button type="submit" class="btn btn-outline-primary"><span class="material-symbols-outlined">check</span>Update</button>
                     </form>
                 </div>
             </div>
 
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="ph ph-image"></i>Logo</h5>
+                    <h5 class="card-title"><span class="material-symbols-outlined">image</span>Logo</h5>
                     <form method="post" th:action="@{/admin/tenants/{id}/logo(id=${tenant.id})}" enctype="multipart/form-data" class="d-flex gap-2">
                         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="form-control" required="required"/>
-                        <button type="submit" class="btn btn-outline-primary"><i class="ph ph-upload"></i>Upload</button>
+                        <button type="submit" class="btn btn-outline-primary"><span class="material-symbols-outlined">upload</span>Upload</button>
                     </form>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="ph ph-storefront"></i>Canteens</h5>
+                    <h5 class="card-title"><span class="material-symbols-outlined">storefront</span>Canteens</h5>
 
                     <div class="alert alert-success py-2" th:if="${outletNotice}" th:text="${outletNotice}"></div>
                     <div class="alert alert-danger py-2" th:if="${outletError}" th:text="${outletError}"></div>
@@ -64,7 +64,7 @@
                               th:action="@{/admin/tenants/{id}/outlets/{outletId}/rename(id=${tenant.id},outletId=${o.id})}">
                             <input type="text" name="name" class="form-control form-control-sm" th:value="${o.name}"
                                    maxlength="150" required="required" aria-label="Canteen name"/>
-                            <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="ph ph-pencil-simple"></i>Rename</button>
+                            <button type="submit" class="btn btn-sm btn-outline-secondary"><span class="material-symbols-outlined">edit</span>Rename</button>
                         </form>
 
                         <div class="d-flex gap-2 flex-wrap">
@@ -73,7 +73,7 @@
                                 <input type="hidden" name="active" th:value="${!o.active}"/>
                                 <button type="submit" class="btn btn-sm"
                                         th:classappend="${o.active} ? 'btn-outline-warning' : 'btn-outline-success'">
-                                    <i class="ph" th:classappend="${o.active} ? 'ph-prohibit' : 'ph-check-circle'"></i>
+                                    <span class="material-symbols-outlined" th:text="${o.active} ? 'block' : 'check_circle'"></span>
                                     <span th:text="${o.active} ? 'Disable' : 'Enable'">Disable</span>
                                 </button>
                             </form>
@@ -83,7 +83,7 @@
                              exact name typed back. The same check runs server-side, so
                              this box is the prompt, not the protection. -->
                         <details class="danger-zone">
-                            <summary><i class="ph ph-trash"></i>Delete this canteen</summary>
+                            <summary><span class="material-symbols-outlined">delete</span>Delete this canteen</summary>
                             <p class="danger-zone__warning">
                                 This permanently removes <strong th:text="${o.name}">the canteen</strong> and its entire
                                 menu, and switches off any staff accounts attached to it. It is refused if the canteen
@@ -97,7 +97,7 @@
                                 <input type="text" name="confirmName" class="form-control form-control-sm mb-2"
                                        th:placeholder="${o.name}" autocomplete="off" required="required"/>
                                 <button type="submit" class="btn btn-sm btn-danger w-100">
-                                    <i class="ph ph-trash"></i>Delete this canteen permanently
+                                    <span class="material-symbols-outlined">delete</span>Delete this canteen permanently
                                 </button>
                             </form>
                         </details>
@@ -106,7 +106,7 @@
                     <hr th:if="${!#lists.isEmpty(outlets)}"/>
                     <form method="post" th:action="@{/admin/tenants/{id}/outlets(id=${tenant.id})}" th:object="${outletForm}" class="d-flex gap-2">
                         <input type="text" th:field="*{name}" class="form-control" placeholder="e.g. Main Canteen"/>
-                        <button type="submit" class="btn btn-primary"><i class="ph ph-plus"></i>Add canteen</button>
+                        <button type="submit" class="btn btn-primary"><span class="material-symbols-outlined">add</span>Add canteen</button>
                     </form>
                     <div class="text-danger small" th:if="${#fields.hasErrors('outletForm.name')}" th:errors="${outletForm.name}"></div>
                 </div>
@@ -116,7 +116,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="ph ph-users-three"></i>Canteen staff accounts</h5>
+                    <h5 class="card-title"><span class="material-symbols-outlined">group</span>Canteen staff accounts</h5>
                     <div class="table-responsive">
                     <table class="table table-sm" th:if="${!#lists.isEmpty(staff)}">
                         <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
@@ -168,7 +168,7 @@
                             <input type="password" th:field="*{password}" class="form-control" placeholder="Temporary password"/>
                             <div class="text-danger small" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-user-plus"></i>Create staff account</button>
+                        <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">person_add</span>Create staff account</button>
                     </form>
                 </div>
             </div>

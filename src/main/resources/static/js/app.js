@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initAddToCartForms();
     initCartControls();
     initCartPageControls();
-    initNavbarToggle();
     initNavbarScroll();
+    initNavDrawer();
     registerServiceWorker();
     initPushToggle();
 });
@@ -130,27 +130,82 @@ function disablePush(toggle) {
 }
 
 /* ============================================================
-   NAVBAR TOGGLE — hamburger menu for staff/admin roles on mobile
-   (the student portal has the bottom nav instead, so this button
-   only renders for the outlet and admin roles).
+   NAV DRAWER — the full destination list.
+
+   The bottom tab bar carries five places and the console strip scrolls; this is the one
+   surface that shows everything at once. Hand-rolled rather than pulled from Bootstrap's
+   offcanvas, because no Bootstrap JS bundle is loaded on this app.
+
+   Accessibility is the reason for most of the code here: a drawer that is visually hidden
+   but still focusable is worse than no drawer at all, because keyboard and screen-reader
+   users tab into an invisible menu. `inert` removes the whole subtree from focus and the
+   accessibility tree; focus moves in on open and returns to the button on close.
    ============================================================ */
 
-function initNavbarToggle() {
-    const btn = document.getElementById('navbar-toggle-btn');
-    const menu = document.getElementById('navbar-links-collapse');
-    if (!btn || !menu) return;
+function initNavDrawer() {
+    const btn = document.getElementById('nav-drawer-btn');
+    const drawer = document.getElementById('nav-drawer');
+    const backdrop = document.getElementById('nav-drawer-backdrop');
+    const closeBtn = document.getElementById('nav-drawer-close');
+    if (!btn || !drawer || !backdrop) return;
+
+    let lastFocused = null;
+
+    const open = () => {
+        lastFocused = document.activeElement;
+        backdrop.hidden = false;
+        // Next frame, so the transition has a starting state to animate from.
+        requestAnimationFrame(() => {
+            drawer.classList.add('is-open');
+            backdrop.classList.add('is-open');
+        });
+        drawer.removeAttribute('inert');
+        drawer.setAttribute('aria-hidden', 'false');
+        btn.setAttribute('aria-expanded', 'true');
+        // Locking the body stops the page behind from scrolling under the drawer.
+        document.body.classList.add('has-drawer-open');
+        (closeBtn || drawer.querySelector('a, button')).focus();
+    };
+
+    const close = () => {
+        drawer.classList.remove('is-open');
+        backdrop.classList.remove('is-open');
+        drawer.setAttribute('inert', '');
+        drawer.setAttribute('aria-hidden', 'true');
+        btn.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('has-drawer-open');
+        // Hide the backdrop only once it has faded, or it vanishes instantly.
+        setTimeout(() => { if (!drawer.classList.contains('is-open')) backdrop.hidden = true; }, 200);
+        if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
+    };
 
     btn.addEventListener('click', () => {
-        const isOpen = menu.classList.toggle('is-open');
-        btn.setAttribute('aria-expanded', String(isOpen));
+        drawer.classList.contains('is-open') ? close() : open();
+    });
+    backdrop.addEventListener('click', close);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && drawer.classList.contains('is-open')) close();
     });
 
-    // Close when a link inside is chosen, so the next page doesn't load with the menu open.
-    menu.addEventListener('click', (e) => {
-        if (e.target.closest('a')) {
-            menu.classList.remove('is-open');
-            btn.setAttribute('aria-expanded', 'false');
-        }
+    // Keep Tab inside the panel while it is open — otherwise focus walks onto the page
+    // behind, which is still visible through the backdrop and confusing to land on.
+    drawer.addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab') return;
+        const items = [...drawer.querySelectorAll('a[href], button:not([disabled])')]
+            .filter((el) => el.offsetParent !== null);
+        if (!items.length) return;
+        const first = items[0], last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+
+    // Mark where you are, using the same path logic the console strip uses server-side.
+    const path = window.location.pathname;
+    drawer.querySelectorAll('.nav-drawer__link').forEach((link) => {
+        const href = link.getAttribute('href');
+        if (href && href !== '/' && path.startsWith(href)) link.setAttribute('aria-current', 'page');
     });
 }
 
@@ -581,7 +636,14 @@ function initCategoryChips() {
             c.classList.toggle('is-scroll-active', c === chip);
         });
         // Keep the highlighted chip visible inside the horizontal strip.
-        chip?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        // Scroll only the strip's own scroll container — never the page.
+        // scrollIntoView({inline:'center'}) can scroll the whole document
+        // vertically to centre the chip, yanking the user back to the top.
+        if (chip) {
+            const strip = container.closest('.category-chips-wrapper') || container;
+            const target = chip.offsetLeft - (strip.clientWidth - chip.offsetWidth) / 2;
+            strip.scrollLeft = target;
+        }
     };
 
     container.addEventListener('click', (e) => {

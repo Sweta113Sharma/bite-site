@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <span class="live-dot"></span>
-        <h3 class="m-0">Order queue</h3>
+    <div class="console-head">
+        <h3>
+            <span class="live-dot" aria-hidden="true"></span>Order queue
+            <!-- How many are waiting is the first thing anyone opening this screen wants
+                 to know, and it was the one number the page didn't state. -->
+            <span class="console-head__count" th:if="${!#lists.isEmpty(orders)}"
+                  th:text="${#lists.size(orders)} + (${#lists.size(orders)} == 1 ? ' waiting' : ' waiting')">0 waiting</span>
+        </h3>
     </div>
 
     <div class="alert alert-success" th:if="${queueNotice}" th:text="${queueNotice}"></div>
@@ -26,7 +31,7 @@
             <input type="hidden" name="accepting" th:value="${!outlet.acceptingOrders}"/>
             <button type="submit" class="btn btn-sm"
                     th:classappend="${outlet.acceptingOrders} ? 'btn-outline-danger' : 'btn-success'">
-                <i class="ph" th:classappend="${outlet.acceptingOrders} ? 'ph-pause-circle' : 'ph-play-circle'"></i>
+                <span class="material-symbols-outlined" th:text="${outlet.acceptingOrders} ? 'pause_circle' : 'play_circle'"></span>
                 <span th:text="${outlet.acceptingOrders} ? 'Pause new orders' : 'Resume orders'">Pause new orders</span>
             </button>
         </form>
@@ -53,7 +58,7 @@
                     <div th:if="${order.status.name() == 'PAID'}" class="d-flex flex-column gap-2">
                         <form method="post" th:action="@{/canteen/queue/{id}/status(id=${order.id})}">
                             <input type="hidden" name="newStatus" value="PREPARING"/>
-                            <button type="submit" class="btn btn-sm btn-warning w-100"><i class="ph ph-cooking-pot"></i>Start preparing</button>
+                            <button type="submit" class="btn btn-sm btn-warning w-100"><span class="material-symbols-outlined">skillet</span>Start preparing</button>
                         </form>
 
                         <!-- Reason is asked for here, not after the fact: it is the only
@@ -61,7 +66,7 @@
                              it in later. Kept behind a disclosure so the common path
                              (start preparing) stays the obvious one. -->
                         <details class="cancel-panel">
-                            <summary><i class="ph ph-x-circle"></i>Cancel &amp; refund</summary>
+                            <summary><span class="material-symbols-outlined">cancel</span>Cancel &amp; refund</summary>
                             <form method="post" th:action="@{/canteen/queue/{id}/cancel(id=${order.id})}"
                                   onsubmit="return confirm('Cancel this order and refund the customer in full?');">
                                 <label class="form-label small mb-1">Reason (the student sees this)</label>
@@ -73,7 +78,7 @@
                                     <option value="">No reason given</option>
                                 </select>
                                 <button type="submit" class="btn btn-sm btn-danger w-100">
-                                    <i class="ph ph-arrow-u-up-left"></i>Cancel and refund in full
+                                    <span class="material-symbols-outlined">undo</span>Cancel and refund in full
                                 </button>
                             </form>
                         </details>
@@ -81,7 +86,7 @@
                     <form method="post" th:if="${order.status.name() == 'PREPARING'}"
                           th:action="@{/canteen/queue/{id}/status(id=${order.id})}">
                         <input type="hidden" name="newStatus" value="READY_FOR_PICKUP"/>
-                        <button type="submit" class="btn btn-sm btn-primary w-100"><i class="ph ph-bell-simple-ringing"></i>Mark ready</button>
+                        <button type="submit" class="btn btn-sm btn-primary w-100"><span class="material-symbols-outlined">notifications_active</span>Mark ready</button>
                     </form>
                     <!-- Handover is authenticated: the student shows the code on their
                          order page and staff type it here. -->
@@ -92,7 +97,7 @@
                             <input type="text" name="pickupCode" class="form-control form-control-sm pickup-input"
                                    inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
                                    placeholder="0000" aria-label="Pickup code"/>
-                            <button type="submit" class="btn btn-sm btn-success"><i class="ph ph-check-circle"></i>Hand over</button>
+                            <button type="submit" class="btn btn-sm btn-success"><span class="material-symbols-outlined">check_circle</span>Hand over</button>
                         </div>
                     </form>
                 </div>

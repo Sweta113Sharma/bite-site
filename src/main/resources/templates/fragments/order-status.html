@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <span th:fragment="statusBadge(status)" class="badge"
-      th:classappend="${status.name() == 'AWAITING_PAYMENT'} ? 'bg-secondary' :
+      th:classappend="${status.name() == 'AWAITING_PAYMENT'} ? 'badge-awaiting' :
                        (${status.name() == 'PAID'} ? 'bg-info text-dark' :
                        (${status.name() == 'PREPARING'} ? 'bg-warning text-dark' :
                        (${status.name() == 'READY_FOR_PICKUP'} ? 'bg-primary' :

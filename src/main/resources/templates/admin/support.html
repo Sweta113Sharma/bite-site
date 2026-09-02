@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
     <h3 class="mb-1">Support desk</h3>
@@ -12,7 +12,7 @@
 
     <form method="get" th:action="@{/admin/support}" class="mb-4">
         <div class="input-group input-group-lg">
-            <span class="input-group-text bg-white"><i class="ph ph-magnifying-glass"></i></span>
+            <span class="input-group-text bg-white"><span class="material-symbols-outlined">search</span></span>
             <input type="text" name="q" th:value="${q}" class="form-control"
                    placeholder="BITE-1984, or order_xxx / pay_xxx" autofocus="autofocus"/>
             <button type="submit" class="btn btn-primary px-4">Search</button>
@@ -63,7 +63,7 @@
             <!-- Payment block. Absent for orders abandoned before checkout, which is a
                  normal state and not an error worth dressing up as one. -->
             <div th:if="${row.payment() == null}" class="text-muted small mb-3">
-                <i class="ph ph-info"></i> No payment was ever started for this order.
+                <span class="material-symbols-outlined">info</span> No payment was ever started for this order.
             </div>
 
             <div th:if="${row.payment() != null}" class="cart-summary mb-3">
@@ -82,7 +82,7 @@
             </div>
 
             <div th:if="${row.refunded()}" class="detail-unavailable mb-0">
-                <i class="ph ph-check-circle"></i>
+                <span class="material-symbols-outlined">check_circle</span>
                 <span>Already refunded. Nothing further to do here.</span>
             </div>
 
@@ -98,7 +98,7 @@
                     <input type="text" name="reason" class="form-control"
                            placeholder="Why is this being refunded? (recorded in the audit log)"/>
                     <button type="submit" class="btn btn-outline-danger px-4">
-                        <i class="ph ph-arrow-u-left-back"></i> Refund ₹<span th:text="${row.payment().amount}">0</span>
+                        <span class="material-symbols-outlined">undo</span> Refund ₹<span th:text="${row.payment().amount}">0</span>
                     </button>
                 </div>
             </form>

@@ -3,6 +3,7 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
 <!-- Mobile Bottom Nav -->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
@@ -15,27 +16,30 @@
     </div>
 
     <div th:if="${!#lists.isEmpty(outlets)}">
-        <!-- Header with organic decor -->
-        <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3">
-            <div class="page-header-decor" aria-hidden="true"></div>
-            <div class="page-header-content">
-                <!-- Comp hierarchy: the greeting is the headline, not a kicker above
-                     one. Keeps this page in step with the auth screens, where the
-                     personal line is what you land on. -->
-                <h3 class="page-header-title" th:text="${greeting + (firstName != null ? ', ' + firstName : '')}">Good morning</h3>
-                <p class="page-header-sub">What are you craving today?</p>
-                <p class="text-muted mb-0 mt-1 d-flex align-items-center gap-1" style="font-size:0.88rem; font-weight: 600;">
-                    <span class="material-symbols-outlined is-filled">storefront</span>
-                    <span th:text="${selectedOutlet.name}">Outlet</span>
-                </p>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <form th:if="${outlets.size() > 1}" method="get" th:action="@{/student/menu}">
+        <!-- Hero: BIG BEEF energy — huge display type, yellow burst sticker. -->
+        <div class="menu-hero">
+            <div class="menu-hero-copy">
+                <h3 class="menu-hero-title">
+                    <span th:text="${greeting}">Good morning</span><br/>
+                    <span class="outline" th:text="${firstName != null ? firstName + ' —' : 'Hungry?'}">Hungry?</span>
+                    <span class="menu-hero-shout">What are you craving today?</span>
+                </h3>
+                <form th:if="${outlets.size() > 1}" method="get" th:action="@{/student/menu}" class="menu-hero-outlet">
                     <select name="outletId" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option th:each="o : ${outlets}" th:value="${o.id}" th:text="${o.name}"
                                 th:selected="${o.id == selectedOutlet.id}"></option>
                     </select>
                 </form>
+            </div>
+            <div class="menu-hero-sticker" aria-hidden="true">
+                <span>BITE<br/>SITE</span>
+            </div>
+        </div>
+
+        <!-- Red ticker: landing-page energy strip. -->
+        <div class="ticker" aria-hidden="true">
+            <div class="ticker-track">
+                <span>FRESH · FAST · FIERCE&nbsp;</span><span>FRESH · FAST · FIERCE&nbsp;</span><span>FRESH · FAST · FIERCE&nbsp;</span><span>FRESH · FAST · FIERCE&nbsp;</span>
             </div>
         </div>
 
@@ -50,43 +54,17 @@
             </div>
         </div>
 
-        <!-- Today's Deals (Foochi-style Specials carousel) -->
-        <div th:if="${!#lists.isEmpty(dealItems)}" class="mb-4">
-            <h5 class="mb-3 d-flex align-items-center gap-2" style="font-family: var(--font-display); font-weight: 800; font-size: 1.25rem;">
-                <span class="material-symbols-outlined is-filled">local_fire_department</span>
-                <span>Today's specials</span>
-            </h5>
-            <div class="featured-scroll">
-                <div class="deal-card" th:each="item : ${dealItems}">
-                    <div class="deal-card-photo" th:classappend="${item.usesIllustration()} ? 'is-illustration'">
-                        <img th:src="@{${item.displayImage()}}" th:alt="${item.name}"/>
-                        <div class="discount-tag" th:text="${item.discountPercentDisplay()} + '% OFF'">20% OFF</div>
-                    </div>
-                    <div class="deal-card-body">
-                        <p class="deal-card-name" th:text="${item.name}">Item</p>
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="deal-card-price" th:text="'₹' + ${item.effectivePrice()}">₹0</div>
-                            <form method="post" th:action="@{/student/cart/add}" class="m-0 add-to-cart-form"
-                                  th:if="${ordersOpen}">
-                                <input type="hidden" name="menuItemId" th:value="${item.id}"/>
-                                <input type="hidden" name="outletId" th:value="${selectedOutlet.id}"/>
-                                <input type="hidden" name="quantity" value="1"/>
-                                <button type="submit" class="btn-add deal-card-add" aria-label="Add to cart">Add</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Search and categories come before the specials rail.
 
-        <div th:if="${#maps.isEmpty(itemsByCategory)}" class="state-panel">
-            <div th:replace="~{fragments/state :: medallion('skillet','neutral')}"></div>
-            <h4>Nothing on the menu right now</h4>
-            <p>The canteen hasn't added any items yet.</p>
-        </div>
-
+             They were nested inside the menu-list block, which rendered after the rail, so
+             on a 390x844 phone the search field landed at 725px and the categories at 819px
+             — at and below the fold — and the first dish sat at 1029px. A student opening
+             the app scrolled past a greeting, a decorative ticker and a carousel before
+             reaching anything they could order. Search and categories are how you navigate
+             a menu, so they now sit directly under the header, and the rail becomes what it
+             should be: discovery you meet on the way down, not a toll gate. -->
         <div th:if="${!#maps.isEmpty(itemsByCategory)}">
-            <!-- Search Bar -->
+            <!-- Search -->
             <div class="search-bar">
                 <span class="material-symbols-outlined">search</span>
                 <input type="text" id="menu-search" placeholder="Search delicious food..."/>
@@ -104,14 +82,59 @@
                     <a class="category-chip" th:each="entry : ${itemsByCategory}"
                        th:data-category="${#strings.replace(entry.key.toLowerCase(), ' ', '-')}">
                         <div class="cat-chip-icon">
-                            <img th:src="@{${entry.value.get(0).displayImage()}}"
+                            <img th:if="${!entry.value.get(0).usesIllustration()}"
+                                 th:src="@{${entry.value.get(0).photoPath}}"
                                  th:alt="${entry.key}" class="cat-icon-img"/>
+                            <span th:if="${entry.value.get(0).usesIllustration()}"
+                                  class="material-symbols-outlined">restaurant</span>
                         </div>
                         <span class="cat-chip-label" th:text="${entry.key}">Category</span>
                     </a>
                 </div>
             </div>
+        </div>
 
+
+        <!-- Today's Deals (Foochi-style Specials carousel) -->
+        <div th:if="${!#lists.isEmpty(dealItems)}" class="mb-4">
+            <h5 class="mb-3 d-flex align-items-center gap-2" style="font-family: var(--font-display); font-weight: 800; font-size: 1.25rem;">
+                <span class="material-symbols-outlined is-filled">local_fire_department</span>
+                <span>Today's specials</span>
+            </h5>
+            <div class="featured-scroll">
+                <div class="deal-card" th:each="item : ${dealItems}">
+                    <div class="deal-card-photo">
+                        <!-- Canteen's own photo when uploaded; otherwise a neutral
+                             placeholder — no pre-made food illustration, since canteens
+                             supply their own images. -->
+                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                        <div th:if="${item.usesIllustration()}" class="photo-placeholder">
+                            <span class="material-symbols-outlined">restaurant</span>
+                        </div>
+                        <div class="discount-tag" th:text="${item.discountPercentDisplay()} + '% OFF'">20% OFF</div>
+                    </div>
+                    <div class="deal-card-body">
+                        <p class="deal-card-name" th:text="${item.name}">Item</p>
+                        <div class="deal-card-price" th:text="'₹' + ${item.effectivePrice()}">₹0</div>
+                        <form method="post" th:action="@{/student/cart/add}" class="deal-card-add-form add-to-cart-form"
+                              th:if="${ordersOpen}">
+                            <input type="hidden" name="menuItemId" th:value="${item.id}"/>
+                            <input type="hidden" name="outletId" th:value="${selectedOutlet.id}"/>
+                            <input type="hidden" name="quantity" value="1"/>
+                            <button type="submit" class="btn-add deal-card-add" aria-label="Add to cart">Add</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${#maps.isEmpty(itemsByCategory)}" class="state-panel">
+            <div th:replace="~{fragments/state :: medallion('skillet','neutral')}"></div>
+            <h4>Nothing on the menu right now</h4>
+            <p>The canteen hasn't added any items yet.</p>
+        </div>
+
+        <div th:if="${!#maps.isEmpty(itemsByCategory)}">
             <!-- No search results -->
             <div id="menu-no-results" class="state-panel" style="display:none;">
                 <div th:replace="~{fragments/state :: medallion('search','neutral')}"></div>
@@ -136,16 +159,39 @@
                                      image's bottom-right corner. -->
                                 <div class="menu-card-media">
                                     <a th:href="@{/student/menu/item/{id}(id=${item.id})}"
-                                       class="menu-card-photo" th:classappend="${item.usesIllustration()} ? 'is-illustration'">
-                                        <img th:src="@{${item.displayImage()}}" th:alt="${item.name}"/>
+                                       class="menu-card-photo">
+                                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                                        <div th:if="${item.usesIllustration()}" class="photo-placeholder">
+                                            <span class="material-symbols-outlined">restaurant</span>
+                                        </div>
                                         <div th:if="${item.hasDiscount()}" class="discount-tag"
                                              th:text="${item.discountPercentDisplay()} + '% OFF'">20% OFF</div>
                                     </a>
+                                </div>
+                                <div class="menu-card-body">
+                                    <h6 class="menu-card-name">
+                                        <a th:href="@{/student/menu/item/{id}(id=${item.id})}"
+                                           class="menu-card-name__link" th:text="${item.name}">Item</a>
+                                    </h6>
+                                    <div class="menu-card-price">
+                                        <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
+                                        <span th:text="'₹' + ${item.effectivePrice()}"></span>
+                                    </div>
+                                    <!-- Only shown when it changes what you'd do: the last few,
+                                         or none left. A cap of 40 with 40 left is not news. -->
+                                    <div class="stock-note is-out" th:if="${item.soldOutToday()}">
+                                        <span class="material-symbols-outlined ms-16">block</span><span>Sold out today</span>
+                                    </div>
+                                    <div class="stock-note is-low" th:if="${item.runningLowToday()}">
+                                        <span class="material-symbols-outlined ms-16">local_fire_department</span><span th:text="'Only ' + ${item.remainingToday()} + ' left'">Only 3 left</span>
+                                    </div>
                                     <!-- Add button and stepper both render; .is-active picks which
                                          one is visible. Doing it this way rather than building the
                                          stepper in JS keeps the no-JS path working: without script
                                          the form still posts and the page reloads with the right
-                                         control already chosen server-side. -->
+                                         control already chosen server-side. This lives in a
+                                         reserved footer row in normal flow — never over the photo —
+                                         so it cannot collide with the name, price, or image. -->
                                     <div class="menu-card-actions">
                                         <div class="cart-control" th:if="${ordersOpen and item.orderable()}"
                                              th:with="qty=${cartQuantities != null and cartQuantities.containsKey(item.id)} ? ${cartQuantities.get(item.id)} : 0"
@@ -168,36 +214,12 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="menu-card-body">
-                                    <h6 class="menu-card-name">
-                                        <a th:href="@{/student/menu/item/{id}(id=${item.id})}"
-                                           class="menu-card-name__link" th:text="${item.name}">Item</a>
-                                    </h6>
-                                    <div class="menu-card-price">
-                                        <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
-                                        <span th:text="'₹' + ${item.effectivePrice()}"></span>
-                                    </div>
-                                    <!-- Only shown when it changes what you'd do: the last few,
-                                         or none left. A cap of 40 with 40 left is not news. -->
-                                    <div class="stock-note is-out" th:if="${item.soldOutToday()}">
-                                        <span class="material-symbols-outlined ms-16">block</span><span>Sold out today</span>
-                                    </div>
-                                    <div class="stock-note is-low" th:if="${item.runningLowToday()}">
-                                        <span class="material-symbols-outlined ms-16">local_fire_department</span><span th:text="'Only ' + ${item.remainingToday()} + ' left'">Only 3 left</span>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Sticky Cart Bar -->
-            <div id="sticky-cart-bar" class="sticky-cart-bar" th:style="${cartItemCount == null or cartItemCount == 0} ? 'display:none' : 'display:block'">
-                <a class="sticky-cart-inner" th:href="@{/student/cart}">
-                    <div class="sticky-cart-info">
-                        <strong id="sticky-cart-count" th:text="${cartItemCount} + (${cartItemCount == 1} ? ' item' : ' items')">1 item</strong> in your cart
-                    </div>
                     <div class="sticky-cart-action">
                         View cart <span class="material-symbols-outlined">chevron_right</span>
                     </div>
@@ -206,5 +228,20 @@
         </div>
     </div>
 </div>
+
+<!-- Sticky cart bar.
+
+     Deliberately a direct child of <body>. It was nested inside .container, and
+     `.container > * { animation: fade-up ... both }` leaves transform: translateY(0)
+     applied for good once the animation finishes. Any transform other than `none` makes
+     that element the containing block for position:fixed descendants — so this bar was
+     being positioned against a div 2,000px down the page rather than the viewport, and
+     came to rest on top of the bottom tab bar. Fixed overlays must not live inside
+     animated content. -->
+<div id="sticky-cart-bar" class="sticky-cart-bar" th:style="${cartItemCount == null or cartItemCount == 0} ? 'display:none' : 'display:block'">
+                <a class="sticky-cart-inner" th:href="@{/student/cart}">
+                    <div class="sticky-cart-info">
+                        <strong id="sticky-cart-count" th:text="${cartItemCount} + (${cartItemCount == 1} ? ' item' : ' items')">1 item</strong> in your cart
+                    </div>
 </body>
 </html>

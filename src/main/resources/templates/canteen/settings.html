@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body>
+<body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 560px;">
-    <div class="page-header">
-        <h3 class="page-header-title" th:text="${outlet.name}">Outlet</h3>
-        <p class="page-header-sub">What students see about this canteen.</p>
+    <div class="console-head">
+        <h3 class="console-head__title" th:text="${outlet.name}">Outlet</h3>
+        <p class="console-head__blurb">What students see about this canteen.</p>
     </div>
 
     <div class="alert alert-success" th:if="${settingsNotice}" th:text="${settingsNotice}"></div>
@@ -42,7 +42,7 @@
             <div class="form-text">A short line shown on your menu.</div>
         </div>
 
-        <button type="submit" class="btn btn-primary w-100"><i class="ph ph-check"></i>Save settings</button>
+        <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">check</span>Save settings</button>
     </form>
 </div>
 </body>

@@ -7,7 +7,7 @@
     <div th:replace="~{fragments/state :: medallion('error','bad')}"></div>
     <p class="text-muted mb-1" th:text="'Error ' + ${statusCode}">Error</p>
     <h3 class="mb-3" th:text="${message}">Something went wrong.</h3>
-    <a class="btn btn-primary" href="/"><i class="ph ph-house"Go home</a>
+    <a class="btn btn-primary" href="/"><span class="material-symbols-outlined">home</span>Go home</a>
 </div>
 </body>
 </html>
