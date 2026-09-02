@@ -1,0 +1,1150 @@
+/* ============================================================
+   09-console.css — the outlet and admin portals.
+
+   Loads after app.css and is the last sheet in the set. It is NOT another
+   override layer for the customer app: almost everything here is scoped to
+   `body.console`, which only the staff templates carry. The handful of
+   deliberately unscoped rules at the top are correctness fixes that were wrong
+   product-wide, and each says so.
+
+   The design language is the same one the customer app uses (bone canvas,
+   near-black 3px borders, hard offset shadows, Archivo Black display type). What
+   differs is density and rhythm. A student browses a menu; staff work a queue and
+   scan tables. So: smaller type, tighter rows, more per screen, and colour used
+   to mean something rather than to decorate.
+   ============================================================ */
+
+
+/* ============================================================
+   STATUS COLOUR — unscoped, because it was wrong everywhere.
+
+   The palette is strictly five colours (bone, ink, red, red-dark, yellow) — the
+   burger-landing reference has no green, so "success = green" is not available
+   and inventing a sixth hue would break the language.
+
+   Before this, `.badge.bg-success` resolved to `--color-primary`, which is red.
+   So an ACTIVE college, an ACTIVE user and a COMPLETED order all rendered in the
+   same red as a cancellation. Red meant everything, therefore nothing.
+
+   The system below spends the palette on meaning instead:
+
+     red      is reserved for cancelled, refunded, suspended, destructive
+     yellow   is work in progress — something is happening right now
+     ink fill is a state that wants your attention but is not a problem
+     bone     is settled or idle; nothing to do
+
+   Two ink-filled states (PAID, READY_FOR_PICKUP) are told apart by their text
+   colour, and the two bone states by their border — dashed reads as provisional.
+   ============================================================ */
+
+.badge {
+    border: 2px solid var(--color-ink);
+    border-radius: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.68rem;
+    padding: 0.32em 0.6em;
+    white-space: nowrap;
+}
+
+/* Awaiting payment — provisional, so a dashed edge. Given its own class rather than
+   reusing bg-secondary: that class also labels categories and item counts, and a
+   dashed border on a category name says "not settled yet" about something that is
+   simply a fact. */
+.badge.badge-awaiting {
+    background: var(--color-bg);
+    color: var(--color-ink-muted);
+    border-style: dashed;
+}
+
+/* A neutral tag: category names, counts, anything that classifies rather than
+   reports a state. */
+.badge.bg-secondary {
+    background: var(--color-surface-deep) !important;
+    color: var(--color-ink-muted) !important;
+}
+
+/* Paid — money is in, this needs working on. */
+.badge.bg-info {
+    background: var(--color-ink) !important;
+    color: var(--color-bg) !important;
+}
+
+/* In progress. */
+.badge.bg-warning {
+    background: var(--color-accent-tint) !important;
+    color: var(--color-ink) !important;
+}
+
+/* Ready for pickup — the loudest non-error state in the product. */
+.badge.bg-primary {
+    background: var(--color-ink) !important;
+    color: var(--color-accent-tint) !important;
+}
+
+/* Settled: completed orders, active colleges, active accounts. Quiet on purpose —
+   the normal case should not compete with the exceptions. */
+.badge.bg-success {
+    background: var(--color-bg) !important;
+    color: var(--color-ink) !important;
+    border-style: solid;
+}
+
+/* Cancelled, refunded, suspended. The only red badge. */
+.badge.bg-danger {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+}
+
+/* `bg-white` was never remapped, so 14 staff tables and panels painted stark
+   #fff onto the bone canvas. Bone is the surface colour in this system. */
+.bg-white {
+    background-color: var(--color-surface) !important;
+}
+
+/* Icons sat flush against their labels everywhere ("<icon>Queue", "<icon>Colleges")
+   because nothing gave the pairing a gap. Fixing it on the shared components
+   rather than per template. */
+.nav-link,
+.btn,
+.dropdown-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn .material-symbols-outlined,
+.nav-link .material-symbols-outlined {
+    font-size: 18px;
+    line-height: 1;
+    flex: none;
+}
+
+/* Buttons that carry only an icon should be square, not a wide slab with a
+   centred glyph. */
+.btn.is-icon-only {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+
+/* ============================================================
+   APP CHROME — the top bar and the console strip travel together.
+
+   `.navbar` is sticky in app.css. With a second bar underneath, stickiness has to
+   move up to the wrapper or the two would pin independently and overlap.
+   ============================================================ */
+
+body.console .app-chrome {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    background: var(--color-bg);
+}
+
+body.console .app-chrome .navbar {
+    position: static;
+    border-bottom: 2px solid var(--color-ink);
+    min-height: 52px;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+
+/* The bars used to carry `mb-4`. Spacing now lives here so the sticky wrapper
+   isn't the thing holding a margin. */
+body.console .app-chrome + * {
+    margin-top: 1.5rem;
+}
+
+
+/* ============================================================
+   CONSOLE NAV — one scrollable strip of destinations.
+
+   Scrollable rather than collapsible: with ten places to be, a hamburger adds a
+   tap to every single navigation. The strip keeps them all one tap away at every
+   width, and simply scrolls when they don't fit.
+   ============================================================ */
+
+.console-nav {
+    background: var(--color-ink);
+    border-bottom: 3px solid var(--color-ink);
+}
+
+.console-nav__strip {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    /* The strip is the horizontal scroller, so a swipe along it must not turn into
+       a browser back-navigation. */
+    overscroll-behavior-x: contain;
+}
+
+.console-nav__strip::-webkit-scrollbar {
+    display: none;
+}
+
+/* Scroll affordance: the last visible link fades into the bar instead of ending in a
+   hard cut, because a hard cut reads as "that's all of them" — exactly wrong here.
+
+   `margin-left: auto` is what makes it conditional without measuring anything in JS.
+   When the links fit there is free space, so auto absorbs it and parks the gradient
+   over empty bar, where ink-fading-into-ink is invisible. When they don't fit there
+   is no free space, auto collapses to zero, and sticky pins the gradient to the right
+   edge of the scrollport over whichever link is under it. */
+.console-nav__strip::after {
+    content: '';
+    position: sticky;
+    right: 0;
+    flex: none;
+    width: 32px;
+    margin-left: auto;
+    align-self: stretch;
+    background: linear-gradient(to right, rgba(20, 16, 13, 0), var(--color-ink) 85%);
+    pointer-events: none;
+}
+
+.console-nav__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: none;
+    padding: 0.6rem 0.85rem;
+    color: var(--color-bg);
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    border-right: 1px solid rgba(242, 234, 217, 0.22);
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.console-nav__link .material-symbols-outlined {
+    font-size: 17px;
+    line-height: 1;
+}
+
+.console-nav__link:hover,
+.console-nav__link:focus-visible {
+    background: var(--color-primary);
+    color: #fff;
+    outline: none;
+}
+
+/* Where you are. Yellow on ink is the strongest pairing in the palette, and it is
+   not used for any status, so it never reads as a state. */
+.console-nav__link[aria-current="page"] {
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+}
+
+@media (max-width: 575.98px) {
+    .console-nav .container {
+        padding-left: 0;
+        padding-right: 0;
+    }
+    .console-nav__link {
+        padding: 0.55rem 0.7rem;
+        font-size: 0.72rem;
+    }
+}
+
+
+/* ============================================================
+   PAGE HEAD — title, optional blurb, actions.
+
+   Replaces the `d-flex justify-content-between` rows the staff screens used. Those
+   had no wrap and no gap, so at 390px the heading and the buttons rendered on top
+   of each other — the "COLLEGES" title sat underneath its own action stack.
+   ============================================================ */
+
+body.console .console-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--color-ink);
+}
+
+/* Works with the markup already in the templates: a heading plus whatever action
+   sits beside it (a link, a form, a filter select, a count). The heading takes the
+   slack, everything else keeps its natural width. No wrapper divs required, so
+   adopting this was a one-class change per screen. */
+body.console .console-head__text,
+body.console .console-head > h1,
+body.console .console-head > h2,
+body.console .console-head > h3 {
+    min-width: 0;
+    flex: 1 1 16rem;
+}
+
+body.console .console-head > :not(h1):not(h2):not(h3):not(.console-head__text):not(.console-head__blurb) {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+
+/* A filter select in the header should size to its content, not stretch. */
+body.console .console-head .form-select {
+    width: auto;
+    min-width: 10rem;
+}
+
+body.console .console-head h1,
+body.console .console-head h2,
+body.console .console-head h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 1.55rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+}
+
+/* When the blurb is a direct child (title and description with no actions beside
+   them) it belongs on its own line under the title, not next to it. */
+body.console .console-head > .console-head__blurb {
+    flex: 1 1 100%;
+}
+
+body.console .console-head__blurb {
+    margin: 0.3rem 0 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--color-ink-muted);
+    max-width: 60ch;
+}
+
+body.console .console-head__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* A count or short fact that belongs to the title rather than to a row. */
+body.console .console-head__count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: 0.5rem;
+    padding: 0.15em 0.5em;
+    background: var(--color-accent-tint);
+    border: 2px solid var(--color-ink);
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    vertical-align: 0.25em;
+}
+
+@media (max-width: 575.98px) {
+    body.console .console-head {
+        align-items: stretch;
+    }
+    body.console .console-head h1,
+    body.console .console-head h2,
+    body.console .console-head h3 {
+        font-size: 1.3rem;
+    }
+    /* Everything that isn't the heading drops to its own full-width line. This is the
+       collision fix: the old flex row had no wrap, so at 390px the title and the
+       action stack were laid over each other. */
+    body.console .console-head > :not(h1):not(h2):not(h3):not(.console-head__text):not(.console-head__blurb) {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+    body.console .console-head__actions {
+        width: 100%;
+    }
+    body.console .console-head__actions > * {
+        flex: 1 1 auto;
+    }
+    body.console .console-head .btn,
+    body.console .console-head .form-select {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+    }
+    /* Two side-by-side actions stay side by side rather than stacking into a tower. */
+    body.console .console-head > div:not(.console-head__text) {
+        display: flex;
+        gap: 0.5rem;
+    }
+}
+
+
+/* ============================================================
+   TABLES — the admin portal is mostly tables.
+   ============================================================ */
+
+body.console .table-responsive {
+    border: 3px solid var(--color-ink);
+    box-shadow: 5px 5px 0 var(--color-ink);
+    background: var(--color-surface);
+    overscroll-behavior-x: contain;
+}
+
+/* The frame belongs to the scroll container when there is one, or the table would
+   carry a second border that scrolls away from the first. */
+body.console .table-responsive > .table {
+    border: none;
+    box-shadow: none;
+    margin-bottom: 0;
+}
+
+body.console .table {
+    --bs-table-bg: transparent;
+    background: var(--color-surface);
+    font-size: 0.88rem;
+    margin-bottom: 0;
+}
+
+body.console .table > :not(caption) > * > * {
+    background: transparent;
+    padding: 0.6rem 0.75rem;
+    vertical-align: middle;
+    border-bottom-color: var(--color-ink);
+}
+
+body.console .table thead th {
+    background: var(--color-accent-tint);
+    border-bottom: 3px solid var(--color-ink);
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+body.console .table tbody tr:last-child > * {
+    border-bottom: none;
+}
+
+body.console .table tbody tr:hover > * {
+    background: var(--color-surface-deep);
+}
+
+/* Numbers line up when they share a width. */
+body.console .table .num,
+body.console .table .money {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* The action cell should not stretch — it holds buttons, not prose. */
+body.console .table .row-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+body.console .table .row-actions .btn {
+    box-shadow: 2px 2px 0 var(--color-ink);
+}
+
+/* Columns that carry decoration rather than data (a logo thumbnail, say) step aside
+   on phones so the columns that matter aren't pushed off the scrollport. */
+@media (max-width: 575.98px) {
+    body.console .table .col-optional {
+        display: none;
+    }
+    body.console .table > :not(caption) > * > * {
+        padding: 0.5rem 0.5rem;
+    }
+}
+
+/* A short identifier column — token numbers, references, codes. */
+body.console .table .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.82rem;
+    letter-spacing: -0.01em;
+}
+
+
+/* ============================================================
+   PANELS — a bordered block that is not a table.
+   ============================================================ */
+
+body.console .console-panel {
+    border: 3px solid var(--color-ink);
+    box-shadow: 5px 5px 0 var(--color-ink);
+    background: var(--color-surface);
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.25rem;
+}
+
+body.console .console-panel__title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+}
+
+/* Metric row — the sales report and any at-a-glance figures. */
+body.console .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+body.console .stat {
+    border: 3px solid var(--color-ink);
+    box-shadow: 4px 4px 0 var(--color-ink);
+    background: var(--color-surface);
+    padding: 0.75rem 0.9rem;
+}
+
+body.console .stat__label {
+    display: block;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-ink-muted);
+    font-family: var(--font-display);
+}
+
+body.console .stat__value {
+    display: block;
+    margin-top: 0.2rem;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+}
+
+body.console .stat--accent {
+    background: var(--color-accent-tint);
+}
+
+
+/* ============================================================
+   FORMS — denser than the customer app's.
+   ============================================================ */
+
+body.console .form-label {
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+    color: var(--color-ink);
+}
+
+body.console .form-control,
+body.console .form-select {
+    background: var(--color-field);
+    border: 2px solid var(--color-ink);
+    border-radius: 0;
+    font-size: 0.9rem;
+    padding: 0.45rem 0.6rem;
+}
+
+body.console .form-control:focus,
+body.console .form-select:focus {
+    border-color: var(--color-ink);
+    box-shadow: 3px 3px 0 var(--color-ink);
+    outline: none;
+}
+
+body.console .form-text {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+}
+
+/* An inline create/filter row that wraps instead of overflowing. */
+body.console .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: flex-end;
+}
+
+body.console .form-row > .form-field {
+    flex: 1 1 11rem;
+    min-width: 0;
+}
+
+body.console .form-row > .form-field--narrow {
+    flex: 0 1 8rem;
+}
+
+
+/* ============================================================
+   OUTLET QUEUE
+   ============================================================ */
+
+/* The pause switch read backwards: "taking new orders" — the healthy state — was
+   pink on a red rule, and "paused" was calm yellow. Open is now quiet, paused
+   shouts. */
+body.console .outlet-switch {
+    background: var(--color-surface);
+    border: 3px solid var(--color-ink);
+    border-left: 8px solid var(--color-ink);
+    box-shadow: 4px 4px 0 var(--color-ink);
+    padding: 0.8rem 1rem;
+}
+
+body.console .outlet-switch.is-paused {
+    background: var(--color-primary-tint);
+    border-left-color: var(--color-primary);
+}
+
+body.console .outlet-switch__text strong {
+    font-size: 0.95rem;
+    text-transform: uppercase;
+}
+
+body.console .outlet-switch__text span {
+    font-size: 0.82rem;
+}
+
+/* The live indicator was a green-era leftover: it read --color-success, which the
+   brutalist palette redefined to near-black, and pulsed a green halo that no longer
+   exists in the system. So the "we are polling" cue rendered as a grey smudge. */
+body.console .live-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 0;
+    border: 2px solid var(--color-ink);
+    background: var(--color-accent-tint);
+    box-shadow: none;
+    margin-right: 0.45rem;
+    vertical-align: 0.15em;
+    animation: console-live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes console-live-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.console .live-dot { animation: none; }
+}
+
+/* Queue cards: the token is the thing you read from two metres away. */
+body.console .token-badge {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+}
+
+body.console #queue-body .card-body {
+    padding: 0.85rem 0.9rem;
+}
+
+body.console #queue-body ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+}
+
+body.console #queue-body ul li {
+    padding: 0.15rem 0;
+    border-bottom: 1px dashed var(--color-field-rule);
+    color: var(--color-ink);
+}
+
+body.console #queue-body ul li:last-child {
+    border-bottom: none;
+}
+
+body.console .pickup-input {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    letter-spacing: 0.25em;
+    text-align: center;
+}
+
+
+/* ============================================================
+   MENU MANAGEMENT — compact rows, not photo heroes.
+
+   The old grid gave every item a 4:3 photo panel. With no photo uploaded that
+   became a ~270px block of flat yellow carrying no information, so six items ran
+   to 3,225px of scroll on a phone. This is a management list: what staff need is
+   name, price, today's count and the stock toggle, many at a time.
+   ============================================================ */
+
+body.console .menu-admin {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 3px solid var(--color-ink);
+    box-shadow: 5px 5px 0 var(--color-ink);
+    background: var(--color-surface);
+}
+
+body.console .menu-admin__row {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.7rem 0.85rem;
+    border-bottom: 2px solid var(--color-ink);
+}
+
+body.console .menu-admin__row:last-child {
+    border-bottom: none;
+}
+
+/* Switched off items stay legible but visibly stand down. */
+body.console .menu-admin__row.is-off {
+    background: repeating-linear-gradient(
+        135deg,
+        var(--color-surface-deep),
+        var(--color-surface-deep) 6px,
+        var(--color-surface) 6px,
+        var(--color-surface) 12px
+    );
+}
+
+body.console .menu-admin__thumb {
+    width: 56px;
+    height: 56px;
+    border: 2px solid var(--color-ink);
+    background: var(--color-field);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+
+body.console .menu-admin__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* No photo: a quiet placeholder glyph, not a saturated panel. */
+body.console .menu-admin__thumb.is-placeholder {
+    background: var(--color-surface-deep);
+}
+
+body.console .menu-admin__thumb.is-placeholder .material-symbols-outlined {
+    font-size: 26px;
+    color: var(--color-ink-muted);
+}
+
+body.console .menu-admin__main {
+    min-width: 0;
+}
+
+body.console .menu-admin__name {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    color: var(--color-ink);
+}
+
+body.console .menu-admin__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+}
+
+body.console .menu-admin__price {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+}
+
+body.console .menu-admin__price .price-strike {
+    color: var(--color-ink-muted);
+    text-decoration: line-through;
+    font-size: 0.82rem;
+    margin-right: 0.3rem;
+}
+
+body.console .menu-admin__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: none;
+}
+
+body.console .menu-admin__actions .btn {
+    box-shadow: 2px 2px 0 var(--color-ink);
+}
+
+/* The daily-limit bar sits inside the row rather than owning one. */
+body.console .menu-admin .daily-limit-row {
+    margin-top: 0.35rem;
+}
+
+body.console .menu-admin .daily-limit-bar {
+    height: 6px;
+    border: 2px solid var(--color-ink);
+    background: var(--color-field);
+    max-width: 12rem;
+}
+
+body.console .menu-admin .daily-limit-bar span {
+    display: block;
+    height: 100%;
+    background: var(--color-accent-tint);
+}
+
+body.console .menu-admin .daily-limit-text {
+    font-size: 0.76rem;
+    color: var(--color-ink-muted);
+}
+
+body.console .menu-admin .daily-limit-text.is-low {
+    color: var(--color-ink);
+    font-weight: 700;
+}
+
+body.console .menu-admin .daily-limit-text.is-out {
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+/* Phones: the action cluster drops to its own line rather than crushing the name. */
+@media (max-width: 575.98px) {
+    body.console .menu-admin__row {
+        grid-template-columns: 48px minmax(0, 1fr);
+        row-gap: 0.6rem;
+    }
+    body.console .menu-admin__thumb {
+        width: 48px;
+        height: 48px;
+    }
+    body.console .menu-admin__actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+}
+
+
+/* ============================================================
+   EMPTY STATES — narrower and calmer than the customer app's.
+   ============================================================ */
+
+body.console .state-panel {
+    background: var(--color-surface);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    max-width: 32rem;
+    margin: 0 auto;
+}
+
+/* The medallion had the same problem the badges did: the "neutral" tone was drawn
+   with --color-primary-tint on --color-primary, i.e. pink on red. So "All caught
+   up", "No sales yet" and "No colleges yet" — the three calmest sentences in the
+   product — arrived looking like failures. Scoped to the console because the
+   customer app's empty states are signed off as they are. */
+body.console .state-medallion__disc {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+}
+
+body.console .state-medallion--neutral .state-medallion__disc {
+    background: var(--color-surface-deep);
+}
+
+body.console .state-medallion--neutral .state-medallion__disc .material-symbols-outlined {
+    color: var(--color-ink);
+}
+
+body.console .state-medallion--good .state-medallion__disc {
+    background: var(--color-accent-tint);
+}
+
+body.console .state-medallion--good .state-medallion__disc .material-symbols-outlined {
+    color: var(--color-ink);
+}
+
+body.console .state-medallion--bad .state-medallion__disc {
+    background: var(--color-primary);
+}
+
+body.console .state-medallion--bad .state-medallion__disc .material-symbols-outlined {
+    color: #fff;
+}
+
+body.console .state-panel h4 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    margin-bottom: 0.4rem;
+}
+
+body.console .state-panel p {
+    font-size: 0.88rem;
+    color: var(--color-ink-muted);
+    margin-bottom: 0.75rem;
+}
+
+
+/* ============================================================
+   ALERTS — app.css uppercases these in Archivo Black, which is fine for a
+   three-word banner and unreadable for a sentence. Staff alerts carry sentences.
+   ============================================================ */
+
+body.console .alert {
+    font-family: var(--font-body);
+    text-transform: none;
+    font-size: 0.88rem;
+    letter-spacing: 0;
+    padding: 0.7rem 0.9rem;
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+
+body.console .alert-success {
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+}
+
+body.console .alert-danger {
+    background: var(--color-primary-tint);
+    color: var(--color-ink);
+}
+
+
+/* ============================================================
+   DANGER ZONE — destructive disclosures (delete an outlet, delete an item).
+   Red is load-bearing here and used nowhere else on the page.
+   ============================================================ */
+
+body.console .danger-zone > summary,
+body.console .cancel-panel > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--color-primary);
+    padding: 0.35rem 0;
+}
+
+body.console .danger-zone[open] > summary,
+body.console .cancel-panel[open] > summary {
+    margin-bottom: 0.5rem;
+}
+
+
+/* ============================================================
+   PRINT — the sales report and the order queue get printed in kitchens.
+   ============================================================ */
+
+@media print {
+    body.console .app-chrome,
+    body.console .console-head__actions,
+    body.console .outlet-switch form {
+        display: none !important;
+    }
+    body.console .table-responsive,
+    body.console .console-panel,
+    body.console .stat {
+        box-shadow: none;
+    }
+}
+
+
+/* ============================================================
+   CONTRAST — unscoped, because it is a WCAG failure product-wide.
+
+   White on the brand red #e8281e is 4.42:1. AA wants 4.5:1 for text below 24px, so
+   every filled primary button, and the danger badge, sat just under the line — and
+   these are the most important controls in the product (Sign in, Proceed to pay, Add).
+   The brand red on the bone canvas is worse at 3.69:1, which is what link text used.
+
+   --color-primary-dark (#b81f16) is already part of the palette and clears both:
+   6.47:1 on white, 5.41:1 on bone. It is the same red, one step down, so the brand
+   reads unchanged while the text becomes legible. The vivid red is kept for large
+   display elements — the ticker, stickers, headings — where 3:1 is the bar and it passes.
+   ============================================================ */
+
+.btn-primary,
+.deal-card-add,
+.sticky-pay-inner .btn-primary,
+.sticky-cart-action {
+    background: var(--color-primary-dark);
+}
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--color-primary);
+}
+
+/* Link text sitting on the bone canvas. */
+a,
+.text-danger,
+.field__error {
+    color: var(--color-primary-dark);
+}
+a:hover { color: var(--color-primary); }
+
+/* Small white-on-red text. */
+.badge.bg-danger {
+    background: var(--color-primary-dark) !important;
+}
+
+/* ============================================================
+   BOOTSTRAP CONTROLS — the checkboxes, switches and list groups that were
+   never retuned. Bootstrap ships them rounded, white-filled and blue-checked,
+   which is three different design systems away from this one.
+   ============================================================ */
+
+.form-check-input {
+    border-radius: 0;
+    border: 2px solid var(--color-ink);
+    background-color: var(--color-field);
+    box-shadow: none;
+}
+.form-check-input:checked {
+    background-color: var(--color-ink);
+    border-color: var(--color-ink);
+}
+.form-check-input:focus {
+    border-color: var(--color-ink);
+    box-shadow: 2px 2px 0 var(--color-ink);
+    outline: none;
+}
+/* The switch variant draws its knob as a background image tinted Bootstrap blue. */
+.form-switch .form-check-input {
+    border-radius: 0;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%2314100d'/%3e%3c/svg%3e");
+}
+.form-switch .form-check-input:checked {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23f2ead9'/%3e%3c/svg%3e");
+}
+
+.list-group,
+.list-group-item {
+    border-radius: 0;
+}
+
+/* ============================================================
+   TAP TARGETS — 44px is the minimum comfortable touch size; the console
+   nav links and bottom tabs were rendering at 38–42px.
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+    .console-nav__link {
+        min-height: 44px;
+    }
+    .btn-sm {
+        min-height: 40px;
+    }
+}
+
+/* Adjacent tappable rows were 3px apart — close enough to mis-tap. */
+.account-row + .account-row {
+    margin-top: 8px;
+}
+
+
+/* ============================================================
+   BOOTSTRAP COLOUR TOKENS — cut off at the source.
+
+   Bootstrap ships its own palette through CSS variables, and anything this sheet has
+   not explicitly restyled still reads them: body copy came out #212529 rather than ink,
+   outline-danger buttons came out #dc3545 rather than the brand red, and borders came
+   out #dee2e6. Restating the variables fixes every component that reads them at once,
+   including ones not yet built, which is strictly better than chasing each class.
+   ============================================================ */
+
+:root {
+    --bs-body-color: var(--color-ink);
+    --bs-body-color-rgb: 20, 16, 13;
+    --bs-body-bg: var(--color-bg);
+    --bs-border-color: var(--color-ink);
+    --bs-emphasis-color: var(--color-ink);
+    --bs-secondary-color: var(--color-ink-muted);
+    --bs-link-color: var(--color-primary-dark);
+    --bs-link-hover-color: var(--color-primary);
+    --bs-danger: #b81f16;
+    --bs-danger-rgb: 184, 31, 22;
+    --bs-success: #14100d;
+    --bs-warning: #ffc918;
+    --bs-info: #14100d;
+    --bs-primary: #b81f16;
+    --bs-primary-rgb: 184, 31, 22;
+}
+
+/* The outline variants read their own per-button variables, which the block above does
+   not reach. Destructive actions stay red — the palette's red, not Bootstrap's. */
+.btn-outline-danger {
+    --bs-btn-color: var(--color-primary-dark);
+    --bs-btn-border-color: var(--color-ink);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--color-primary-dark);
+    --bs-btn-hover-border-color: var(--color-ink);
+    --bs-btn-active-bg: var(--color-primary-dark);
+    --bs-btn-active-border-color: var(--color-ink);
+}
+
+
+/* ============================================================
+   NAVIGATION: ONE MECHANISM PER WIDTH
+
+   The drawer was added while the console strip stayed, so staff and admin saw both at
+   every size: a hamburger and a 19-link black bar offering the same destinations. Two
+   controls for one job is the "congested" part, and on a 390px screen the strip alone
+   was 47px of permanent chrome above every page.
+
+   Split by width instead of showing both:
+     - below 992px the drawer is the whole story, and the strip is gone
+     - at 992px and up the strip is genuinely useful — ten destinations, all one click
+       away, no tap to open — so it stays and the hamburger steps aside
+
+   The drawer markup is always present either way, so the keyboard and screen-reader
+   path never depends on which one is on screen.
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+    .console-nav { display: none; }
+}
+
+@media (min-width: 992px) {
+    /* Staff already have every destination on the strip below the bar. */
+    body.console .nav-drawer-btn { display: none; }
+}

@@ -12,23 +12,25 @@
 'use strict';
 
 // Bumped when the precache list changes: an existing client keeps its old list
-// until the version changes, and the previous one references a stylesheet that
-// no longer exists, so install would fail and offline would silently break.
-const VERSION = 'v2';
+// until the version changes.
+const VERSION = 'v3';
 const STATIC_CACHE = `bitesite-static-${VERSION}`;
 const PAGE_CACHE = `bitesite-pages-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
+// Only what the offline page itself needs.
+//
+// CSS and JS are deliberately NOT listed any more. They are served from content-hashed
+// URLs now (see StaticResourceConfig), so a hardcoded path here would name a file the
+// pages no longer request — and since cache.addAll() rejects wholesale if any single URL
+// fails, one stale entry silently disables offline support for everyone. That had already
+// happened: this list still named 03-app.css and friends long after they stopped being
+// linked. Hashed assets are picked up by the runtime cache-first handler below instead,
+// which is strictly better — an immutable URL can never serve a stale file, so it needs
+// no list to maintain and no version bump to invalidate.
 const PRECACHE_URLS = [
-    '/css/parts/01-tokens.css',
-    '/css/parts/02-base.css',
-    '/css/parts/03-app.css',
-    '/css/parts/04-shared.css',
-    '/css/parts/05-outlet.css',
-    '/css/parts/06-app-editorial.css',
-    '/js/app.js',
-    '/js/password-toggle.js',
     OFFLINE_URL,
+    '/img/logo-mark-pastel.svg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -54,7 +56,10 @@ function isStaticAsset(url) {
     return url.origin === self.location.origin
         && (url.pathname.startsWith('/css/')
             || url.pathname.startsWith('/js/')
-            || url.pathname.startsWith('/img/'));
+            || url.pathname.startsWith('/img/')
+            // /fonts/ was missing, so the icon font — by far the largest asset in the
+            // product — was the one thing the service worker never cached.
+            || url.pathname.startsWith('/fonts/'));
 }
 
 self.addEventListener('fetch', (event) => {

@@ -1,0 +1,759 @@
+/* ============================================================
+   03-customer.css — Customer screen components
+
+   The student-facing pieces: category tabs, quantity steppers, menu and deal cards,
+   the outlet picker, sticky cart, cart, orders, item detail, account and search.
+
+   Part of an ordered set linked in fragments/head.html. The browser applies these
+   in link order and THAT ORDER IS THE CASCADE — a rule here can only override one
+   in an earlier file. Do not reorder the links, and do not move a rule between
+   files without checking what it then stops overriding.
+   ============================================================ */
+
+/* ============================================================
+   03-app.css  (3 of 6)
+
+   Customer screens: category tabs, quantity steppers, menu cards, deals rail,
+   outlet picker, sticky cart, cart, orders, item detail, account, search, auth.
+
+   Part of an ordered set. The browser concatenates these in the order they
+   are linked in fragments/head.html, and that order IS the cascade. Do not
+   reorder the <link> tags, and do not move a rule between files without
+   checking what it would then stop overriding.
+   ============================================================ */
+
+/* ============================================================
+   CATEGORY TABS
+
+   The app design replaces the circular illustrated chips with a plain
+   underlined tab bar: a scrolling row of labels on a hairline, the active
+   one in primary with a 2px rule beneath it. Quieter, and it stops the
+   category row competing with the food photography below it.
+   ============================================================ */
+
+.category-chips-wrapper {
+    margin: 0 0 var(--stack-lg);
+}
+
+.category-chips {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.category-chips::-webkit-scrollbar { display: none; }
+
+.category-chip {
+    position: relative;
+    flex: none;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* The illustrated pucks have no place in a text tab bar. */
+.cat-chip-icon,
+.cat-icon-img { display: none; }
+
+.cat-chip-label {
+    line-height: var(--lh-label-lg);
+    transition: color 150ms ease;
+}
+
+.category-chip:hover .cat-chip-label { color: var(--color-ink); }
+
+
+/* The active rule sits on the wrapper's hairline rather than under the label, so the
+   two line up exactly however tall the label happens to be. */
+.category-chip.active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+}
+
+/* ============================================================
+   QUANTITY STEPPER (+ / - buttons replacing number input)
+   ============================================================ */
+
+.qty-stepper,
+.cart-control__stepper {
+    overflow: hidden;
+}
+
+.qty-stepper button,
+.cart-control__stepper button {
+    font-size: 0.95rem;
+    font-weight: 700;
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+.qty-stepper .qty-value,
+.cart-control__stepper .cart-qty-value {
+    user-select: none;
+}
+
+/* ---------- Add / stepper swap on menu cards ----------
+   The card used to show a stepper reading "1" beside an Add button, on an
+   item that was not in the cart at all. Two controls, one of which was
+   lying: the 1 described what would be added, but read as what was already
+   there. Now the stepper only exists once the item is in the cart, so any
+   number on screen is a number in the cart.
+
+   Both controls are always in the DOM and .is-active picks between them.
+   That keeps the swap instant and, more importantly, keeps the no-JS path
+   honest: the server renders the correct one on load. */
+.cart-control__stepper { display: none; }
+.cart-control.is-active .cart-control__add { display: none; }
+.cart-control.is-active .cart-control__stepper { display: inline-flex; }
+
+/* Only the number changes on +/-, and it changes under the user's finger,
+   so it gets a short pop to confirm the tap registered. Anything longer
+   would lag behind repeated presses. */
+.cart-qty-value.is-bumped { animation: qtyBump 180ms ease; }
+@keyframes qtyBump {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.28); }
+    100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cart-qty-value.is-bumped { animation: none; }
+}
+
+/* Solid sage pill with lively tactile micro-press */
+/* ============================================================
+   ADD BUTTON
+
+   In the app design the add control is a small filled square that floats
+   over the bottom-right of the food photo, not a pill sitting in a row of
+   text. It stays the same object on the detail screen and the deals rail.
+   ============================================================ */
+
+.btn-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-family: var(--font-body);
+    font-size: 0;              /* the label is for screen readers; the glyph carries it */
+    line-height: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-add::before {
+    content: 'add';
+    /* Ligature-selected, so the inherited uppercase from the button would turn
+       'add' into 'ADD' and render the word instead of the glyph. */
+    text-transform: none;
+    letter-spacing: normal;
+    font-family: 'Material Symbols Outlined';
+    line-height: 1;
+}
+
+
+/* ============================================================
+   MENU CARD
+
+   Two-up grid of square-cropped photos on pure-white cards with a hairline
+   and the lightest shadow — the app design's main feed. The previous
+   horizontal row layout is gone: at two columns the photo does the work of
+   identifying the dish, so the text below it is only name, price, rating.
+   ============================================================ */
+
+.menu-card {
+    height: 100%;
+}
+
+
+/* The row wrapper survives from the old markup but no longer lays anything out
+   sideways — the card is a column now. */
+.menu-card-row {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.menu-card-photo {
+    position: relative;
+    background: var(--color-surface-deep);
+    overflow: hidden;
+}
+
+
+/* Generated illustrations are line art, not photography: contain them and sit them
+   on the tonal fill rather than cropping them to the square. */
+.menu-card-photo.is-illustration {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-food);
+}
+
+.menu-card-photo.is-illustration img {
+    width: 62%;
+    height: 62%;
+    object-fit: contain;
+}
+
+.menu-card:hover .menu-card-photo.is-illustration img { transform: scale(1.06); }
+
+
+.menu-card-name {
+    margin: 0;
+    color: var(--color-ink);
+    /* One line, clipped — a long dish name must not push the price row out of
+       alignment with the card beside it. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.menu-card-price {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: var(--lh-label-lg);
+    color: var(--color-primary);
+}
+
+/* The add control floats over the photo, but it cannot live inside it: the photo is a
+   link to the dish page and a <form> nested in an <a> is invalid markup that browsers
+   recover from unpredictably. So the two are siblings inside a positioned media wrapper
+   — the button overlaps the image without ever being a descendant of the anchor. */
+
+.menu-card-actions {
+    z-index: 2;
+}
+
+/* An item that cannot be ordered shows no control at all; the reason is stated in the
+   card body instead. Keeps a dead button off a sold-out card. */
+.menu-card-actions:empty { display: none; }
+
+
+/* ============================================================
+   TODAY'S DEALS / SPECIALS (Foochi-style featured specials cards)
+   ============================================================ */
+
+.featured-scroll {
+    padding: 6px 1rem 12px;
+    scroll-snap-type: x mandatory;
+}
+
+.deal-card {
+    transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+
+.deal-card-photo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.deal-card-photo img {
+    display: block;
+}
+.deal-card-photo.is-illustration {
+    padding: 10px;
+}
+.deal-card-photo.is-illustration img {
+    opacity: 1;
+}
+.deal-card:hover .deal-card-photo.is-illustration img {
+    transform: none;
+}
+
+
+.deal-card-name {
+    font-family: var(--font-display);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.deal-card-price {
+    font-family: var(--font-display);
+}
+
+.deal-card-add {
+    min-width: 0;
+    padding: 6px 12px;
+}
+
+/* ============================================================
+   OUTLET PICKER (choose-your-canteen screen)
+   ============================================================ */
+
+.outlet-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--color-surface-food);
+    border: 2px solid var(--color-ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 20px 22px;
+    transition: all 180ms ease;
+    color: inherit;
+}
+.outlet-card:hover {
+    background: var(--color-surface-deep);
+    color: inherit;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.outlet-card:active {
+    transform: scale(0.98);
+}
+
+/* Cream disc on peach — the icon reads as a plate set on the surface */
+.outlet-card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface);
+    color: var(--color-accent-strong);
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    box-shadow: none;
+}
+
+.outlet-card-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--color-ink);
+    margin: 0;
+}
+
+.outlet-card-hint {
+    font-size: 0.84rem;
+    color: var(--color-ink-muted);
+    margin: 2px 0 0;
+}
+
+.outlet-card-chevron {
+    margin-left: auto;
+    color: var(--color-ink-muted);
+    font-size: 1.3rem;
+}
+
+/* ============================================================
+   STICKY CART BAR (Glassmorphism & glowing action pill)
+   ============================================================ */
+
+.sticky-cart-bar {
+    right: 0;
+    padding: 10px 16px;
+    animation: slide-up 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (max-width: 767.98px) {
+    .sticky-cart-bar {
+        bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
+    }
+}
+@media (min-width: 768px) {
+}
+
+.sticky-cart-inner {
+    max-width: 540px;
+    margin: 0 auto;
+    
+    
+    cursor: pointer;
+    animation: cart-bar-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes cart-bar-glow {
+    0% { box-shadow: 4px 4px 0 rgba(20, 16, 13, 0.35); }
+    100% { box-shadow: 6px 6px 0 rgba(20, 16, 13, 0.35); }
+}
+
+
+.sticky-cart-inner:active {
+    transform: scale(0.97);
+}
+
+
+.sticky-cart-info strong {
+    font-size: 1.05rem;
+}
+
+.sticky-cart-action {
+    color: #fff;
+}
+
+@keyframes slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+}
+
+/* ============================================================
+   CART PAGE (card-based layout)
+   ============================================================ */
+
+/* ---------- Cart, ported from the Stitch "Your Order" comp ----------
+   The comp introduces two things the page lacked: a named pickup block, so
+   you can see which counter you are collecting from before paying, and
+   small section labels that break a long scroll into "where" / "what" /
+   "how much".
+
+   The comp's address line and its Subtotal / Taxes & Fees rows are not
+   here: Outlet has no address column and the app has no fee concept at all
+   (Order carries a single totalAmount). Rendering either would mean
+   inventing numbers, so the summary shows the one figure that is real.
+   ============================================================ */
+
+.pickup-card {
+    margin-bottom: 1.75rem;
+}
+.pickup-card__icon {
+    place-items: center;
+    flex: 0 0 42px;
+    font-size: 1.25rem;
+}
+.pickup-card__name {
+    font-family: var(--font-display);
+}
+
+.cart-summary {
+    margin-bottom: 1.25rem;
+}
+.cart-summary__row dt {
+    font-family: var(--font-display);
+    margin: 0;
+}
+.cart-summary__row dd {
+    font-family: var(--font-display);
+    margin: 0;
+}
+
+
+.cart-item-photo {
+    flex-shrink: 0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.cart-item-photo.is-illustration {
+    padding: 8px;
+}
+
+.cart-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cart-item-name {
+    font-family: var(--font-display);
+}
+
+
+.cart-item-subtotal {
+    font-family: var(--font-display);
+}
+
+/* Sticky pay button at bottom of cart */
+.sticky-pay-bar {
+    
+    
+    border-top: 3px solid var(--color-ink);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-sticky);
+    padding-bottom: calc(16px + var(--safe-area-bottom));
+}
+
+@media (max-width: 767.98px) {
+    .sticky-pay-bar {
+        bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+        padding-bottom: 14px;
+    }
+}
+
+
+.sticky-pay-total {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.35rem;
+    color: var(--color-accent-strong);
+}
+
+.sticky-pay-total small {
+    display: block;
+}
+
+/* ============================================================
+   ORDERS PAGE (rich cards instead of list-group)
+   ============================================================ */
+
+.order-card {
+    margin-bottom: 14px;
+    text-decoration: none;
+}
+
+.order-card:hover {
+    background: var(--color-surface-deep);
+}
+.order-card:active {
+    transform: scale(0.98);
+}
+
+.order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+
+.order-card-items {
+    font-size: 0.88rem;
+    color: var(--color-ink-muted);
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.order-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.order-card-total {
+    font-family: var(--font-display);
+}
+
+
+/* ---------- Order history, ported from the Stitch comp ----------
+   The card previously ran its items as one truncated line, which on a
+   three-item order showed "2 x Veg Biryani, 1 x Masala Ch…" and hid the
+   rest. The comp lists them, which is both what a receipt does and the
+   thing you actually scan for when finding an old order. */
+.order-card-lines {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+}
+.order-card-lines li {
+    font-size: 0.88rem;
+    color: var(--color-ink);
+    line-height: 1.5;
+}
+.order-card-lines .qty {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-ink-muted);
+    margin-right: 0.35rem;
+}
+.order-card-lines .more {
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+}
+
+/* The whole card is the link, so this is an affordance rather than a
+   second target: it tells you the card is clickable without adding a
+   nested interactive element inside an anchor. */
+.order-card-track {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 12px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--color-primary);
+}
+.order-card-track i { font-size: 1rem; transition: transform 180ms ease; }
+.order-card:hover .order-card-track i { transform: translateX(3px); }
+
+
+/* ============================================================
+   ITEM DETAIL — ported from the Stitch "Dish Details" comp.
+
+   The comp is mostly modifiers: Add Protein, Extras, Special
+   Instructions, dietary tags, a favourite toggle. None of that exists
+   on MenuItem, which carries name, category, photo, price and an
+   optional discount and nothing else. So this page is the honest
+   subset: a bigger photo, the price with its strike-through, where to
+   collect it, and the add control. It is the right shape to hang
+   modifiers on if they ever get modelled.
+   ============================================================ */
+/* The card name is now a link; it should not look like one until you
+   reach for it, or every card in the grid turns into a wall of blue. */
+.menu-card-name__link:hover,
+.menu-card-name__link:focus-visible {
+    color: var(--color-accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.detail-back {
+    margin: 0.5rem 0 1rem;
+    font-family: var(--font-display);
+    text-decoration: none;
+}
+.detail-back i { font-size: 1.05rem; transition: transform 180ms ease; }
+.detail-back:hover i { transform: translateX(-3px); }
+
+.detail-hero img {display: block; }
+/* Illustrations are line art on a transparent ground, so cropping them to
+   fill would cut the drawing; they get padded and contained instead. */
+.detail-hero.is-illustration img {padding: 12%; }
+
+.detail-eyebrow {
+    font-family: var(--font-display);
+}
+.detail-price {
+    font-family: var(--font-display);
+}
+.detail-meta {
+    font-weight: 600;
+    margin-bottom: 1.75rem;
+}
+.detail-meta i { color: var(--color-primary); font-size: 1.05rem; }
+
+.detail-unavailable {
+    font-weight: 600;
+}
+
+.detail-add {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 2.5rem;
+}
+.detail-add__btn {
+    flex: 1;
+    padding: 0.9rem 1rem;
+    font-size: 1rem;
+    border-radius: var(--radius-md);
+}
+
+/* ============================================================
+   ACCOUNT PAGE (sectioned list)
+   ============================================================ */
+
+.account-section {
+    background: transparent;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.account-section-title {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+    padding: 0 4px 8px;
+}
+
+.account-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    text-decoration: none;
+    color: var(--color-ink);
+    background: var(--color-surface-food);
+    border-top: none;
+    transition: background 120ms ease, transform 120ms ease;
+    box-shadow: none;
+}
+
+/* Round only the outer corners of the stack so it reads as one grouped block */
+.account-section-title + .account-row,
+.account-section > .account-row:first-child {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.account-section > .account-row:last-child {
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.account-section > .account-row:only-of-type {
+    border-radius: var(--radius-lg);
+}
+
+.account-row:hover {
+    color: var(--color-ink);
+}
+.account-row:active {
+    background: var(--color-surface-deep);
+}
+
+.account-row i {
+    font-size: 1.35rem;
+    color: var(--color-accent-strong);
+    width: 28px;
+    text-align: center;
+}
+
+.account-row-content {
+    flex: 1;
+}
+
+.account-row-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.account-row-detail {
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+}
+
+.account-row-chevron {
+    color: var(--color-ink-muted);
+    font-size: 1rem;
+}
+
+/* ============================================================
+   SEARCH BAR (menu page — Foochi pill search)
+   ============================================================ */
+
+
+.search-bar input:focus {
+    box-shadow: none;
+}
+
+
+.search-bar i {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-ink-muted);
+    font-size: 1.2rem;
+    pointer-events: none;
+}
+
+/* ============================================================
+   PRICE DISPLAY
+   ============================================================ */
+
+.card-price {
+    font-family: var(--font-display);
+    font-weight: 700;
+}
+
+.price-strike {
+    opacity: 0.75;
+}
+
+
+.list-group-item {
+    border-color: var(--color-border);
+}
+.list-group-item-action:hover {
+    background: var(--color-primary-tint);
+}

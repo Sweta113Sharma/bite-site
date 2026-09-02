@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -27,6 +28,25 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Takes static assets out of the security filter chain entirely.
+     *
+     * <p>This is a caching fix, not a performance micro-optimisation. Spring Security's
+     * header writer stamps {@code Cache-Control: no-cache, no-store, max-age=0,
+     * must-revalidate} on every response it handles — correct for an authenticated page,
+     * badly wrong for a stylesheet. With these paths inside the chain the browser was
+     * re-downloading every asset on every navigation, including the 4MB icon font: about
+     * 4.15MB per page view for a student on campus wifi.
+     *
+     * <p>Safe because all four directories are already {@code permitAll} below and hold
+     * nothing user-specific. {@code /uploads/**} is deliberately NOT here — those are
+     * uploaded files and stay behind the chain.
+     */
+    @Bean
+    public WebSecurityCustomizer staticResources() {
+        return web -> web.ignoring().requestMatchers("/css/**", "/js/**", "/img/**", "/fonts/**");
     }
 
     /**
@@ -60,9 +80,10 @@ public class SecurityConfig {
             .addFilterAfter(portalGateFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/", "/login", "/tenant-unavailable",
-                            "/register/student", "/css/**", "/js/**", "/img/**", "/uploads/**", "/error",
+                            "/register/student", "/css/**", "/js/**", "/img/**", "/fonts/**", "/uploads/**", "/error",
                             "/actuator/health", "/api/payments/webhook",
                             "/privacy-policy", "/terms", "/refund-policy",
+                            "/shipping-policy", "/grievance-policy",
                             "/verify", "/verify/**", "/resend-verification",
                             "/manifest.webmanifest", "/sw.js", "/offline.html").permitAll()
                     // Admin portal routes — any admin-portal role

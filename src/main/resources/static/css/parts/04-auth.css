@@ -1,0 +1,319 @@
+/* ============================================================
+   04-auth.css — Sign in and registration
+
+   The split-panel auth layout and its editorial field styling.
+
+   Part of an ordered set linked in fragments/head.html. The browser applies these
+   in link order and THAT ORDER IS THE CASCADE — a rule here can only override one
+   in an earlier file. Do not reorder the links, and do not move a rule between
+   files without checking what it then stops overriding.
+   ============================================================ */
+
+/* ============================================================
+   AUTH PAGES — split panel on desktop, single column on mobile.
+
+   A 420px card centred in ~1400px of cream left the whole right and left
+   thirds doing nothing. The brief asked to use width intentionally at
+   large sizes, so desktop gets a peach brand panel beside the form. The
+   form itself sits directly on the canvas at every size now — no card —
+   which also permanently removes the bug where an input painted the same
+   colour as the card it sat on became invisible.
+   ============================================================ */
+
+.auth-shell {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr;
+    background: var(--color-bg);
+}
+
+.auth-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.25rem 3rem;
+}
+
+.auth-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Compact lockup above the form — carries the brand on mobile, where the
+   brand panel is hidden. */
+.auth-lockup {
+    align-items: center;
+    gap: 0.55rem;
+}
+.auth-lockup img { width: 34px; height: 34px; }
+
+.auth-kicker {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-accent-strong);
+    background: var(--color-accent-tint);
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-pill);
+    margin-bottom: 0.75rem;
+}
+
+/* ============================================================
+   EDITORIAL AUTH FIELDS — ported from the Stitch "Sign In" comp.
+
+   The comp's one real idea is that form fields stop being boxes.
+   Bootstrap's .input-group draws an icon tile, a 1px border and a white
+   fill around every field: three pieces of chrome on a page that only
+   asks two questions. The comp replaces all of it with a single hairline
+   under the text, so the screen reads as type on cream rather than
+   widgets on a card.
+
+   The field icons come off entirely. An envelope glyph beside a field
+   labelled "Email" is decoration, and it was the thing forcing the boxed
+   treatment in the first place.
+
+   Scoped to .auth-card so the canteen and admin portals — same
+   stylesheet, deliberately not part of this redesign — keep their dense
+   bordered forms.
+   ============================================================ */
+
+/* 0.55 dropped the placeholder to 2.42:1. Every field here already has a
+   visible label, so the placeholder is supplementary — but it is still text,
+   and 1.4.3 does not exempt it. 0.85 resolves to #806E5D at 4.51:1. */
+.field__input::placeholder {opacity: 0.85; }
+/* Focus is carried by the rule itself rather than a ring, to keep the
+   field flat. Thickening to 2px means it still reads for anyone who
+   can't rely on the hue change alone; the padding claws back the 0.5px
+   so the baseline doesn't hop. */
+/* Chrome paints autofilled inputs pale blue, which on a transparent
+   field shows up as a floating blue slab. */
+.field__input:-webkit-autofill,
+.field__input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-ink);
+    -webkit-box-shadow: 0 0 0 100px var(--color-bg) inset;
+}
+.field__input--pw { padding-right: 2.75rem; }
+.field__toggle {
+    line-height: 1;
+}
+.field__toggle:hover, .field__toggle:focus-visible { color: var(--color-ink); }
+.field__toggle i { font-size: 1.15rem; }
+
+/* Select gets the same underline treatment. Bootstrap's .form-select paints
+   its own border, fill and arrow, so all three are stripped and the chevron
+   is redrawn inline in --color-ink-muted to match the field text. */
+.field__select {
+    width: 100%;
+    background-color: transparent;
+    border: 0;
+    border-bottom: 1.5px solid var(--color-field-rule);
+    border-radius: 0;
+    padding: 0.5rem 1.75rem 0.5rem 0;
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    color: var(--color-ink);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235c5247' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.15rem center;
+    background-size: 1rem;
+    transition: border-color 0.18s ease;
+}
+.field__select:focus {
+    outline: none;
+    box-shadow: none;
+    border-bottom-color: var(--color-primary);
+    border-bottom-width: 2px;
+    padding-bottom: calc(0.5rem - 0.5px);
+}
+/* The "choose one" placeholder option should read as unfilled, like a
+   placeholder does, rather than as a real selection. */
+.field__select:has(option[value=""]:checked) { color: var(--color-ink-muted); }
+
+/* "(Optional)" sits with the label rather than in the field, so the field
+   itself stays clean. Lowercase against the uppercase label so it reads as
+   an aside and not part of the field name. */
+.field__optional {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    font-size: 0.72rem;
+    opacity: 0.75;
+    margin-left: 0.4rem;
+}
+
+.field__hint {
+    margin: 0.4rem 0 0;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+}
+
+/* Validation copy. --color-danger is 5.11:1 on cream, so it carries as text
+   without a tinted box behind it. */
+.field__error {
+    margin: 0.4rem 0 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-danger);
+}
+/* A field that failed validation says so on the rule too, not by colour
+   alone — the message below it is the non-colour cue. */
+.field__input.is-invalid,
+.field__select.is-invalid {
+    border-bottom-color: var(--color-danger);
+    border-bottom-width: 2px;
+    padding-bottom: calc(0.5rem - 0.5px);
+}
+
+/* The comp runs a ~56px CTA. That height is what makes a two-field form
+   feel finished rather than cramped. */
+
+.auth-legal {
+    margin-top: 0.85rem;
+    text-align: center;
+    font-size: 0.78rem;
+}
+
+
+/* ---------- Brand panel (desktop only) ---------- */
+
+.auth-brand { display: none; }
+
+@media (min-width: 992px) {
+    .auth-shell { grid-template-columns: 1.05fr 1fr; }
+
+    .auth-brand {
+        display: flex;
+        align-items: center;
+        padding: 4rem 3.5rem;
+        background: var(--color-surface-food);
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Oversized brand mark bled off the corner — the identity as pattern
+       rather than a logo sitting politely in a box. */
+    .auth-brand::after {
+        content: '';
+        position: absolute;
+        right: -14%;
+        bottom: -18%;
+        width: 62%;
+        aspect-ratio: 1;
+        background: url('/img/logo-mark-pastel.svg') center / contain no-repeat;
+        opacity: 0.32;
+        pointer-events: none;
+    }
+
+}
+
+.auth-brand__inner { position: relative; z-index: 1; max-width: 420px; }
+
+.auth-brand__lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 2.5rem;
+}
+.auth-brand__lockup img { width: 40px; height: 40px; }
+.auth-brand__lockup span {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.55rem;
+    color: var(--color-accent-strong);
+}
+
+.auth-brand__headline {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 2.6rem;
+    line-height: 1.12;
+    color: var(--color-ink);
+    margin: 0 0 1rem;
+}
+
+.auth-brand__sub {
+    font-size: 1.02rem;
+    margin: 0 0 2.5rem;
+    max-width: 34ch;
+}
+
+/* Three dishes on the brand panel, so the first screen of a food app
+   actually shows food. */
+.auth-brand__dishes { display: flex; gap: 1.5rem; align-items: center; }
+
+/* No tile behind the art. The boxed treatment came from the old peach panel,
+   where the illustrations needed a surface to sit on; against the flat
+   terracotta they read better free-standing, and dropping the 12px padding
+   with it gives the artwork the whole box. */
+.auth-brand__dish {
+    width: 136px;
+    height: 136px;
+    display: grid;
+    place-items: center;
+}
+/* Size comes from --dish-size, set per dish below. Applied to BOTH axes so the
+   box scales squarely and object-fit: contain shrinks the artwork with it —
+   which is what makes the knob work on every image whatever its shape. */
+.auth-brand__dish img {
+    width: var(--dish-size, 100%);
+    height: var(--dish-size, 100%);
+    object-fit: contain;
+}
+
+/* The middle tile used to be lifted 14px as a staggered flourish, which suited the old
+   peach panel. On the flat one it just reads as a tile that failed to line up, so the
+   row is level now. */
+
+/* ---- Dish sizing. These three values are the knobs. ----------------------
+   Percentage of the tile's 68px content box. Lower = smaller.
+
+   Scales the box on both axes, so it works on every image whatever its shape.
+   max-height did not: it is inert on a width-limited image, so it moved the
+   chai and did nothing at all to the dosa or the puff.
+
+     image     source     shape       limited by
+     -------   ---------  ----------  ----------
+     dosa      320x215    landscape   width
+     puff      320x193    landscape   width
+
+   Both remaining illustrations are landscape and so width-limited, which is why
+   they sit at 100%: the box is square and their height is the short axis. The
+   chai used to be the exception — the only portrait artwork, the only one whose
+   height filled the box — and it has been removed.
+
+   Tagged per dish rather than by :nth-child, so each value stays attached to the
+   artwork it was measured against if the order ever changes. */
+.auth-brand__dish--dosa { --dish-size: 100%; }
+.auth-brand__dish--puff { --dish-size: 100%; }
+
+/* ---------- Password visibility toggle ---------- */
+
+/* This used to be the right-hand cap of a Bootstrap .input-group: a filled tile with a
+   border on three sides, `border-left: none` so it butted against the field, sharing one
+   edge with it. That group is long gone — the field is now a single bordered box and the
+   button is positioned inside it — so the leftover fill and border rendered as an opaque
+   near-white tile sitting on top of the field's own right border, reading as a control
+   from a different interface.
+
+   The button is an affordance inside the field, so it carries no surface of its own. The
+   !important flags went with the input-group too: nothing needs overriding here now, and
+   leaving them meant this block quietly beat every later attempt to restyle it. */
+.toggle-password {
+    border: none;
+    background: transparent;
+    color: var(--color-ink-muted);
+}
+.toggle-password:hover {
+    color: var(--color-ink);
+    background: transparent;
+}
+.toggle-password:focus-visible {
+    z-index: 3;
+}

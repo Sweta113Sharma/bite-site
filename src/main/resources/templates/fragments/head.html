@@ -16,28 +16,50 @@
     <meta name="apple-mobile-web-app-title" content="BiteSite"/>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
-    <!-- Inter alone, as the app design ships: its type scale sets every role — display
-         through label — on one family and leans on weight and tracking for hierarchy. -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;display=swap" rel="stylesheet"/>
-    <!-- Phosphor stays for the outlet and admin portals, which share this stylesheet but
-         are not part of the customer-app redesign. Dropping it would blank their icons. -->
-    <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" rel="stylesheet"/>
-    <link href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" rel="stylesheet"/>
+    <!-- Archivo Black + Archivo: the BIG BEEF reference language. Archivo Black carries
+         display/headings/buttons; Archivo carries body copy. -->
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&amp;family=Archivo:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <style>
+        /* Self-hosted Material Symbols — no CDN dependency, icons always render. */
+        @font-face {
+            font-family: 'Material Symbols Outlined';
+            font-style: normal;
+            font-weight: 100 700;
+            font-display: swap;
+            src: url('/fonts/material-symbols-outlined.woff2?v=2') format('woff2');
+        }
+    </style>
+    <!-- Phosphor is gone: the outlet and admin portals were the last users of it, and they
+         now draw from the same self-hosted Material Symbols set as the customer app. That
+         removes two render-blocking CDN stylesheets from every page in the product and
+         makes icons work offline, which a PWA needs. -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-    <!-- Ordered stylesheet set. The browser concatenates these in link order and
-         that order is the cascade: 06 restates components from 03 and has to win.
-         Reordering these tags changes rendering. Split from a single 3,545-line
-         style.css at existing section boundaries, so the concatenation is byte
-         identical to what it replaced. -->
+    <!-- Ordered stylesheet set. THIS ORDER IS THE CASCADE: each file may only override
+         the ones above it, so the links must not be reordered and a rule must not move
+         between files without checking what it then stops overriding.
+
+         01  design tokens, read by everything below
+         02  base + the overrides that retune Bootstrap to this system
+         03  customer screen components
+         04  sign-in and registration
+         05  cross-portal state, and outlet operational controls
+         06  editorial customer screens
+         07  the BIG BEEF language applied to the components above
+         08  final word on the customer menu, navbar and deal cards
+         09  the staff portals, scoped to body.console
+
+         Served with a content hash and a one-year immutable cache (see
+         spring.web.resources.chain in application.yml), so the request count matters
+         only on a first visit and every file is then free. -->
     <link rel="stylesheet" th:href="@{/css/parts/01-tokens.css}"/>
     <link rel="stylesheet" th:href="@{/css/parts/02-base.css}"/>
-    <link rel="stylesheet" th:href="@{/css/parts/03-app.css}"/>
-    <link rel="stylesheet" th:href="@{/css/parts/04-shared.css}"/>
-    <link rel="stylesheet" th:href="@{/css/parts/05-outlet.css}"/>
-    <link rel="stylesheet" th:href="@{/css/parts/06-app-editorial.css}"/>
-    <link rel="stylesheet" th:href="@{/css/parts/07-ux-polish.css}"/>
-    <link rel="stylesheet" th:href="@{/css/parts/08-redesign.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/03-customer.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/04-auth.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/05-shared.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/06-editorial.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/07-brutalist.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/08-customer-final.css}"/>
+    <link rel="stylesheet" th:href="@{/css/parts/09-console.css}"/>
     <script th:src="@{/js/app.js}" defer></script>
     <meta name="_csrf" th:content="${_csrf?.token}"/>
     <meta name="_csrf_parameter" th:content="${_csrf?.parameterName}"/>

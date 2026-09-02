@@ -1,4 +1,16 @@
 /* ============================================================
+   06-editorial.css — Editorial customer screens
+
+   The Stitch editorial comps for the customer app, plus the responsive and
+   interaction refinements layered on top of them.
+
+   Part of an ordered set linked in fragments/head.html. The browser applies these
+   in link order and THAT ORDER IS THE CASCADE — a rule here can only override one
+   in an earlier file. Do not reorder the links, and do not move a rule between
+   files without checking what it then stops overriding.
+   ============================================================ */
+
+/* ============================================================
    06-app-editorial.css  (6 of 6)
 
    Customer app, Stitch Editorial layer.
@@ -38,21 +50,11 @@
 
 /* The blob sat behind the greeting on a cream page. Gone: this design carries
    hierarchy with type size alone. */
-.page-header-decor { display: none; }
 
-.page-header {
-    position: relative;
-    padding: var(--stack-md) 0 var(--stack-sm);
-}
 
 .page-header-title {
-    font-family: var(--font-display);
-    font-size: var(--text-display-lg);
     line-height: var(--lh-display-lg);
-    font-weight: 700;
-    letter-spacing: -0.02em;
     margin: 0;
-    color: var(--color-ink);
 }
 
 @media (min-width: 768px) {
@@ -61,8 +63,6 @@
 
 .page-header-sub {
     margin: var(--stack-xs) 0 0;
-    color: var(--color-ink-muted);
-    font-size: var(--text-body-md);
     line-height: var(--lh-body-md);
 }
 
@@ -88,23 +88,17 @@
 
 .search-bar input {
     width: 100%;
-    padding: 12px 16px 12px 48px;
-    border: 1px solid transparent;
     border-radius: var(--radius-lg);
-    background: var(--color-field);
     font-family: var(--font-body);
-    font-size: var(--text-body-md);
     line-height: var(--lh-body-md);
     color: var(--color-ink);
     box-shadow: none;
     transition: border-color 150ms ease, background-color 150ms ease;
 }
 
-.search-bar input::placeholder { color: var(--color-ink-muted); }
 
 .search-bar input:focus {
     outline: none;
-    background: var(--color-surface);
     border-color: var(--color-field-rule);
 }
 
@@ -123,7 +117,6 @@
 
 .featured-scroll {
     display: flex;
-    gap: var(--gutter-mobile);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -137,25 +130,15 @@
 /* Not a card in this design — an image with three lines under it, no fill,
    no border, no shadow. */
 .deal-card {
-    flex: 0 0 232px;
-    width: 232px;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 0;
     scroll-snap-align: start;
 }
-.deal-card:hover { transform: none; box-shadow: none; }
 
 .deal-card-photo {
     position: relative;
     width: 100%;
     aspect-ratio: 4 / 3;
     margin-bottom: var(--stack-sm);
-    border-radius: var(--radius-sm);
     overflow: hidden;
-    background: var(--color-surface-deep);
 }
 
 .deal-card-photo img {
@@ -179,61 +162,32 @@
 }
 
 .deal-card-body {
-    display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: var(--stack-sm);
     padding: 0;
 }
 
 .deal-card-name {
-    margin: 0 0 2px;
-    font-size: var(--text-label-lg);
     line-height: var(--lh-label-lg);
-    font-weight: 600;
-    letter-spacing: 0.01em;
     color: var(--color-ink);
 }
 
 .deal-card-price {
-    font-size: var(--text-label-lg);
     line-height: var(--lh-label-lg);
-    font-weight: 600;
-    color: var(--color-primary);
 }
 
 /* ---------- Discount + stock flags ---------- */
 
 .discount-tag {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    padding: 3px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--color-primary);
-    color: #fff;
-    font-size: var(--text-label-sm);
     line-height: var(--lh-label-sm);
-    font-weight: 600;
-    letter-spacing: 0.02em;
 }
 
 .stock-note {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
     margin-top: 2px;
-    padding: 0;
-    border-radius: 0;
     background: none;
-    font-size: var(--text-label-sm);
     line-height: var(--lh-label-sm);
-    font-weight: 500;
     letter-spacing: 0.02em;
 }
-.stock-note .material-symbols-outlined { font-size: 16px; }
-.stock-note.is-low { color: var(--color-warning); }
-.stock-note.is-out { color: var(--color-danger); }
 
 /* ---------- Quantity stepper ---------- */
 
@@ -243,10 +197,6 @@
     align-items: center;
     gap: 2px;
     padding: 2px;
-    border: none;
-    border-radius: var(--radius-lg);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-md);
 }
 
 .qty-stepper button,
@@ -257,14 +207,9 @@
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--color-primary);
     cursor: pointer;
     transition: background-color 150ms ease, transform 120ms ease;
 }
-.qty-stepper button:hover,
-.cart-control__stepper button:hover { background: var(--color-primary-tint); }
 .qty-stepper button:active,
 .cart-control__stepper button:active { transform: scale(0.9); }
 .qty-stepper button .material-symbols-outlined,
@@ -305,72 +250,46 @@
 
 .state-medallion__disc .material-symbols-outlined { font-size: 34px; }
 
-.state-medallion--neutral .state-medallion__disc { background: var(--color-primary-tint); }
-.state-medallion--neutral .state-medallion__disc .material-symbols-outlined { color: var(--color-primary); }
+/* The three tones must be told apart at a glance, and two of them were not: after the
+   palette moved to the burger-landing system, --color-primary-tint and --color-danger-tint
+   both resolved to #ffd9d4, and --color-primary and --color-danger both to #e8281e. So a
+   "neutral" medallion and a "bad" one rendered pixel-identical — an empty cart looked
+   exactly like a cancelled order, and both looked like an error.
+
+   Neutral is now the quiet one it was always meant to be. Only the colours change; the
+   disc shape and size are untouched. */
+.state-medallion--neutral .state-medallion__disc { background: var(--color-surface-deep); }
+.state-medallion--neutral .state-medallion__disc .material-symbols-outlined { color: var(--color-ink); }
 .state-medallion--good    .state-medallion__disc { background: var(--color-accent-tint); }
 .state-medallion--good    .state-medallion__disc .material-symbols-outlined { color: var(--color-accent); }
-.state-medallion--bad     .state-medallion__disc { background: var(--color-danger-tint); }
-.state-medallion--bad     .state-medallion__disc .material-symbols-outlined { color: var(--color-danger); }
+.state-medallion--bad     .state-medallion__disc { background: var(--color-primary); }
+.state-medallion--bad     .state-medallion__disc .material-symbols-outlined { color: #fff; }
 
-.state-panel {
-    padding: var(--stack-lg) var(--stack-md);
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    text-align: center;
-}
 
 /* ---------- Bottom navigation ---------- */
 
 .bottom-nav {
-    background: var(--color-surface);
-    border-top: none;
-    box-shadow: var(--shadow-sticky);
     height: var(--bottom-nav-height);
     padding: 8px 16px calc(8px + var(--safe-area-bottom));
 }
 
 .bottom-nav-item {
-    gap: 2px;
     border-radius: var(--radius-sm);
-    padding: 4px 8px;
-    color: var(--color-ink-muted);
-    font-size: var(--text-label-sm);
     line-height: var(--lh-label-sm);
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    transition: color 150ms ease, background-color 150ms ease, transform 120ms ease;
 }
-.bottom-nav-item .material-symbols-outlined { font-size: 24px; }
 .bottom-nav-item:active { transform: scale(0.9); }
 .bottom-nav-item.active {
-    color: var(--color-primary);
     background: transparent;
 }
-.bottom-nav-item.active .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
 
 .bottom-nav-badge {
-    background: var(--color-primary);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 600;
     border: 2px solid var(--color-surface);
 }
 
 /* ---------- Sticky cart bar ---------- */
 
-.sticky-cart-bar {
-    bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 8px);
-}
 
-.sticky-cart-inner {
-    border-radius: var(--radius-md);
-    background: var(--color-primary);
-    color: #fff;
-    box-shadow: var(--shadow-lg);
-    padding: 14px 18px;
-}
-.sticky-cart-inner:hover { background: var(--color-primary-dark); color: #fff; }
+.sticky-cart-inner:hover { background: var(--color-primary-dark);}
 
 .sticky-cart-info,
 .sticky-cart-action {
@@ -385,21 +304,16 @@
 .order-card {
     display: block;
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
     padding: var(--stack-sm) var(--stack-md);
     color: inherit;
     transition: box-shadow 200ms ease;
 }
-.order-card:hover { box-shadow: var(--shadow-md); color: inherit; }
+.order-card:hover {color: inherit; }
 
 .order-card-token {
-    font-family: var(--font-body);
     font-size: var(--text-headline-md);
     line-height: var(--lh-headline-md);
     font-weight: 700;
-    letter-spacing: -0.01em;
     color: var(--color-ink);
 }
 
@@ -424,65 +338,25 @@
 /* ---------- Cart rows ---------- */
 
 /* Rows on a rule, not floating cards — the design lists items as a ledger. */
-.cart-item-card {
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--color-border);
-    border-radius: 0;
-    box-shadow: none;
-    padding: 16px 0;
-    gap: 16px;
-}
 
-.cart-item-photo {
-    width: 64px;
-    height: 64px;
-    flex: none;
-    border-radius: var(--radius-sm);
-    background: var(--color-surface-deep);
-    overflow: hidden;
-}
-.cart-item-photo img { width: 100%; height: 100%; object-fit: cover; }
 .cart-item-photo.is-illustration { display: grid; place-items: center; background: var(--color-surface-food); }
-.cart-item-photo.is-illustration img { width: 62%; height: 62%; object-fit: contain; }
+.cart-item-photo.is-illustration img { width: 62%; height: 62%;}
 
 .cart-item-name {
-    font-size: var(--text-body-lg);
     line-height: 1.25;
-    font-weight: 600;
     color: var(--color-ink);
-    margin: 0;
 }
 
 .cart-item-price {
-    font-size: var(--text-body-md);
-    color: var(--color-ink-muted);
     margin-top: 2px;
 }
 
-.cart-item-subtotal {
-    font-size: var(--text-label-lg);
-    font-weight: 600;
-    color: var(--color-ink);
-}
 
 .pickup-card {
-    background: transparent;
-    border: none;
-    border-radius: 0;
     box-shadow: none;
-    padding: 0;
-    gap: 12px;
-}
-.pickup-card__icon {
-    width: auto;
-    height: auto;
-    background: none;
-    color: var(--color-accent);
 }
 .pickup-card__icon .material-symbols-outlined { font-size: 20px; }
-.pickup-card__name { font-size: var(--text-body-lg); font-weight: 600; margin: 0; color: var(--color-ink); }
-.pickup-card__meta { font-size: var(--text-body-md); color: var(--color-ink-muted); margin: 0; }
+.pickup-card__name { font-size: var(--text-body-lg);color: var(--color-ink); }
 
 .cart-summary {
     border-top: 1px solid var(--color-border);
@@ -568,11 +442,6 @@
     margin-bottom: var(--stack-sm);
 }
 
-.price-strike {
-    text-decoration: line-through;
-    color: var(--color-ink-muted);
-    font-weight: 500;
-}
 
 /* ---------- Token badge ---------- */
 
@@ -596,9 +465,7 @@
 
 .auth-card {
     background: var(--color-surface);
-    border: none;
     border-radius: 0;
-    box-shadow: none;
     padding: var(--stack-lg) var(--margin-mobile);
 }
 
@@ -641,10 +508,8 @@
 
 .field__label {
     display: block;
-    font-size: var(--text-label-sm);
     line-height: var(--lh-label-sm);
     font-weight: 500;
-    letter-spacing: 0.02em;
     color: var(--color-ink-muted);
     margin-bottom: var(--stack-xs);
 }
@@ -656,9 +521,7 @@
 .field__input {
     width: 100%;
     padding: 8px 0;
-    border: none;
     border-bottom: 1px solid var(--color-field-rule);
-    border-radius: 0;
     background: transparent;
     font-family: var(--font-body);
     font-size: var(--text-body-lg);
@@ -671,11 +534,9 @@
 .field__input::placeholder { color: var(--color-ink-muted); }
 
 .field__input:focus {
-    outline: none;
     border-bottom-color: var(--color-primary);
     border-bottom-width: 2px;
     padding-bottom: 7px;   /* keeps the baseline still as the rule thickens */
-    box-shadow: none;
     background: transparent;
 }
 
@@ -732,13 +593,17 @@
     .auth-lockup { display: none; }
 }
 
+/* One step down the same red. The vivid --color-primary carries white text at 4.42:1,
+   under AA for anything below 24px, and this panel is mostly body copy. --color-primary-dark
+   is the same hue at 6.47:1, so the panel reads identically and the text becomes legible.
+   The sub-heading was additionally at 82% opacity, which took it lower still. */
 .auth-brand {
-    background: var(--color-primary);
+    background: var(--color-primary-dark);
     color: #fff;
 }
 .auth-brand__headline,
 .auth-brand__lockup span { color: #fff; }
-.auth-brand__sub { color: rgba(255, 255, 255, 0.82); }
+.auth-brand__sub { color: #fff; }
 /* The translucent tile is gone with the boxed treatment — the illustrations sit
    directly on the panel now. Kept as an empty-intent note rather than silently
    deleted, because this file re-tones the brand panel and its absence is the
@@ -747,17 +612,13 @@
 /* ---------- Buttons, app-wide within the customer surfaces ---------- */
 
 .btn-primary {
-    background: var(--color-primary);
     border-color: var(--color-primary);
-    border-radius: var(--radius-md);
     font-family: var(--font-body);
     font-size: var(--text-label-lg);
-    font-weight: 600;
     letter-spacing: 0.01em;
 }
 .btn-primary:hover,
 .btn-primary:focus {
-    background: var(--color-primary-dark);
     border-color: var(--color-primary-dark);
 }
 
@@ -814,4 +675,122 @@
     letter-spacing: 0.15em;
     text-align: center;
     font-variant-numeric: tabular-nums;
+}
+/* ============================================================
+   07 — UX POLISH
+   Responsive and interaction refinements layered after 06 so they
+   win the cascade. Touch targets, sticky chrome, keyboard focus,
+   and desktop density. Loaded last in head.html.
+   ============================================================ */
+
+/* ---------- Sticky top navbar ----------
+   The menu is long; the navbar should stay in reach so the user can
+   switch outlet or sign out without scrolling back to the top. On
+   desktop this also keeps the brand anchored while browsing. */
+
+/* ---------- Touch targets ----------
+   The add control floats over the photo; it must be easy to hit.
+   40px is the floor for a thumb target on a food feed. */
+
+/* Stepper +/- buttons on menu cards and cart page */
+.cart-control__stepper button,
+.qty-stepper button {
+    width: 36px;
+    height: 36px;
+    font-size: 1.05rem;
+}
+
+/* ---------- Keyboard focus ----------
+   Cards and controls get a clear focus ring so the whole feed is
+   navigable by keyboard, not just the name link. */
+.menu-card:focus-within,
+.outlet-card:focus-within,
+.cart-item-card:focus-within {
+    box-shadow: 0 0 0 3px var(--color-primary-tint), var(--shadow-md);
+}
+
+.btn-add:focus-visible,
+.cart-control__stepper button:focus-visible,
+.qty-stepper button:focus-visible,
+.category-chip:focus-visible,
+.sticky-cart-inner:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* ---------- Desktop density ----------
+   The 1100px container is roomy; let the menu breathe with a touch
+   more max width and lift cards on hover for a tactile feed. */
+@media (min-width: 992px) {
+    .menu-card {
+        transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+    .menu-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+}
+
+/* ---------- Sticky category chips (mobile) ----------
+   On a phone the category list is the fastest way to jump a long
+   menu. Keep it pinned under the navbar so it never scrolls away. */
+@media (max-width: 767.98px) {
+    /* Active chip highlight while scrolling (driven by JS) */
+    .category-chip.is-scroll-active {
+        background: var(--color-primary);
+        color: #fff;
+        border-color: var(--color-primary);
+    }
+}
+
+/* ---------- Sticky add-to-cart bar (item detail, mobile) ----------
+   Long descriptions push the add control out of reach. A slim bar
+   pinned above the bottom nav keeps the primary action thumb-close. */
+@media (max-width: 767.98px) {
+    .detail-add {
+        z-index: 1020;
+        background: var(--color-surface-food);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 10px 12px;
+        margin-top: 1rem;
+        box-shadow: var(--shadow-md);
+    }
+}
+
+/* ---------- Cart page polish ----------
+   The old cart page shrank the stepper with an inline transform and
+   used a bare text delete. Replace those with clean, full-size
+   controls and a proper remove button. */
+.cart-item-card .qty-stepper {
+    transform: none !important;
+    transform-origin: initial !important;
+}
+
+.cart-item-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.cart-item-remove:active {
+    transform: scale(0.9);
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .navbar,
+    .category-chips-wrapper,
+    .detail-add {
+        position: static;
+    }
+    .menu-card,
+    .btn-add,
+    .cart-control__stepper button,
+    .qty-stepper button,
+    .cart-item-remove {
+        transition: none;
+    }
 }

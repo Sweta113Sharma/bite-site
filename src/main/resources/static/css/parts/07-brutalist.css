@@ -1,0 +1,1296 @@
+/* ============================================================
+   07-brutalist.css — The BIG BEEF language
+
+   3px near-black borders, hard offset shadows, square corners and uppercase Archivo
+   Black. This is where the burger-landing reference is actually applied to the
+   components defined earlier.
+
+   Part of an ordered set linked in fragments/head.html. The browser applies these
+   in link order and THAT ORDER IS THE CASCADE — a rule here can only override one
+   in an earlier file. Do not reorder the links, and do not move a rule between
+   files without checking what it then stops overriding.
+   ============================================================ */
+
+/* ============================================================
+   08 — REDESIGN
+   The visual overhaul layer. Loads last, wins the cascade.
+
+   Art direction: modern food-ordering app — expressive rounded
+   surfaces, pill categories with illustrated pucks re-enabled,
+   gradient hero header, deeper shadows, warmer accents, bolder
+   type. Markup and behaviour are untouched; this file only
+   restyles what is already in the DOM.
+   ============================================================ */
+
+/* ---------- Foundation ----------
+
+   This block used to re-inflate the geometry that 01-tokens.css had just flattened:
+   radii back to 16/20/999px, two soft blurred shadows, a terracotta gradient and a
+   peach-and-mint haze behind the whole page. That was the *previous* art direction —
+   this file carries both it and the brutalist pass that replaced it, and the old
+   foundation was never removed. So every surface reading these tokens kept rendering
+   in the soft system: the cart's pickup card, its summary panel and the sticky pay bar
+   were rounded and gradient-filled on a page of square black-bordered cards.
+
+   The radius overrides are simply gone, so 01-tokens (0–2px) wins as intended. The
+   gradient and shadow tokens are kept as names but repointed at flat brand values,
+   because eleven rules still reference them and repointing is safer than editing all
+   eleven — anything asking for "the brand fill" now gets the brand's flat red. */
+:root {
+    --gradient-brand: var(--color-primary);
+    --gradient-warm: var(--color-surface);
+    --shadow-card: var(--shadow-sm);
+    --shadow-lift: var(--shadow-md);
+    --navbar-height: 60px;
+}
+
+/* ---------- Navbar ---------- */
+
+
+.top-nav-links .nav-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--color-ink-muted);
+    transition: color 150ms ease, background-color 150ms ease;
+}
+
+.top-nav-links .nav-link .material-symbols-outlined { font-size: 20px; }
+
+.top-nav-links .nav-link:hover {
+    color: var(--color-ink);
+    background: var(--color-field);
+}
+
+.top-nav-links .nav-link.active {
+    color: var(--color-primary);
+    background: var(--color-primary-tint);
+}
+
+.navbar .btn-outline-secondary {
+    padding-inline: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+.navbar .btn-outline-secondary:hover {
+    border: none;
+}
+
+/* ---------- Bottom nav (mobile) ---------- */
+.bottom-nav {
+    background: rgba(255, 255, 255, .92);
+    
+    
+    border-top: 1px solid rgba(26, 26, 26, .06);
+    box-shadow: 0 -8px 30px rgba(26, 26, 26, .08);
+    padding-bottom: var(--safe-area-bottom);
+}
+
+.bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 0 10px;
+    color: var(--color-ink-muted);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    position: relative;
+    transition: color 150ms ease;
+}
+
+.bottom-nav-item .material-symbols-outlined { font-size: 24px; transition: transform 180ms ease; }
+
+.bottom-nav-item.active { color: var(--color-primary); }
+.bottom-nav-item.active .material-symbols-outlined {
+    font-variation-settings: 'FILL' 1;
+    transform: translateY(-2px);
+}
+
+.bottom-nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 28px;
+    height: 3px;
+    border-radius: 0;
+    background: var(--gradient-brand);
+}
+
+.bottom-nav-badge {
+    position: absolute;
+    top: 4px;
+    right: calc(50% - 20px);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 0;
+    background: var(--gradient-brand);
+    color: #fff;
+    font-size: 0.64rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(20, 16, 13, 0.35);
+}
+
+/* ---------- Page header → hero ---------- */
+.page-header {
+    position: relative;
+    padding: 28px 28px 26px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    right: -70px;
+    top: -70px;
+    width: 220px;
+    height: 220px;
+    border-radius: 0;
+    background: none;
+    pointer-events: none;
+}
+
+.page-header-decor { display: none; }
+
+.page-header-title {
+    font-size: clamp(1.5rem, 3.5vw, 1.9rem);
+    color: var(--color-ink);
+}
+
+.page-header-sub {
+    color: var(--color-ink-muted);
+    font-size: 0.98rem;
+    margin-top: 2px;
+}
+
+/* ---------- Search ---------- */
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* Was `4px 8px 4px 18px`: the 18px left inset dated from when the icon was absolutely
+       positioned over the field and needed clearing. The icon is a flex item now, so the
+       inset is doing nothing except making the bar visibly lopsided. */
+    padding: 4px 14px;
+    transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+.search-bar .material-symbols-outlined { color: var(--color-ink-muted); font-size: 22px; }
+/* This layer turns .search-bar into a flex row, so the icon should be a flex item and
+   the gap above should separate it from the field. It was still carrying
+   `position: absolute; left: 16px` from the editorial layer, which took it out of the
+   flow — the input then started at the container's own padding and the placeholder ran
+   underneath the icon. Returning it to the flow is the fix the flex layout assumed. */
+.search-bar > .material-symbols-outlined,
+.search-bar > i {
+    position: static;
+    transform: none;
+    flex: none;
+}
+.search-bar input {
+    flex: 1;
+    outline: none;
+    /* Right padding so a long query does not run into the bar's own border. The left is
+       handled by the flex gap after the icon. */
+    padding: 12px 4px 12px 0;
+    font-size: 0.98rem;
+    font-weight: 500;
+}
+.search-bar input::placeholder { color: var(--color-ink-muted); }
+
+/* ---------- Category chips — illustrated pills, re-enabled ---------- */
+.category-chips-wrapper {
+    margin-bottom: var(--stack-md);
+}
+.category-chips {
+    gap: 10px;
+    padding: 4px 2px 8px;
+    margin-bottom: 0;
+}
+
+.category-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    min-width: 72px;
+}
+
+.cat-chip-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 62px;
+    height: 62px;
+    background: var(--color-surface);
+    overflow: hidden;
+}
+.cat-icon-img {
+    display: block !important;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+.cat-chip-label {
+    font-weight: 600;
+    color: var(--color-ink-muted);
+    max-width: 78px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.category-chip.active .cat-chip-label {font-weight: 700; }
+
+/* kill the old underline rule in every state */
+.category-chip.active::after { display: none; }
+
+/* mobile sticky strip keeps gradient mask */
+@media (max-width: 767.98px) {
+    .category-chip.is-scroll-active .cat-chip-icon {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 4px var(--color-primary-tint);
+    }
+    .category-chip.is-scroll-active .cat-chip-label { color: var(--color-primary); }
+}
+
+/* ---------- Section headings ---------- */
+.menu-category-section h5 {
+    font-weight: 800;
+    margin-bottom: 1rem !important;
+}
+
+.cat-bullet {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--gradient-brand);
+    transform: rotate(45deg);
+    display: inline-block;
+    box-shadow: 0 2px 6px rgba(20, 16, 13, 0.35);
+}
+
+/* ---------- Menu cards ---------- */
+
+
+.menu-card-photo {
+    aspect-ratio: 4 / 3;
+}
+
+.menu-card-photo img { transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+.menu-card:hover .menu-card-photo img { transform: scale(1.07); }
+
+.menu-card-media { border-radius: var(--radius-lg) var(--radius-lg) 0 0;}
+
+.menu-card-body {gap: 6px; }
+
+.menu-card-name {
+    font-weight: 700;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+.menu-card-name__link { text-decoration: none; color: inherit; }
+.menu-card-name__link:hover { color: var(--color-primary); }
+
+.menu-card-price {
+    letter-spacing: -0.01em;
+}
+
+.price-strike {
+    font-size: 0.82rem;
+}
+
+.discount-tag {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    background: var(--gradient-brand);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 4px 9px;
+    border-radius: 0;
+    box-shadow: 0 4px 12px rgba(20, 16, 13, 0.35);
+}
+
+.stock-note {
+    font-weight: 700;
+    border-radius: 0;
+    width: fit-content;
+}
+.stock-note.is-low { background: var(--color-warning-tint); color: var(--color-warning); }
+.stock-note.is-out { background: var(--color-danger-tint); color: var(--color-danger); }
+
+/* Add control: floating disc over the photo */
+.btn-add {
+    width: 38px;
+    height: 38px;
+    transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, color 150ms ease;
+}
+.btn-add::before { font-size: 22px; font-weight: 500; }
+
+/* The button must stay inside the media wrapper: .menu-card-media has
+   overflow:hidden to round the photo corners, so a negative bottom here
+   pushed the disc below that boundary and clipped it into a half-pill. */
+
+/* Stepper swap: solid brand stepper */
+.cart-control__stepper {
+    background: var(--color-primary);
+    border: none;
+    border-radius: 0;
+    padding: 3px;
+    box-shadow: 0 6px 18px rgba(20, 16, 13, 0.35);
+}
+.cart-control__stepper button {
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    color: #fff;
+    font-size: 1rem;
+}
+.cart-control__stepper button:hover { background: rgba(255, 255, 255, .18); }
+.cart-control__stepper .cart-qty-value { color: #fff; min-width: 24px; font-size: 0.92rem; }
+.cart-control__stepper button:active { transform: scale(0.85); }
+
+/* ---------- Deals rail ---------- */
+.featured-scroll { gap: 14px; margin-bottom: 4px; }
+
+/* Deal add button: full-width footer bar in normal flow — no overlay, no
+   collision with the price. */
+.deal-card-add:hover { background: var(--color-primary-dark); color: #fff; }
+
+.deal-card {
+    padding: 12px;
+}
+.deal-card:hover {
+    background: var(--color-surface);
+}
+
+.deal-card-photo {
+    background: var(--gradient-warm);
+    box-shadow: none;
+}
+
+.deal-card-name {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.deal-card-price {
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: var(--color-primary);
+}
+
+/* Superseded by the full-width footer bar defined above — kept as a no-op
+   so the later cascade position doesn't resurrect the tiny square disc. */
+
+/* ---------- Specials heading ---------- */
+h5 .material-symbols-outlined.is-filled {
+    font-variation-settings: 'FILL' 1;
+    color: var(--color-primary);
+}
+
+/* ---------- Sticky cart bar (menu page) ---------- */
+.sticky-cart-bar {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 12px);
+    width: min(680px, calc(100% - 2rem));
+    z-index: 1035;
+}
+
+.sticky-cart-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--gradient-brand);
+    color: #fff;
+    border-radius: var(--radius-pill);
+    padding: 12px 12px 12px 22px;
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
+    transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease;
+}
+.sticky-cart-inner:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); color: #fff; }
+.sticky-cart-inner:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 3px; }
+
+.sticky-cart-info { font-weight: 600; font-size: 0.95rem; }
+.sticky-cart-info strong { font-weight: 800; }
+
+.sticky-cart-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255, 255, 255, .18);
+    border-radius: 0;
+    padding: 8px 16px;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* desktop: dock bottom-right, out of the content's way */
+@media (min-width: 768px) {
+    .sticky-cart-bar {
+        left: auto;
+        right: 2rem;
+        transform: none;
+        width: 340px;
+        bottom: 2rem;
+    }
+}
+
+/* ---------- CART PAGE ---------- */
+.pickup-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--color-surface);
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: var(--shadow-sm);
+    padding: 14px 16px;
+}
+.pickup-card__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 0;
+    border: 2px solid var(--color-ink);
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+    box-shadow: none;
+}
+.pickup-card__name { margin: 0; font-weight: 800; letter-spacing: -0.01em; }
+.pickup-card__meta { margin: 0; font-size: 0.84rem; color: var(--color-ink-muted); }
+
+.cart-item-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--color-surface);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 12px;
+    margin-bottom: 12px;
+    transition: box-shadow 200ms ease;
+}
+.cart-item-card:hover { box-shadow: var(--shadow-lift); }
+
+.cart-item-photo {
+    width: 76px;
+    height: 76px;
+    flex: none;
+    overflow: hidden;
+    background: var(--color-surface-food);
+}
+.cart-item-photo img { width: 100%; height: 100%; object-fit: cover; }
+.cart-item-photo.is-illustration img { object-fit: contain; padding: 8px; }
+
+.cart-item-name {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-size: 0.98rem;
+}
+.cart-item-price { color: var(--color-ink-muted); font-size: 0.86rem; font-weight: 600; }
+.cart-item-subtotal { font-weight: 800; font-size: 1rem; color: var(--color-ink); }
+
+.cart-item-right { margin-left: auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+
+.qty-stepper {
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background: var(--color-field);
+    padding: 3px;
+    box-shadow: none;
+}
+.qty-stepper button {
+    width: 30px;
+    height: 30px;
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-size: 1rem;
+    box-shadow: 0 1px 3px rgba(26, 26, 26, .12);
+}
+.qty-stepper button:hover { background: var(--color-primary); color: #fff; box-shadow: none; }
+
+.cart-item-remove {
+    border: none;
+    background: transparent;
+    color: var(--color-ink-muted);
+    width: 34px;
+    height: 34px;
+    border-radius: 0;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+.cart-item-remove:hover { background: var(--color-danger-tint); color: var(--color-danger); }
+
+/* Summary */
+.cart-summary {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 18px 20px;
+    margin: 0;
+}
+.cart-summary__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+.cart-summary dt { color: var(--color-ink-muted); font-weight: 600; }
+.cart-summary dd { margin: 0; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; }
+
+/* Sticky pay bar */
+.sticky-pay-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1035;
+    background: transparent;
+    pointer-events: none;
+    padding: 0 1rem calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 12px);
+}
+.sticky-pay-inner {
+    pointer-events: auto;
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: var(--color-ink);
+    color: var(--color-bg);
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    padding: 12px 14px 12px 18px;
+    box-shadow: 5px 5px 0 rgba(20, 16, 13, 0.35);
+}
+.sticky-pay-total { display: flex; flex-direction: column; line-height: 1.25; }
+.sticky-pay-total small { color: rgba(255, 255, 255, .65); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.sticky-pay-total span { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; }
+
+.sticky-pay-inner .btn-primary {
+    background: var(--color-primary);
+    border: 2px solid var(--color-bg);
+    border-radius: 0;
+    font-weight: 700;
+    padding-block: 12px;
+    box-shadow: none;
+    transition: transform 160ms ease, filter 160ms ease;
+}
+.sticky-pay-inner .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.06); }
+
+@media (min-width: 768px) {
+    .sticky-pay-bar { padding-bottom: 1.5rem; }
+}
+
+/* ---------- Alerts / state panels ---------- */
+.alert {
+    padding: 16px 18px;
+}
+.alert-warning { background: var(--color-warning-tint); color: var(--color-warning); }
+.alert-danger { background: var(--color-danger-tint); color: var(--color-danger); }
+
+.icon-circle {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0;
+}
+
+.state-panel {
+    background: var(--color-surface);
+    padding: 48px 24px;
+    text-align: center;
+}
+.state-panel h4 {margin-bottom: 6px; }
+.state-panel p { color: var(--color-ink-muted); }
+
+.state-panel .btn-primary {
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding-inline: 22px;
+}
+
+/* ---------- Forms / selects ---------- */
+.form-select {
+    border-radius: 0;
+    border: 1px solid var(--color-border);
+    font-weight: 600;
+    font-size: 0.9rem;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Buttons, global ---------- */
+.btn-primary {
+    border: none;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+}
+.btn-primary:hover, .btn-primary:focus {border: none; }
+
+/* ---------- Item detail ---------- */
+.detail-add {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    box-shadow: var(--shadow-lift);
+}
+@media (max-width: 767.98px) {
+    .detail-add {
+        position: fixed;
+        left: 1rem;
+        right: 1rem;
+        bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 12px);
+    }
+}
+
+/* ---------- Desktop density ---------- */
+@media (min-width: 992px) {
+    .container { max-width: 1140px; }
+}
+
+/* ---------- Focus rings ---------- */
+.menu-card:focus-within,
+.cart-item-card:focus-within {
+    box-shadow: 0 0 0 3px var(--color-primary-tint), var(--shadow-lift);
+}
+.category-chip:focus-visible .cat-chip-icon,
+.search-bar:focus-within {
+    outline: none;
+}
+.category-chip:focus-visible .cat-chip-icon {
+    box-shadow: 0 0 0 3px var(--color-primary), var(--shadow-md);
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .menu-card, .btn-add, .deal-card, .bottom-nav-item .material-symbols-outlined,
+    .sticky-cart-inner, .sticky-pay-inner .btn-primary {
+        transition: none;
+    }
+    .menu-card:hover, .deal-card:hover, .btn-add:hover, .sticky-cart-inner:hover { transform: none; }
+}
+
+/* ============================================================
+   POLISH LAYER — controlled elevation of the shared surfaces.
+   Appended after the consolidated cascade so these win, but each
+   rule is scoped and uses existing tokens; nothing here fights the
+   base system. This is the "gorgeous" pass: depth, rhythm, focus.
+   ============================================================ */
+
+/* ---------- Navbar: soft, floating, warm ---------- */
+.navbar .nav-link.active {
+    color: var(--color-primary-dark) !important;
+    background: var(--color-primary-tint);
+}
+
+/* ---------- Buttons: confident, tactile ---------- */
+.btn-primary {
+    background-image: none;
+}
+.btn-primary:active {
+    transform: scale(0.97);
+}
+
+/* ---------- Cards: warm, lifted ---------- */
+.card {
+    background: var(--color-surface);
+    border: 2px solid var(--color-ink);
+}
+.menu-card, .outlet-card, .deal-card, .order-card {
+    border: 3px solid var(--color-ink);
+}
+
+/* ---------- Forms: soft slots ---------- */
+.form-control, .form-select {
+    background: var(--color-field);
+}
+
+/* ---------- Tables: calm zebra, clear header ---------- */
+.table tbody tr:hover {
+    background: var(--color-surface-deep);
+}
+
+/* ---------- Badges: softer, warmer ---------- */
+.badge {
+    box-shadow: none;
+}
+
+/* ---------- Page headers: rhythm ---------- */
+
+/* ---------- Selection & focus ---------- */
+
+/* ---------- Scrollbar (WebKit) — subtle warm ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+    background: var(--color-ink-muted);
+    border-radius: 0;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink); background-clip: content-box; }
+
+/* ============================================================
+   09-brutalist.css  (scoped BIG BEEF layer)
+
+   Ported from /Users/yash113gadia/burger-landing/css/style.css.
+
+   The tokens in 01-tokens.css already remap colour, radius and shadow to
+   the neo-brutalist palette, so most components re-tone automatically.
+   This layer adds the structural language that tokens cannot: film grain,
+   hard 3px borders, uppercase Archivo Black type, and pressed interactions.
+
+   Every selector below targets a known BiteSite component. Nothing here
+   rewrites Bootstrap internals or global layout primitives, so the app
+   keeps its flow while the surfaces read as BIG BEEF.
+   ============================================================ */
+
+/* ---------- Film grain over the whole canvas ---------- */
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch''/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n%23)' opacity='0.06'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    /* Oversized fixed elements (inset:-50% / 200%) create phantom scrollable
+       overflow on some browsers and block reaching the page bottom. The overlay
+       is exactly the viewport; the grain moves via a pure translate so it never
+       extends the scrollable area. */
+    overflow: hidden;
+    animation: grain 8s steps(10) infinite;
+}
+@keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-5%, -10%); }
+    20% { transform: translate(-15%, 5%); }
+    30% { transform: translate(7%, -25%); }
+    40% { transform: translate(-5%, 25%); }
+    50% { transform: translate(-15%, 10%); }
+    60% { transform: translate(15%, 0%); }
+    70% { transform: translate(0%, 15%); }
+    80% { transform: translate(3%, 35%); }
+    90% { transform: translate(-10%, 10%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    body::after { animation: none; }
+}
+
+/* ---------- Display type: Archivo Black, uppercase, tight ---------- */
+h1, h2, h3, h4, h5, h6,
+.navbar-brand,
+.page-header h1,
+.page-header h2,
+.card-title,
+.menu-card-name,
+.order-card-token,
+.account-section-title,
+.auth-card h1,
+.auth-card h2,
+.state-panel h4,
+.bottom-nav-item,
+.badge {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+h1, h2, h3 {
+    font-weight: 400; /* Archivo Black is already heavy */
+}
+
+/* ---------- Buttons: hard border + offset shadow + press ---------- */
+.btn {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 4px 4px 0 var(--color-ink);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-display);
+    transition: transform 100ms ease, box-shadow 100ms ease, background-color 120ms ease;
+}
+.btn:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--color-ink);
+}
+.btn:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0 0 0 var(--color-ink);
+}
+.btn-sm {
+    border-width: 2px;
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+.btn-primary { background: var(--color-primary); color: #fff; }
+.btn-primary:hover, .btn-primary:focus { background: var(--color-primary-dark); color: #fff; }
+.btn-accent { background: var(--color-accent-tint); color: var(--color-ink); }
+.btn-accent:hover, .btn-accent:focus { background: var(--color-coral-deep); color: var(--color-ink); }
+.btn-success { background: var(--color-accent-tint); color: var(--color-ink); }
+.btn-success:hover { background: var(--color-coral-deep); color: var(--color-ink); }
+.btn-outline-secondary { background: var(--color-surface-food); border-color: var(--color-ink); color: var(--color-ink); }
+.btn-outline-primary { background: var(--color-surface); border-color: var(--color-ink); color: var(--color-ink); }
+.btn-outline-primary:hover { background: var(--color-primary); border-color: var(--color-ink); color: #fff; }
+
+/* ---------- Cards: hard 3px border, offset shadow ---------- */
+.card,
+.menu-card,
+.cart-item-card,
+.order-card,
+.outlet-card,
+.account-section,
+.auth-card,
+.state-panel {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 5px 5px 0 var(--color-ink);
+}
+.card:hover,
+.menu-card:hover,
+.order-card:hover,
+.outlet-card:hover {
+    box-shadow: 7px 7px 0 var(--color-ink);
+}
+
+/* Menu cards: keep the photo square, harden the edge */
+.menu-card-photo {
+    border-bottom: 3px solid var(--color-ink);
+}
+
+/* ---------- Forms: hard field edges ---------- */
+.form-control, .form-select, .input-group-text {
+    border: 2px solid var(--color-ink);
+    border-radius: 0;
+    background: var(--color-field);
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--color-ink);
+    background: #fff;
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+.form-check-input:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-ink);
+}
+
+/* ---------- Category chips: hard active rule ---------- */
+.category-chips-wrapper {
+    border-bottom: 3px solid var(--color-ink);
+}
+.category-chip.active::after {
+    height: 3px;
+    background: var(--color-primary);
+    border-radius: 0;
+}
+
+/* ---------- Quantity stepper: hard square buttons ---------- */
+.qty-stepper,
+.cart-control__stepper {
+    border: 2px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 2px 2px 0 var(--color-ink);
+    background: var(--color-surface);
+}
+.qty-stepper button,
+.cart-control__stepper button {
+    border-radius: 0;
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+}
+.qty-stepper button:hover,
+.cart-control__stepper button:hover {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+/* ---------- Sticky cart bar: hard top edge ---------- */
+
+/* ---------- Tables: hard header ---------- */
+.table thead th {
+    color: var(--color-ink);
+}
+
+/* ---------- Alerts: hard edges ---------- */
+
+/* ---------- Navbar: hard bottom border ---------- */
+
+/* ---------- Bottom nav: hard top border ---------- */
+@media (max-width: 767.98px) {
+    .bottom-nav {
+        border-top: 3px solid var(--color-ink);
+        border-radius: 0;
+        background: rgba(242, 234, 217, 0.94);
+        box-shadow: 0 -3px 0 var(--color-ink);
+    }
+    .bottom-nav-item.active {
+        color: var(--color-primary-dark);
+    }
+}
+
+/* ---------- Focus ring: thick black ---------- */
+:focus-visible {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 2px;
+}
+
+/* ---------- Page header: hard rule ---------- */
+.page-header {
+    border-bottom: 3px solid var(--color-ink);
+}
+
+/* ---------- Selection ---------- */
+::selection {
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+}
+
+/* ============================================================
+   09-student-brutalist — page headers, cards, controls in the
+   BIG BEEF language: 3px black borders, hard offset shadows,
+   square corners, uppercase Archivo Black type.
+   ============================================================ */
+
+/* ---------- Page header banner ---------- */
+.page-header {
+    background: var(--color-surface);
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 6px 6px 0 var(--color-ink);
+}
+.page-header::before { display: none; }
+.page-header-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0;
+}
+
+/* ---------- Search bar: hard-edged slot ---------- */
+.search-bar input {
+    border: none;
+    background: transparent;
+}
+.search-bar input:focus { background: transparent; }
+.search-bar:focus-within {
+    border-color: var(--color-ink);
+    box-shadow: 2px 2px 0 var(--color-ink);
+}
+
+/* ---------- Category chips: square tiles ---------- */
+.cat-chip-icon {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 3px 3px 0 var(--color-ink);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.category-chip:hover .cat-chip-icon {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--color-ink);
+}
+.category-chip.active .cat-chip-icon {
+    background: var(--color-accent-tint);
+    border-color: var(--color-ink);
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+.cat-chip-label {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+}
+.category-chip.active .cat-chip-label { color: var(--color-ink); }
+.category-chip.is-scroll-active .cat-chip-icon {
+    border-color: var(--color-ink);
+}
+
+/* ---------- Deal cards (featured rail) ---------- */
+.deal-card:hover { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--color-ink); }
+.deal-card-photo { border-radius: 0; }
+.deal-card-photo img,
+.deal-card-photo.is-illustration img { border-radius: 0; }
+.deal-card:active { transform: translate(4px, 4px); box-shadow: 1px 1px 0 var(--color-ink); }
+
+/* ---------- Menu cards ---------- */
+.menu-card {
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.menu-card:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+.menu-card:active { transform: translate(4px, 4px); }
+.menu-card-photo { border-radius: 0; }
+.menu-card-photo img { border-radius: 0; }
+.menu-card-price {
+    font-family: var(--font-display);
+}
+
+/* ---------- Floating add button: square, hard shadow ---------- */
+.btn-add {
+    border-radius: 0;
+    border: 3px solid var(--color-ink);
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+.btn-add:hover {
+    background: var(--color-primary);
+    color: #fff;
+    transform: none;
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+.btn-add:active {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 var(--color-ink);
+}
+
+/* ---------- Cart rows: ledger lines stay, harden photo ---------- */
+.cart-item-card {
+    border-bottom: 3px solid var(--color-ink);
+}
+.cart-item-photo {
+    border-radius: 0;
+    border: 3px solid var(--color-ink);
+}
+
+/* ---------- Quantity stepper: square block ---------- */
+.cart-control__stepper,
+.qty-stepper {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 3px 3px 0 var(--color-ink);
+    background: var(--color-surface);
+}
+.cart-control__stepper button,
+.qty-stepper button {
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-ink);
+}
+.cart-control__stepper button:hover,
+.qty-stepper button:hover {
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+}
+.cart-control__stepper .qty-value,
+.qty-stepper .qty-value {
+    font-family: var(--font-display);
+    font-weight: 400;
+}
+
+/* ---------- Sticky cart bar ---------- */
+.sticky-cart-bar {
+    border-top: 3px solid var(--color-ink);
+    box-shadow: none;
+    background: var(--color-accent-tint);
+}
+#sticky-cart-bar .btn { box-shadow: 2px 2px 0 var(--color-ink); }
+
+/* ---------- Order cards ---------- */
+.order-card {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 5px 5px 0 var(--color-ink);
+}
+.order-card:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+.order-card-token {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+}
+
+/* ---------- Account sections ---------- */
+.account-section {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 5px 5px 0 var(--color-ink);
+    overflow: hidden;
+}
+.account-section > .account-row:first-child,
+.account-section > .account-row:last-child,
+.account-section > .account-row:only-of-type { border-radius: 0; }
+.account-row { border-radius: 0; }
+.account-row:hover { background: var(--color-surface-deep); }
+.account-section-title {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ---------- State panels (empty states) ---------- */
+.state-panel {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 6px 6px 0 var(--color-ink);
+}
+.state-panel h4 {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+.state-panel .btn-primary {
+    background: var(--color-primary);
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 3px 3px 0 var(--color-ink);
+    text-transform: uppercase;
+    font-family: var(--font-display);
+}
+.state-panel .btn-primary:hover {
+    background: var(--color-primary-dark);
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--color-ink);
+}
+
+/* ---------- Form selects / inputs: square ---------- */
+.form-select, .form-control {
+    border-radius: 0;
+    border: 2px solid var(--color-ink);
+}
+.form-select:focus, .form-control:focus {
+    border-color: var(--color-ink);
+    box-shadow: 3px 3px 0 var(--color-ink);
+}
+.form-label {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+}
+
+/* ---------- Badges: square pills ---------- */
+.badge {
+    border-radius: 0;
+    border: 2px solid var(--color-ink);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+}
+
+/* ---------- Tables: hard frame, yellow head ---------- */
+.table {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 5px 5px 0 var(--color-ink);
+}
+.table thead th {
+    background: var(--color-accent-tint);
+    border-bottom: 3px solid var(--color-ink);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-weight: 400;
+}
+
+/* ---------- Alerts ---------- */
+.alert {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 4px 4px 0 var(--color-ink);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+}
+
+/* ---------- Navbar: hard bottom rule ---------- */
+
+/* ---------- Auth card ---------- */
+.auth-card {
+    border: 3px solid var(--color-ink);
+    box-shadow: 6px 6px 0 var(--color-ink);
+}
+/* 04-auth styles these fields as underlines: a hairline beneath the text and
+   `padding: 0.5rem 1.75rem 0.5rem 0`, where zero left padding is correct because there
+   is no left edge to sit away from. This layer turns them back into bordered boxes but
+   never restored the padding, so every value and placeholder rendered flush against the
+   new border. The box and its padding have to be introduced together. */
+.field__input {
+    border: 2px solid var(--color-ink);
+    border-radius: 0;
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+}
+/* Room for the reveal button, measured from the field's inner edge. */
+.field__input--pw { padding-right: 3rem; }
+
+.field__input:focus {
+    border-color: var(--color-ink);
+    box-shadow: 3px 3px 0 var(--color-ink);
+    outline: none;
+}
+
+/* The reveal button was drawing an opaque near-white tile (--color-field) hard against
+   the field's right border, so it read as a separate control bolted onto the input
+   rather than an affordance inside it. It belongs *in* the field: no fill, no edge of
+   its own, and inset far enough not to sit on the border it was overlapping. */
+.field__toggle {
+    background: transparent;
+    border: none;
+    right: 3px;
+    padding: 6px 9px;
+    color: var(--color-ink-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.field__toggle:hover,
+.field__toggle:focus-visible {
+    background: transparent;
+    color: var(--color-ink);
+}
+.field__toggle:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: -2px;
+}
+.field__label {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+}
+
+/* ---------- Queue cards (canteen) ---------- */
+.queue-card,
+[class*="queue-"] .card {
+    border: 3px solid var(--color-ink);
+    border-radius: 0;
+    box-shadow: 5px 5px 0 var(--color-ink);
+}

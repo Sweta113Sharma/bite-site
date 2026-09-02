@@ -22,83 +22,81 @@
 
 :root {
     /* ============================================================
-       BiteSite — Stitch "Editorial" app system.
-       Ported from the app design in Stitch (project 15449988834297890483),
-       whose 12 screens all share one 51-token palette.
+       BiteSite — BIG BEEF / burger-landing neo-brutalist system.
+       Ported from /Users/yash113gadia/burger-landing/css/style.css.
 
-       Two deliberate departures from the raw export, both contrast-driven:
-       the export's own hairline (#E5E5E5, 1.2:1 on canvas) is kept for
-       decorative dividers only and never for a control boundary — inputs
-       use --color-field-rule instead, which clears the 3:1 WCAG 1.4.11 asks
-       of a control edge. And the warning tone is darkened from the old
-       #B5811B (3.26:1, a text failure) to #8A5A00 (5.63:1).
+       Bone canvas, near-black 3px borders, hard offset shadows,
+       red + yellow accents, Archivo Black uppercase type.
        ============================================================ */
 
-    /* --- Surfaces. Near-white canvas, pure-white cards. --- */
-    --color-bg:            #F9F9F9;  /* background / surface */
-    --color-surface:       #FFFFFF;  /* pure-white — cards, sheets */
-    --color-field:         #F3F3F3;  /* surface-container-low — inputs, pills */
-    --color-field-border:  #E5E5E5;  /* surface-border — decorative only */
-    --color-field-rule:    #8A726C;  /* outline — 4.24:1, the real control edge */
-    --color-surface-food:  #F3F3F3;  /* surface-container-low */
-    --color-surface-deep:  #E8E8E8;  /* surface-container-high — pressed/active */
+    /* --- Surfaces. Warm bone canvas, bone cards. --- */
+    --color-bg:            #f2ead9;  /* bone canvas */
+    --color-surface:       #f2ead9;  /* bone cards */
+    --color-field:         #fffdf6;  /* inputs — lighter bone */
+    --color-field-border:  #14100d;  /* control edge — near-black */
+    --color-field-rule:    #14100d;
+    --color-surface-food:  #f2ead9;
+    --color-surface-deep:  #e6dcc4;  /* pressed/active */
 
-    --color-ink:       #1A1A1A;  /* text-main   16.5:1 on canvas */
-    --color-ink-muted: #666666;  /* text-muted   5.45:1 on canvas */
-    --color-border:    #E5E5E5;  /* surface-border */
+    --color-ink:       #14100d;  /* near-black */
+    --color-ink-muted: #5c5247;  /* warm grey */
+    --color-border:    #14100d;
 
-    /* --- Terracotta is the primary action colour in this system. --- */
-    --color-primary:      #9F3C25;  /* 6.34:1 on canvas, 6.67:1 behind white */
-    --color-primary-dark: #822712;  /* on-primary-fixed-variant — hover/pressed */
-    --color-primary-soft: #FFB4A3;  /* primary-fixed-dim — decorative fills only */
-    --color-primary-tint: #FFDAD2;  /* primary-fixed */
+    /* --- Terracotta red is the primary action colour. --- */
+    --color-primary:      #e8281e;  /* red */
+    --color-primary-dark: #b81f16;  /* red-dark */
+    --color-primary-soft: #ff6a5e;
+    --color-primary-tint: #ffd9d4;
 
-    /* --- Sage is secondary: ratings, positive accents. --- */
-    --color-accent:        #486459;  /* secondary  6.15:1 on canvas */
-    --color-accent-strong: #486459;  /* text-safe at the same value */
-    --color-accent-tint:   #C8E7D9;  /* secondary-container */
+    /* --- Yellow accents. --- */
+    --color-accent:        #14100d;
+    --color-accent-strong: #14100d;
+    --color-accent-tint:   #ffc918;
 
-    /* --- Status. Success borrows the teal tertiary. --- */
-    --color-success:      #006762;  /* tertiary  6.40:1 */
-    --color-success-tint: #C8E7D9;
-    --color-warning:      #8A5A00;  /* darkened for text safety, 5.63:1 */
-    --color-warning-tint: #FBF0DA;
-    --color-info:         #006762;
-    --color-info-tint:    #F3FFFD;
-    --color-danger:       #BA1A1A;  /* error  6.14:1 */
-    --color-danger-tint:  #FFDAD6;  /* error-container */
+    /* --- Status. --- */
+    --color-success:      #14100d;
+    --color-success-tint: #ffc918;
+    --color-warning:      #14100d;
+    --color-warning-tint: #ffc918;
+    --color-info:         #14100d;
+    --color-info-tint:    #ffc918;
+    --color-danger:       #e8281e;
+    --color-danger-tint:  #ffd9d4;
 
-    --color-nav: #FFFFFF;
+    --color-nav: #f2ead9;
 
-    /* --- Shape. Far tighter than the old system: the export caps at 12px. --- */
-    --radius-sm:   4px;   /* rounded-lg  — images, small controls */
-    --radius-md:   8px;   /* rounded-xl  — cards, buttons */
-    --radius-lg:   12px;  /* rounded-full in this config — sheets, steppers */
-    --radius-pill: 12px;  /* the export's "full" really is 12px, not 999px */
+    /* --- Shape. Brutalist: tight radii, hard edges. --- */
+    --radius-sm:   0px;
+    --radius-md:   2px;
+    --radius-lg:   2px;
+    --radius-pill: 2px;
 
-    /* --- Depth. Tailwind shadow-sm / shadow-md, as the export uses. --- */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.10);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.10);
-    --shadow-sticky: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    /* --- Depth. Hard offset shadows, no soft blur. --- */
+    --shadow-sm: 3px 3px 0 #14100d;
+    --shadow-md: 5px 5px 0 #14100d;
+    --shadow-lg: 8px 8px 0 #14100d;
+    --shadow-sticky: 0 -3px 0 #14100d;
 
-    --color-coral:      #FFDAD2;
-    --color-coral-deep: #FFB4A3;
+    --color-coral:      #ffc918;
+    --color-coral-deep: #ffb300;
 
-    /* --- Type. One family, as the export ships. --- */
-    --font-display: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+    /* --- Focus ring: thick black outline. --- */
+    --focus-ring: 0 0 0 3px #14100d;
 
-    /* --- Type scale, lifted from the export's fontSize config. --- */
-    --text-display-lg:  32px;  --lh-display-lg:  40px;
-    --text-headline-lg: 24px;  --lh-headline-lg: 32px;
-    --text-headline-md: 20px;  --lh-headline-md: 28px;
+    /* --- Type. Archivo for body, Archivo Black for display. --- */
+    --font-display: 'Archivo Black', system-ui, sans-serif;
+    --font-body:    'Archivo', system-ui, -apple-system, sans-serif;
+
+    /* --- Type scale. --- */
+    --text-display-lg:  40px;  --lh-display-lg:  40px;
+    --text-headline-lg: 28px;  --lh-headline-lg: 32px;
+    --text-headline-md: 22px;  --lh-headline-md: 28px;
     --text-body-lg:     16px;  --lh-body-lg:     24px;
     --text-body-md:     14px;  --lh-body-md:     20px;
     --text-label-lg:    14px;  --lh-label-lg:    20px;
     --text-label-sm:    12px;  --lh-label-sm:    16px;
 
-    /* --- Spacing scale from the export. --- */
+    /* --- Spacing scale. --- */
     --stack-xs: 4px;
     --stack-sm: 12px;
     --stack-md: 24px;
@@ -112,6 +110,15 @@
 }
 
 
+/* `text-wrap` is a shorthand for text-wrap-mode + text-wrap-style, so `text-wrap: pretty`
+   also sets mode back to its initial `wrap` — on every element in the document. That
+   silently defeats any `white-space: nowrap` that relies on inheritance: the parent
+   computes nowrap, and this rule then applies `wrap` directly to each child, which beats
+   an inherited value. It is why the marquee strip broke each "FRESH · FAST · FIERCE" onto
+   three lines despite its track being explicitly nowrap.
+
+   The longhand asks for the thing that was actually wanted — nicer line breaking — and
+   leaves wrapping mode alone. */
 * {
-    text-wrap: pretty;
+    text-wrap-style: pretty;
 }

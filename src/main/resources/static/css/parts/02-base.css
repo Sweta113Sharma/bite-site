@@ -1,4 +1,29 @@
 /* ============================================================
+   02-base.css — Base and Bootstrap overrides
+
+   Reset, view transitions, the top and bottom navigation, and the overrides that
+   retune Bootstrap's buttons, cards, forms, badges, tables and alerts to this
+   design system. Everything else builds on what is here.
+
+   Part of an ordered set linked in fragments/head.html. The browser applies these
+   in link order and THAT ORDER IS THE CASCADE — a rule here can only override one
+   in an earlier file. Do not reorder the links, and do not move a rule between
+   files without checking what it then stops overriding.
+   ============================================================ */
+
+/* ============================================================
+   app.css — BiteSite consolidated component stylesheet.
+
+   This file merges the former 02-base → 08-redesign cascade into a
+   single ordered sheet. 01-tokens.css (design tokens) loads before it
+   and is the only other stylesheet this app ships.
+
+   The merge is faithful: where the old files overrode each other,
+   the winning (later-file) value is preserved here, so rendering is
+   unchanged. The content remains in its original cascade order; a
+   scoped polish layer is appended at the end.
+   ============================================================ */
+/* ============================================================
    02-base.css  (2 of 6)
 
    Shared primitives used by every portal: view transitions, navbar, bottom nav,
@@ -38,7 +63,7 @@
 
 @keyframes view-transition-fade-in {
     from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: none; }
 }
 
 @keyframes view-transition-fade-out {
@@ -72,12 +97,28 @@ h4 { font-size: var(--text-headline-md); line-height: var(--lh-headline-md); fon
 h5 { font-size: var(--text-headline-md); line-height: var(--lh-headline-md); font-weight: 600; }
 h6 { font-size: var(--text-label-lg);    line-height: var(--lh-label-lg);    font-weight: 600; }
 
-/* Material Symbols, the icon set the app design uses. Phosphor stays loaded for the
-   staff portals; the two coexist because they key off different class names. */
+/* Material Symbols, the icon set used across the whole product. */
 .material-symbols-outlined {
+    /* The font-family used to come from the Google CDN stylesheet; now that the
+       font is self-hosted this rule must carry it, or ligatures render as text. */
+    font-family: 'Material Symbols Outlined';
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     vertical-align: middle;
     user-select: none;
+
+    /* An icon is chosen by ligature: the element's text is the icon's name, and the
+       font substitutes a glyph for that exact lowercase letter sequence. Anything that
+       alters the letters or their spacing before shaping stops the substitution
+       matching, and the name renders as words instead.
+       `.btn` sets `text-transform: uppercase` and `letter-spacing: 0.05em`, so every
+       icon inside a button was drawing the literal text — "LOGOUT" beside the word
+       Logout. These three lines are load-bearing, not defensive tidying. */
+    text-transform: none;
+    letter-spacing: normal;
+    font-variant-ligatures: normal;
+    /* The names contain underscores and can be long; nothing here should ever wrap. */
+    white-space: nowrap;
+    word-break: normal;
 }
 .material-symbols-outlined.is-filled { font-variation-settings: 'FILL' 1; }
 .ms-20 { font-size: 20px; }
@@ -89,10 +130,6 @@ a {
 }
 a:hover { color: var(--color-primary); }
 
-::selection {
-    background: var(--color-primary-tint);
-    color: var(--color-primary-dark);
-}
 
 /* ---------- Layout ---------- */
 
@@ -116,26 +153,21 @@ a:hover { color: var(--color-primary); }
    "generic SaaS with an orange button" read. The reference has no dark surfaces
    at all; the canvas simply continues to the top of the screen and the brand mark
    carries the identity. */
-.navbar {
-    position: relative;
-    background: var(--color-nav) !important;
-    padding-top: 0.9rem;
-    padding-bottom: 0.9rem;
-    box-shadow: none;
-}
 
-/* A phone should never scroll sideways. Anything that overflows its container is a
-   bug, but this keeps one from taking the whole page with it. */
-html, body { overflow-x: hidden; }
+/* A phone should never scroll sideways. Anything that overflows its container is a bug,
+   but this keeps one from taking the whole page with it.
+
+   `clip`, not `hidden`. They look the same and behave very differently: `hidden` makes
+   the element a scroll container, which silently disables `position: sticky` for every
+   descendant — the top navbar and the menu's category strip both declared `sticky` and
+   neither ever stuck. `clip` crops the overflow without creating a scrollport, so the
+   guard stays and sticky works. */
+html, body { overflow-x: clip; }
 
 .navbar-toggler-custom {
-    background: transparent;
-    border: none;
-    color: var(--color-ink);
     font-size: 1.5rem;
     line-height: 1;
     padding: 4px 8px;
-    border-radius: var(--radius-sm);
     transition: background-color 150ms ease;
 }
 .navbar-toggler-custom:hover,
@@ -157,10 +189,8 @@ html, body { overflow-x: hidden; }
     top: 100%;
     left: 0;
     right: 0;
-    background: var(--color-surface-food);
     border-radius: 0 0 var(--radius-md) var(--radius-md);
     padding: 0.5rem 1rem 1rem;
-    box-shadow: var(--shadow-md);
     z-index: 1030;
     animation: fade-up 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -188,29 +218,14 @@ html, body { overflow-x: hidden; }
 /* Terracotta wordmark on cream — the brand carries the top of the page now that
    there's no dark slab doing it. Matches the reference, whose own wordmark is the
    one strongly orange element on the screen. */
-.navbar-brand {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.25rem;
-    letter-spacing: -0.01em;
-    color: var(--color-accent-strong) !important;
-}
 
 .navbar-brand img {
-    border-radius: 8px;
+    border-radius: 0;
 }
 
 .navbar .nav-link {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--color-ink-muted) !important;
     padding: 0.45rem 0.85rem !important;
-    border-radius: var(--radius-pill);
     transition: color 150ms ease, background-color 150ms ease;
-}
-.navbar .nav-link:hover {
-    color: var(--color-ink) !important;
-    background: var(--color-surface-deep);
 }
 
 .navbar .navbar-text {
@@ -248,13 +263,9 @@ html, body { overflow-x: hidden; }
         z-index: 1050;
         height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
         padding-bottom: var(--safe-area-bottom);
-        background: rgba(251, 228, 208, 0.92);
-        backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        
+        
         border: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.6);
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-        box-shadow: 0 -8px 24px -6px rgba(70, 45, 25, 0.12);
         align-items: stretch;
     }
 
@@ -282,9 +293,6 @@ html, body { overflow-x: hidden; }
         transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    .bottom-nav-item.active {
-        color: var(--color-primary-dark);
-    }
 
     .bottom-nav-item.active i {
         transform: scale(1.15) translateY(-2px);
@@ -301,7 +309,7 @@ html, body { overflow-x: hidden; }
         right: calc(50% - 18px);
         min-width: 18px;
         height: 18px;
-        border-radius: 9px;
+        border-radius: 0;
         background: var(--color-accent-strong);
         color: #fff;
         font-size: 0.65rem;
@@ -311,7 +319,7 @@ html, body { overflow-x: hidden; }
         justify-content: center;
         padding: 0 5px;
         line-height: 1;
-        box-shadow: 0 2px 6px rgba(158, 58, 24, 0.4);
+        box-shadow: none;
         animation: badge-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
@@ -330,12 +338,9 @@ html, body { overflow-x: hidden; }
    at phone size they're the most tactile thing on screen, which is right for the
    one control that commits an order. */
 .btn {
-    font-family: var(--font-display);
     font-weight: 700;
     font-size: 0.95rem;
-    border-radius: var(--radius-pill);
     padding: 0.6rem 1.4rem;
-    transition: transform 120ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
 /* Bootstrap ships .btn-sm, but this file loads after Bootstrap and .btn matches at
    the same specificity, so the padding above was silently beating it and every
@@ -347,32 +352,18 @@ html, body { overflow-x: hidden; }
     font-size: 0.85rem;
 }
 
-.btn:active { transform: scale(0.97); }
 .btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 .btn-primary {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #fff;
-    box-shadow: 0 6px 16px -8px rgba(69, 124, 92, 0.55);
+    box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover, .btn-primary:focus {
-    background: var(--color-primary-dark);
-    border-color: var(--color-primary-dark);
-    color: #fff;
-    box-shadow: 0 10px 22px -10px rgba(69, 124, 92, 0.65);
+    box-shadow: var(--shadow-sm);
 }
 
-.btn-outline-primary { color: var(--color-primary-dark); border-color: var(--color-primary); }
-.btn-outline-primary:hover { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
 /* Secondary reads as a soft peach chip rather than a hairline outline — an outlined
    button on a peach card is two thin lines competing; a filled tonal chip is calmer. */
-.btn-outline-secondary {
-    color: var(--color-ink);
-    background: var(--color-surface-deep);
-    border-color: transparent;
-}
 .btn-outline-secondary:hover {
     background: var(--color-coral-deep);
     border-color: transparent;
@@ -382,25 +373,20 @@ html, body { overflow-x: hidden; }
 /* Terracotta button — for appetite/brand moments, never for confirm/pay.
    Uses the strong tone so white label text clears 5.37:1. */
 .btn-accent {
-    background: var(--color-accent-strong);
     border-color: var(--color-accent-strong);
-    color: #fff;
 }
 .btn-accent:hover, .btn-accent:focus {
-    background: #7F2E12;
-    border-color: #7F2E12;
-    color: #fff;
+    border-color: var(--color-ink);
 }
 
-.btn-success { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
-.btn-success:hover { background: var(--color-primary-dark); border-color: var(--color-primary-dark); color: #fff; }
+.btn-success {border-color: var(--color-primary);}
+.btn-success:hover {border-color: var(--color-primary-dark);}
 
 .btn-warning { background: var(--color-warning); border-color: var(--color-warning); color: #fff; }
-.btn-warning:hover { background: #96690f; border-color: #96690f; color: #fff; }
+.btn-warning:hover { background: var(--color-coral-deep); border-color: var(--color-ink); color: #fff; }
 
 .btn-danger, .btn-outline-danger:hover { background: var(--color-danger); border-color: var(--color-danger); }
 
-.btn-lg { padding: 0.85rem 1.75rem; font-size: 1rem; }
 
 /* ============================================================
    CARDS
@@ -413,8 +399,6 @@ html, body { overflow-x: hidden; }
    ============================================================ */
 
 .card {
-    background: var(--color-surface);
-    border: none;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     transition: box-shadow 180ms ease, transform 180ms ease;
@@ -439,22 +423,15 @@ html, body { overflow-x: hidden; }
 .form-control, .form-select {
     border-radius: var(--radius-sm);
     border: 1.5px solid var(--color-field-border);
-    background: var(--color-field);
     padding: 0.8rem 1rem;
     font-size: 0.95rem;
     color: var(--color-ink);
     transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
 .form-control::placeholder { color: var(--color-ink-muted); }
-.form-control:focus, .form-select:focus {
-    border-color: var(--color-primary);
-    background: #FFFFFF;
-    box-shadow: 0 0 0 3px var(--color-primary-tint);
-}
 
 .form-label {
     font-weight: 600;
-    font-size: 0.88rem;
     color: var(--color-ink);
     margin-bottom: 0.4rem;
 }
@@ -486,10 +463,6 @@ html, body { overflow-x: hidden; }
 }
 
 /* Toggle switches pick up the action color rather than Bootstrap's blue. */
-.form-check-input:checked {
-    background-color: var(--color-primary);
-    border-color: var(--color-primary);
-}
 .form-check-input:focus {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-tint);
@@ -504,7 +477,6 @@ html, body { overflow-x: hidden; }
     font-weight: 700;
     letter-spacing: 0.01em;
     padding: 0.45em 0.85em;
-    border-radius: var(--radius-pill);
 }
 
 .badge.bg-success { background: var(--color-primary) !important; color: #fff !important; }
@@ -519,19 +491,12 @@ html, body { overflow-x: hidden; }
    ============================================================ */
 
 .table {
-    border-radius: var(--radius-md);
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
 }
 .table thead th {
-    font-family: var(--font-display);
-    font-weight: 600;
     font-size: 0.82rem;
-    text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--color-ink-muted);
     border-bottom-width: 1px;
-    background: #F5F0E8;
 }
 .table td, .table th { vertical-align: middle; border-color: var(--color-border); }
 
@@ -539,11 +504,8 @@ html, body { overflow-x: hidden; }
    ALERTS
    ============================================================ */
 
-.alert { border-radius: var(--radius-md); border: none; font-size: 0.92rem; padding: 0.9rem 1.1rem; }
 .alert-secondary { background: var(--color-surface-food); color: var(--color-ink-muted); }
 .alert-success { background: var(--color-primary-tint); color: var(--color-primary-dark); }
-.alert-danger { background: var(--color-danger-tint); color: var(--color-danger); }
-.alert-warning { background: var(--color-warning-tint); color: var(--color-warning); }
 .alert-info { background: var(--color-info-tint); color: var(--color-info); }
 .alert-primary { background: var(--color-primary-tint); color: var(--color-primary-dark); }
 
@@ -561,3 +523,179 @@ html, body { overflow-x: hidden; }
 .text-dark   { color: var(--color-ink) !important; }
 .bg-light    { background-color: var(--color-surface) !important; }
 .border-bottom, .border-top { border-color: var(--color-border) !important; }
+
+/* ============================================================
+   NAV DRAWER — every destination for the signed-in role.
+
+   In 02-base because all three portals use it. It slides from the right so the opening
+   gesture starts near the button that triggers it, and so it never fights the bottom tab
+   bar on a phone.
+   ============================================================ */
+
+.nav-drawer-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex: none;
+    padding: 0;
+    background: var(--color-surface);
+    border: 2px solid var(--color-ink);
+    border-radius: 0;
+    color: var(--color-ink);
+    box-shadow: 3px 3px 0 var(--color-ink);
+    cursor: pointer;
+}
+
+.nav-drawer-btn:hover { background: var(--color-accent-tint); }
+.nav-drawer-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--color-ink); }
+.nav-drawer-btn .material-symbols-outlined { font-size: 22px; }
+
+.nav-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    background: rgba(20, 16, 13, 0.55);
+    opacity: 0;
+    transition: opacity 180ms ease;
+}
+.nav-drawer-backdrop.is-open { opacity: 1; }
+
+.nav-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1101;
+    width: min(340px, 86vw);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-ink);
+    transform: translateX(100%);
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    overscroll-behavior: contain;
+}
+.nav-drawer.is-open { transform: translateX(0); }
+
+@media (prefers-reduced-motion: reduce) {
+    .nav-drawer, .nav-drawer-backdrop { transition: none; }
+}
+
+/* The page behind must not scroll while the drawer is over it. */
+body.has-drawer-open { overflow: hidden; }
+
+.nav-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 3px solid var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-bg);
+}
+
+.nav-drawer__who {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.nav-drawer__who .material-symbols-outlined { font-size: 20px; flex: none; }
+
+.nav-drawer__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    padding: 0;
+    background: transparent;
+    border: 2px solid var(--color-bg);
+    border-radius: 0;
+    color: var(--color-bg);
+    cursor: pointer;
+}
+.nav-drawer__close:hover { background: var(--color-primary-dark); }
+
+.nav-drawer__body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px 0 12px;
+}
+
+.nav-drawer__group { padding: 8px 0; }
+.nav-drawer__group + .nav-drawer__group { border-top: 2px solid var(--color-field-rule); }
+
+.nav-drawer__label {
+    margin: 0 0 2px;
+    padding: 4px 16px;
+    font-family: var(--font-display);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--color-ink-muted);
+}
+
+.nav-drawer__link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    min-height: 44px;
+    color: var(--color-ink);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.nav-drawer__link .material-symbols-outlined { font-size: 20px; flex: none; }
+.nav-drawer__link:hover { background: var(--color-accent-tint); color: var(--color-ink); }
+
+.nav-drawer__link[aria-current="page"] {
+    background: var(--color-ink);
+    color: var(--color-accent-tint);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+}
+
+/* Counts ride to the right of their row, so cart and order state is visible without
+   opening either page. */
+.nav-drawer__count {
+    margin-left: auto;
+    min-width: 22px;
+    padding: 1px 6px;
+    text-align: center;
+    background: var(--color-primary-dark);
+    color: #fff;
+    border: 2px solid var(--color-ink);
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+}
+
+/* Legal links are references, not destinations you go to often. */
+.nav-drawer__group--quiet .nav-drawer__link {
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+    min-height: 38px;
+    padding-block: 8px;
+}
+
+.nav-drawer__foot {
+    flex: none;
+    padding: 12px 14px calc(12px + var(--safe-area-bottom));
+    border-top: 3px solid var(--color-ink);
+    margin: 0;
+}
