@@ -22,7 +22,14 @@ command -v az >/dev/null || fail "Azure CLI not found. Install it, or run this i
 az account show >/dev/null 2>&1 || fail "Not logged in. Run: az login"
 
 bold "==> Locating the web app"
-RESOURCE_GROUP="${RESOURCE_GROUP:-$(az webapp list --query "[?name=='$APP_NAME'].resourceGroup | [0]" -o tsv)}"
+# Default to the known group and only fall back to a subscription-wide search if it is
+# wrong. `az webapp list` enumerates every site in the subscription and can stall for
+# tens of seconds behind a token refresh, which looked like the script had hung.
+RESOURCE_GROUP="${RESOURCE_GROUP:-bitesite-rg}"
+if ! az webapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" -o none 2>/dev/null; then
+  echo "    not in '$RESOURCE_GROUP' — searching the subscription (this can take 30s)…"
+  RESOURCE_GROUP="$(az webapp list --query "[?name=='$APP_NAME'].resourceGroup | [0]" -o tsv)"
+fi
 [ -n "$RESOURCE_GROUP" ] || fail "Could not find a web app named '$APP_NAME'. Set APP_NAME/RESOURCE_GROUP and retry."
 echo "    app:            $APP_NAME"
 echo "    resource group: $RESOURCE_GROUP"
@@ -33,6 +40,11 @@ bold "==> Razorpay credentials"
 echo "    Dashboard > Account & Settings > API Keys for the first two."
 echo "    Nothing you type is echoed."
 echo
+
+# Anything typed while the Azure lookup was running is still sitting in the terminal
+# buffer and would otherwise be swallowed by the first prompt — an arrow key becomes an
+# escape sequence in the middle of your key id, and the script rejects it as malformed.
+while read -r -t 0; do read -r -n 10000 -s _discard || break; done 2>/dev/null || true
 
 read -r  -p "  RAZORPAY_KEY_ID (rzp_live_… or rzp_test_…): " KEY_ID
 read -rs -p "  RAZORPAY_KEY_SECRET: " KEY_SECRET; echo
@@ -50,6 +62,35 @@ esac
 
 # Catches the classic paste error: the secret is not the key id.
 [ "$KEY_SECRET" != "$KEY_ID" ] || fail "Key secret is identical to the key id — check what you pasted."
+
+# ---------------------------------------------------------------------------
+# Pre-flight: prove the credentials work BEFORE writing them.
+#
+# Without this the first time anyone learns a secret was mistyped is a customer
+# failing to pay. Razorpay's orders endpoint accepts HTTP basic auth with the
+# key id as the username and the secret as the password, so one authenticated
+# GET is enough to tell a good pair from a bad one. Nothing is created.
+# ---------------------------------------------------------------------------
+echo
+bold "==> Checking the credentials against Razorpay"
+HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+  -u "$KEY_ID:$KEY_SECRET" \
+  "https://api.razorpay.com/v1/orders?count=1" || echo "000")
+
+case "$HTTP_CODE" in
+  200) echo "    accepted by Razorpay (HTTP 200) — key id and secret match." ;;
+  401) fail "Razorpay rejected these credentials (HTTP 401). The key id and secret do not match, or the key is disabled. Nothing was changed." ;;
+  000) warn "    could not reach Razorpay to verify (network/timeout). Continuing without the check." ;;
+  *)   warn "    unexpected response from Razorpay (HTTP $HTTP_CODE). Continuing, but verify manually." ;;
+esac
+
+# The webhook secret cannot be verified this way — it is not an API credential,
+# it is a shared string you also paste into the dashboard. Getting it wrong
+# means captured payments are rejected with a 400 and orders never mark paid,
+# so it is worth re-reading before you continue.
+echo
+echo "    Webhook secret entered: ${#WEBHOOK_SECRET} characters."
+echo "    It cannot be verified from here — it must match the dashboard exactly."
 
 echo
 warn "==> Applying these settings RESTARTS $APP_NAME (expect ~30-60s of downtime)."

@@ -28,10 +28,19 @@ jobs:
     - name: Build with Maven
       run: mvn -DskipTests clean package
 
+    # v2 ships a jar through Kudu's ZIP Deploy, which extracts the archive and then
+    # rsyncs it into wwwroot. That is the step this workflow was failing on: a 20-minute
+    # upload followed by rsync of a single file erroring instantly, while the app kept
+    # serving the previous build — so pushes looked successful and shipped nothing.
+    #
+    # v3 with type: jar uses the OneDeploy API instead, which hands Azure the artifact
+    # directly with no extract-and-sync stage. That is the same path `az webapp deploy
+    # --type jar` takes, and it is what actually got the current build onto the site.
     - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v2
-      with: 
+      uses: azure/webapps-deploy@v3
+      with:
         app-name: 'bitesite-app'
         slot-name: 'production'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_492918a811ff43a0ace5cf7efce68199 }}
         package: '${{ github.workspace }}/target/*.jar'
+        type: 'jar'
