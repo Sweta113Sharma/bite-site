@@ -33,7 +33,14 @@ public class OrderHistoryController {
     @GetMapping
     public String history(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
         User user = principal.getUser();
-        model.addAttribute("orders", orderService.historyForUser(user.getId(), user.getTenantId()));
+        // The screen shows two groups. Active ones arrive via GlobalModelAttributes
+        // (they are needed on every customer page for the strip); this supplies only the
+        // finished ones, so nothing is listed twice.
+        List<Order> past = orderService.historyForUser(user.getId(), user.getTenantId()).stream()
+                .filter(o -> o.getStatus().isTerminal())
+                .toList();
+        model.addAttribute("orders", past);
+        model.addAttribute("pastOrders", past);
         model.addAttribute("pageTitle", "My orders");
         return "student/orders";
     }

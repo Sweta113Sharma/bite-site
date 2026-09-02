@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -197,6 +198,17 @@ public class OrderService {
 
     public List<Order> historyForUser(Long userId, Long tenantId) {
         return orderDao.findByUserId(userId, tenantId);
+    }
+
+    /**
+     * Unfinished orders, most urgent first — see {@link OrderStatus#attentionRank()}.
+     * Drives the active-order strip and the orders screen's "Active now" group.
+     */
+    public List<Order> liveForUser(Long userId, Long tenantId) {
+        return orderDao.findLiveByUserId(userId, tenantId).stream()
+                .sorted(Comparator.comparingInt((Order o) -> o.getStatus().attentionRank())
+                        .thenComparing(Order::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
     }
 
     public List<Order> kitchenQueue(Long tenantId, Long outletId) {

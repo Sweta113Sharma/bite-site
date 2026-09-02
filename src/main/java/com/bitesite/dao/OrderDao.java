@@ -20,6 +20,13 @@ public interface OrderDao {
     List<Order> findByUserId(Long userId, Long tenantId);
 
     /**
+     * A student's orders that are not finished. Read on every customer page render for
+     * the active-order strip, so it filters in SQL rather than loading the full history
+     * and discarding most of it.
+     */
+    List<Order> findLiveByUserId(Long userId, Long tenantId);
+
+    /**
      * One outlet's orders, newest first, optionally narrowed to a single status.
      * Bounded by an explicit limit rather than paged — the same shape AuditLogDao uses,
      * and the only bounding convention this codebase has.

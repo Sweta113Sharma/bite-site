@@ -115,6 +115,20 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    public List<Order> findLiveByUserId(Long userId, Long tenantId) {
+        // Terminal states are excluded here rather than in Java: this runs on every
+        // customer page, and a student with a long history should not pay to load it.
+        // idx_orders_user covers the user_id predicate.
+        List<Order> orders = jdbcTemplate.query(
+                "SELECT * FROM orders WHERE user_id = ? AND tenant_id = ? "
+                        + "AND status NOT IN ('COMPLETED', 'EXPIRED', 'CANCELLED') "
+                        + "ORDER BY created_at DESC",
+                ORDER_ROW_MAPPER, userId, tenantId);
+        attachItems(orders);
+        return orders;
+    }
+
+    @Override
     public List<Order> findByOutlet(Long tenantId, Long outletId, OrderStatus status, int limit) {
         // idx_orders_outlet_created (outlet_id, created_at) covers both the filter and the
         // sort. The status predicate is appended rather than always-present so the common
@@ -269,7 +283,12 @@ public class OrderDaoImpl implements OrderDao {
         // Java-side Timestamp parameter the driver shifted the cutoff by the server's UTC
         // offset, and a 10-minute timeout behaved as 5h40m against a database running in IST.
         return jdbcTemplate.query(
-                "SELECT * FROM orders WHERE status = 'AWAITING_PAYMENT' "
+                // PAYMENT_FAILED is swept alongside AWAITING_PAYMENT. Both mean "no money
+                // arrived"; the only difference is whether the gateway said so out loud.
+                // Leaving failures out meant they stayed live for ever — they surfaced a
+                // permanent red banner on every customer page, and the oldest on this
+                // database was two weeks old.
+                "SELECT * FROM orders WHERE status IN ('AWAITING_PAYMENT', 'PAYMENT_FAILED') "
                         + "AND created_at < NOW() - INTERVAL ? MINUTE",
                 ORDER_ROW_MAPPER, timeoutMinutes);
     }
