@@ -27,6 +27,12 @@
     <button id="pay-btn" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
         <span class="material-symbols-outlined">lock</span> Pay Securely via UPI
     </button>
+    <!-- Only for accounts with no number on file. Everyone else is prefilled and never
+         sees a form; telling them about a field they will not meet would be noise. -->
+    <p class="text-muted small mb-2" th:if="${#strings.isEmpty(payerPhone)}">
+        Razorpay will ask for your mobile number.
+        <a th:href="@{/account/profile}">Add it to your profile</a> to skip this next time.
+    </p>
     <a th:href="@{/student/cart}" class="text-muted small text-decoration-none d-inline-block mt-2">Cancel and return to cart</a>
 </div>
 
@@ -41,6 +47,9 @@
     /*<![CDATA[*/
     const razorpayKeyId = /*[[${razorpayKeyId}]]*/ '';
     const gatewayOrderId = /*[[${payment.razorpayOrderId}]]*/ '';
+    const payerName = /*[[${payerName}]]*/ '';
+    const payerEmail = /*[[${payerEmail}]]*/ '';
+    const payerPhone = /*[[${payerPhone}]]*/ '';
     const amountPaise = /*[[${amountPaise}]]*/ 0;
     const tokenNo = /*[[${order.tokenNo}]]*/ '';
     /*]]>*/
@@ -68,6 +77,16 @@
             name: 'BiteSite',
             description: 'Order ' + tokenNo,
             order_id: gatewayOrderId,
+            /* Razorpay asks for contact and email before it will take a payment, and with
+               nothing prefilled it asked every student, every time — at the one moment in
+               the product where friction costs an order. The account already holds all
+               three. Phone is optional at registration, so it can still be blank; Razorpay
+               then asks for just that one field instead of the whole form. */
+            prefill: {
+                name: payerName,
+                email: payerEmail,
+                contact: payerPhone
+            },
             handler: function (response) {
                 /* The signature is verified server-side before anything is marked paid —
                    see CheckoutController.confirm. Nothing here is trusted. */

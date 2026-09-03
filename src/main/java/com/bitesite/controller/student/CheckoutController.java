@@ -76,6 +76,12 @@ public class CheckoutController {
         model.addAttribute("payment", payment);
         model.addAttribute("amountPaise", amountPaise);
         model.addAttribute("razorpayKeyId", razorpayProperties.keyId());
+        // Handed to Razorpay's prefill so the student is not asked at the till for details
+        // this account already holds. Phone is optional at registration, so it may be blank
+        // — Razorpay asks for it only when it is, which is the point.
+        model.addAttribute("payerName", user.getName());
+        model.addAttribute("payerEmail", user.getEmail());
+        model.addAttribute("payerPhone", user.getPhone() == null ? "" : user.getPhone());
         model.addAttribute("pageTitle", "Pay for your order");
         return "student/checkout";
     }
