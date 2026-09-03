@@ -259,8 +259,7 @@ public class OrderService {
             // and nothing at all if the browser closed on the redirect back from Razorpay.
             orderNotifier.notifyOrderUpdate(order.getUserId(), "Order confirmed",
                     "We have your payment for order " + order.getTokenNo() + ". The canteen is on it — "
-                            + "you will hear from us again when it is ready to collect.",
-                    OrderNotifier.Delivery.PUSH_ONLY);
+                            + "you will hear from us again when it is ready to collect.");
         }
         return true;
     }
@@ -277,8 +276,7 @@ public class OrderService {
         if (newStatus == OrderStatus.READY_FOR_PICKUP) {
             String code = issuePickupCode(orderId, tenantId, order.getOutletId());
             orderNotifier.notifyOrderUpdate(order.getUserId(), "Order ready for pickup",
-                    "Your order " + order.getTokenNo() + " is ready — show code " + code + " at the counter.",
-                    OrderNotifier.Delivery.PUSH_AND_EMAIL);
+                    "Your order " + order.getTokenNo() + " is ready — show code " + code + " at the counter.");
         }
     }
 
@@ -362,8 +360,7 @@ public class OrderService {
         auditService.record(actorUserId, tenantId, "Order", orderId, "STATUS_CANCELLED", previous, OrderStatus.CANCELLED);
         orderNotifier.notifyOrderUpdate(order.getUserId(), "Order cancelled",
                 "Your order " + order.getTokenNo() + " was cancelled" + (previous == OrderStatus.PAID ? " and refunded" : "")
-                        + ": " + explanation,
-                OrderNotifier.Delivery.PUSH_AND_EMAIL);
+                        + ": " + explanation);
     }
 
     /**
@@ -424,8 +421,7 @@ public class OrderService {
         }
 
         orderNotifier.notifyOrderUpdate(order.getUserId(), "Refund issued",
-                "Your order " + order.getTokenNo() + " has been refunded. It should reach your account in 5-7 days.",
-                OrderNotifier.Delivery.PUSH_AND_EMAIL);
+                "Your order " + order.getTokenNo() + " has been refunded. It should reach your account in 5-7 days.");
         log.info("Manual refund on order {} (tenant {}) by user {}: {}", orderId, tenantId, actorUserId, reason);
     }
 

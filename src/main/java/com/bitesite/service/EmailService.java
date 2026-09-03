@@ -11,10 +11,6 @@ public interface EmailService {
      * receiving this unexpectedly needs to be told to ignore it, not to enter it. */
     void sendPasswordResetEmail(String toEmail, String recipientName, String code);
 
-    /** An order-status update: confirmed, ready, cancelled, refunded. Same wording the
-     * push notification carries, so a student who has both does not get two differently
-     * worded accounts of the same event. */
-    void sendOrderUpdateEmail(String toEmail, String recipientName, String subject, String body);
 
     /** A code sent to a proposed new address, to prove the person asking actually holds
      * it. Goes to the new address, never the old one — sending it to the old one would

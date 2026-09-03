@@ -99,36 +99,6 @@ public class SmtpEmailService implements EmailService {
             log.error("Failed to send password reset email to {}", toEmail, e);
         }
     }
-
-    @Async
-    @Override
-    public void sendOrderUpdateEmail(String toEmail, String recipientName, String subject, String body) {
-        if (!isConfigured()) {
-            log.warn("SMTP not configured — skipping order update email to {}", toEmail);
-            return;
-        }
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
-            helper.setFrom(fromAddress);
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText("""
-                    Hi %s,
-
-                    %s
-
-                    You can see the order in the app under My Orders.
-
-                    To stop these emails, turn off order notifications under Privacy & data
-                    in your account.
-                    """.formatted(recipientName, body));
-            mailSender.send(message);
-        } catch (Exception e) {
-            log.error("Failed to send order update email to {}", toEmail, e);
-        }
-    }
-
     @Async
     @Override
     public void sendEmailChangeEmail(String toEmail, String recipientName, String code) {

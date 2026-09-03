@@ -61,14 +61,16 @@ public class RateLimiter {
     }
 
     /**
-     * Longest window any caller asks for, plus an hour of slack.
+     * The longest window this limiter supports. Eviction is measured against it, never
+     * against the shorter windows callers actually pass.
      *
-     * <p>This has to exceed every window in use or the sweeper becomes a way to reset a
-     * limit early: a row deleted while its window is still open takes the count with it,
-     * and the next call starts again from one. That was live when the only windows were
-     * minutes long and the sweep cut at an hour — it stopped being true the moment
-     * something asked for a daily budget (order-email volume, see OrderNotifier), which
-     * would have been silently reset every fifteen minutes and enforced nothing.
+     * <p>The sweeper deletes rows by age, and a row deleted while its window is still open
+     * takes the count with it — the next call then starts again from one and the limit
+     * silently enforces nothing. That was fine while every caller asked for minutes and
+     * the sweep cut at an hour, and it stopped being fine the moment something asked for a
+     * daily budget. Nothing asks for a day today, but the trap was real and costs nothing
+     * to close: rows here are keyed by IP or user id, so keeping them a day longer is a
+     * rounding error, and a future long window cannot quietly reintroduce the bug.
      */
     private static final Duration LONGEST_WINDOW = Duration.ofHours(25);
 
