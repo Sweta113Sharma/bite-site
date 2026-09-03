@@ -37,6 +37,9 @@
         </form>
     </div>
 
+    <!-- Filled and revealed by queue-poll.js when orders arrive between polls. Paired
+         with a chime: a tablet on a shelf needs to be heard as well as seen. -->
+    <div id="queue-alert" class="alert alert-warning d-none" role="status" aria-live="polite"></div>
     <div id="queue-empty" class="state-panel" th:if="${#lists.isEmpty(orders)}">
         <div th:replace="~{fragments/state :: medallion('hourglass_top','neutral')}"></div>
         <h4>All caught up</h4>

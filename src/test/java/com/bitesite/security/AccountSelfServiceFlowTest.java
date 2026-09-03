@@ -1065,4 +1065,28 @@ class AccountSelfServiceFlowTest {
         verify(emailService, never()).sendLoginCodeEmail(eq(student.getEmail()), anyString(), anyString());
         verify(emailService, never()).sendLoginCodeEmail(eq(manager.getEmail()), anyString(), anyString());
     }
+
+    // ---------- Watching an order you do not own ----------
+
+    /**
+     * The status endpoint the order page polls takes an id from the URL. It resolves
+     * through getForUser, so somebody else's order is not visible — otherwise a student
+     * could sit and watch a stranger's lunch by incrementing a number.
+     */
+    @Test
+    void theOrderStatusEndpointRefusesSomeoneElsesOrder() throws Exception {
+        User student = seedUser("status-watcher", Role.USER);
+
+        // No order with this id belongs to them; the lookup must not fall through to a
+        // tenant-wide or global read.
+        new Client().perform(get("/api/orders/{id}/status", 999999L)
+                        .with(user(new AppUserPrincipal(student))), APP_HOST)
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void theOrderStatusEndpointIsNotReachableAnonymously() throws Exception {
+        new Client().perform(get("/api/orders/{id}/status", 1L), APP_HOST)
+                .andExpect(status().is3xxRedirection());
+    }
 }

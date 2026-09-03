@@ -8,7 +8,8 @@
 <!-- Mobile Bottom Nav -->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
-<div class="container" style="max-width: 560px;">
+<div class="container" style="max-width: 560px;"
+     th:attr="data-order-id=${order.id},data-order-status=${order.status.name()}">
 
     <!-- Push is the only way this product reaches a student who is not looking at it, and
          the only place that ever asked was a toggle buried in the account screen. Asked
@@ -25,6 +26,11 @@
         <button type="button" id="push-invite-no" class="btn btn-sm btn-link text-muted">Not now</button>
     </div>
 
+
+    <div class="alert alert-success d-flex align-items-center gap-2" th:if="${paymentSucceeded}">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span>Payment successful. The canteen has your order.</span>
+    </div>
 
     <!-- Status illustration — icon + tone resolved in fragments/order-status
          alongside the badge, so the two never drift apart. -->

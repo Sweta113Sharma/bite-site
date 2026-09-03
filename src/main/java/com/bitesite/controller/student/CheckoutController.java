@@ -99,6 +99,11 @@ public class CheckoutController {
             redirectAttributes.addFlashAttribute("paymentError", "We couldn't verify that payment — please retry.");
             return "redirect:/student/checkout/" + orderId;
         }
+        // Money has just left a student's account and the old redirect said nothing at
+        // all — they landed on the order page and had to work out from the badge whether
+        // it had worked. This is the most anxious moment in the product; it should be the
+        // most clearly answered.
+        redirectAttributes.addFlashAttribute("paymentSucceeded", true);
         return "redirect:/student/orders/" + orderId;
     }
 }

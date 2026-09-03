@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     registerServiceWorker();
     initPushToggle();
     initPushInvite();
+    initOrderStatusWatch();
 });
 
 /* ============================================================
@@ -746,5 +747,53 @@ function initPushInvite() {
             localStorage.setItem('pushInviteDismissed', '1');
         } catch (e) { /* Private mode: forget the dismissal rather than fail the click. */ }
         invite.classList.add('d-none');
+    });
+}
+
+/**
+ * Keeps the order page honest while a student watches it.
+ *
+ * The status here is cooked in a kitchen, not in the browser, so a server-rendered page is
+ * out of date the moment the canteen touches it. Rather than repaint the badge, the
+ * medallion, the pickup code and the wording from JavaScript — four things that would then
+ * have two implementations and drift — this reloads once the server reports a different
+ * status. The reload is the cheap, always-correct option on a page nobody is typing into.
+ */
+function initOrderStatusWatch() {
+    const host = document.querySelector('[data-order-id][data-order-status]');
+    if (!host) return;
+
+    const orderId = host.dataset.orderId;
+    let rendered = host.dataset.orderStatus;
+    // Terminal orders never change again; polling them would be pure noise.
+    if (['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(rendered)) return;
+
+    const POLL_MS = 10000;
+
+    function check() {
+        fetch('/api/orders/' + encodeURIComponent(orderId) + '/status', {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                if (!data || data.status === rendered) return;
+                rendered = data.status;
+                clearInterval(timer);
+                // Announce before reloading: a page that changes under someone with no
+                // explanation is worse than one that changes slightly later.
+                showToast(data.status === 'READY_FOR_PICKUP'
+                    ? 'Your order is ready — show your code at the counter'
+                    : 'Order updated');
+                setTimeout(() => window.location.reload(), 900);
+            })
+            .catch(() => { /* Offline: keep what is on screen and try again next tick. */ });
+    }
+
+    const timer = setInterval(check, POLL_MS);
+    // Coming back to a backgrounded tab is when the page is most likely to be stale, and a
+    // throttled timer may not have fired for minutes.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') check();
     });
 }

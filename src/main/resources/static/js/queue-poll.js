@@ -8,6 +8,56 @@
         return;
     }
 
+    /* A kitchen tablet sits on a shelf. The queue re-rendered silently, so a new order
+       arriving looked exactly like nothing happening and staff found out by glancing over.
+       A short chime plus a count is the difference between a five-minute-old order and a
+       fifteen-minute-old one.
+
+       WebAudio rather than an audio file: no asset to ship, no 404 to debug, and nothing
+       to cache-bust. Browsers refuse to make noise before the page has been interacted
+       with, so the context is created lazily on the first interaction and the whole thing
+       degrades to silence rather than an error if that never happens. */
+    let audioContext = null;
+    function unlockAudio() {
+        if (audioContext) return;
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            audioContext = null;
+        }
+    }
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+
+    function chime() {
+        if (!audioContext) return;
+        try {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            /* Short and quiet. This fires in a room where people are working. */
+            gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.2, audioContext.currentTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.35);
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.36);
+        } catch (e) {
+            /* Audio is a courtesy, never a dependency of the queue working. */
+        }
+    }
+
+    function announce(message) {
+        const banner = document.getElementById('queue-alert');
+        if (!banner) return;
+        banner.textContent = message;
+        banner.classList.remove('d-none');
+        clearTimeout(banner.dataset.timer);
+        banner.dataset.timer = setTimeout(() => banner.classList.add('d-none'), 6000);
+    }
+
     const csrfToken = document.querySelector('meta[name="_csrf"]').content;
     const csrfParam = document.querySelector('meta[name="_csrf_parameter"]').content;
 
@@ -117,7 +167,18 @@
             if (snapshot === lastSnapshot) {
                 return;
             }
+            /* Only orders that were not on the previous poll count as arrivals — a status
+               change on an order already in the queue is not a new one, and chiming for it
+               would train staff to ignore the sound. lastSnapshot is null on first load,
+               so opening the page does not announce the whole existing queue. */
+            const arrived = lastSnapshot === null ? 0
+                : orders.filter(o => !lastSnapshot.includes('[' + o.id + ',')).length;
             lastSnapshot = snapshot;
+
+            if (arrived > 0) {
+                chime();
+                announce(arrived === 1 ? 'New order in the queue' : arrived + ' new orders in the queue');
+            }
 
             if (emptyNotice) {
                 emptyNotice.style.display = orders.length === 0 ? '' : 'none';
