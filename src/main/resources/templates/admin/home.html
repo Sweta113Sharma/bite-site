@@ -41,6 +41,15 @@
             <span class="stat__label">Failed payments today</span>
             <span class="stat__value" th:text="${snapshot.failedPaymentsToday()}">0</span>
         </a>
+        <!-- Money taken against an order that cannot be honoured. Loudest tile on the
+             screen when it is non-zero, because it is the only one that is somebody's
+             money sitting in the wrong place. -->
+        <a class="stat stat--action" th:classappend="${snapshot.paymentsNeedingRefund() > 0} ? 'is-urgent'"
+           th:href="@{/admin/payments(needsRefund=true)}">
+            <span class="stat__label">Awaiting refund</span>
+            <span class="stat__value" th:text="${snapshot.paymentsNeedingRefund()}">0</span>
+            <span class="stat__note">Captured, but the order could not be honoured</span>
+        </a>
         <a sec:authorize="hasRole('SUPER_ADMIN')" class="stat stat--action"
            th:classappend="${snapshot.openDataRequests() > 0} ? 'is-live'" th:href="@{/admin/dpdp}">
             <span class="stat__label">Open data requests</span>

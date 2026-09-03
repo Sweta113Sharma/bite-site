@@ -269,4 +269,52 @@ class OtpServiceTest {
         verify(userDao, never()).markEmailVerified(any());
         verify(userDao, never()).markPhoneVerified(any());
     }
+
+    // --- sign-in second factor ---
+
+    /**
+     * The return value is what stops a second factor locking out the account that would
+     * fix the relay. No code issued means no code to demand, and the caller lets the
+     * sign-in through — see RoleBasedAuthenticationSuccessHandler.
+     */
+    @Test
+    void issueLoginOtpReportsFailureWhenThereIsNoRelay() {
+        when(emailService.isConfigured()).thenReturn(false);
+
+        assertThat(service.issueLoginOtp(User.builder().id(1L).email("admin@demo.local").build())).isFalse();
+        verifyNoInteractions(otpCodeDao);
+    }
+
+    @Test
+    void issueLoginOtpReportsFailureWhenThereIsNoAddress() {
+        when(emailService.isConfigured()).thenReturn(true);
+
+        assertThat(service.issueLoginOtp(User.builder().id(1L).email("  ").build())).isFalse();
+        verifyNoInteractions(otpCodeDao);
+    }
+
+    @Test
+    void issueLoginOtpSendsACodeAndReportsSuccess() {
+        when(emailService.isConfigured()).thenReturn(true);
+        when(otpCodeDao.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        User admin = User.builder().id(3L).name("An Admin").email("admin@demo.local").build();
+
+        assertThat(service.issueLoginOtp(admin)).isTrue();
+
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendLoginCodeEmail(eq("admin@demo.local"), eq("An Admin"), code.capture());
+        assertThat(code.getValue()).matches("\\d{6}");
+        verify(otpCodeDao).deleteByUserIdAndChannel(3L, OtpChannel.LOGIN2FA);
+    }
+
+    @Test
+    void verifyLoginOtpConsumesTheCodeSoItCannotBeReplayed() throws Exception {
+        when(otpCodeDao.findLatest(3L, OtpChannel.LOGIN2FA)).thenReturn(Optional.of(OtpCode.builder()
+                .id(9L).userId(3L).channel(OtpChannel.LOGIN2FA).codeHash(hash("112233"))
+                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(0).build()));
+
+        assertThat(service.verifyLoginOtp(3L, "112233")).isTrue();
+        verify(otpCodeDao).deleteByUserIdAndChannel(3L, OtpChannel.LOGIN2FA);
+        verify(userDao, never()).markEmailVerified(any());
+    }
 }

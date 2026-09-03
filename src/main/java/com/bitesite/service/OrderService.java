@@ -252,15 +252,37 @@ public class OrderService {
 
         paymentDao.markVerified(payment.getId(), gatewayPaymentId, signature, PaymentStatus.CAPTURED);
         Order order = getForTenant(payment.getOrderId(), payment.getTenantId());
-        if (order.getStatus().canTransitionTo(OrderStatus.PAID)) {
-            orderDao.updateStatus(order.getId(), order.getTenantId(), OrderStatus.PAID);
+        if (!order.getStatus().canTransitionTo(OrderStatus.PAID)) {
+            // Money we hold against an order that cannot be honoured — a cancellation, or
+            // an order already completed. Previously this branch did not exist: the
+            // transition silently failed and confirmPayment returned success, so the
+            // student was charged and nothing anywhere recorded it. It is a refund, and a
+            // refund needs a person.
+            String reason = "Captured while order was " + order.getStatus() + "; needs refund";
+            paymentDao.flagForReconciliation(payment.getId(), reason);
+            auditService.record(null, order.getTenantId(), "Payment", payment.getId(),
+                    "CAPTURE_UNAPPLIED", order.getStatus(), null);
+            log.error("Payment {} captured for order {} which is {} — flagged for refund",
+                    payment.getId(), order.getId(), order.getStatus());
+            return true;
+        }
+
+        if (order.getStatus() == OrderStatus.EXPIRED) {
+            // The common late capture: the sweeper expired the order while the student was
+            // still on their bank's page. They paid, so they get their food.
+            log.info("Reviving expired order {} — payment {} captured after the timeout",
+                    order.getId(), payment.getId());
+            auditService.record(null, order.getTenantId(), "Order", order.getId(),
+                    "REVIVED_ON_LATE_PAYMENT", OrderStatus.EXPIRED, OrderStatus.PAID);
+        }
+
+        orderDao.updateStatus(order.getId(), order.getTenantId(), OrderStatus.PAID);
             // Doubles as the receipt. Payment succeeded and the only acknowledgement was
             // the page the student happened to be looking at — nothing they could keep,
             // and nothing at all if the browser closed on the redirect back from Razorpay.
-            orderNotifier.notifyOrderUpdate(order.getUserId(), "Order confirmed",
-                    "We have your payment for order " + order.getTokenNo() + ". The canteen is on it — "
-                            + "you will hear from us again when it is ready to collect.");
-        }
+        orderNotifier.notifyOrderUpdate(order.getUserId(), "Order confirmed",
+                "We have your payment for order " + order.getTokenNo() + ". The canteen is on it — "
+                        + "you will hear from us again when it is ready to collect.");
         return true;
     }
 

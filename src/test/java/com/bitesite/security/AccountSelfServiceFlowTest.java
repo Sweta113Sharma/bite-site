@@ -673,6 +673,7 @@ class AccountSelfServiceFlowTest {
         Client client = new Client();
         for (String path : new String[] {
                 "/admin", "/admin/orders?page=1", "/admin/orders?q=BITE",
+                "/admin/payments?needsRefund=true",
                 "/admin/payments?page=1", "/admin/audit-log?tenantId=" + tenant.getId() + "&page=1",
                 "/admin/tenants", "/admin/tenants/new", "/admin/tenants/" + tenant.getId(),
                 "/admin/users", "/admin/audit-log", "/admin/grievances", "/admin/orders",

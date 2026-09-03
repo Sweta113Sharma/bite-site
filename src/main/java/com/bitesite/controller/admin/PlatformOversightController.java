@@ -100,12 +100,17 @@ public class PlatformOversightController {
     @GetMapping("/payments")
     public String payments(@AuthenticationPrincipal AppUserPrincipal principal,
             @RequestParam(required = false) PaymentStatus status,
+            @RequestParam(defaultValue = "false") boolean needsRefund,
             @RequestParam(defaultValue = "0") int page, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OPS_SCOPE);
         int safePage = Math.max(0, page);
+        int offset = Paged.offsetFor(safePage, PAGE_SIZE);
+        // The only view that answers "are we holding money we should not be". Without it
+        // a stranded capture is invisible outside the database.
         Paged<Payment> paged = Paged.of(
-                paymentDao.findRecentAcrossTenants(status, PAGE_SIZE + 1,
-                        Paged.offsetFor(safePage, PAGE_SIZE)),
+                needsRefund
+                        ? paymentDao.findNeedingReconciliation(PAGE_SIZE + 1, offset)
+                        : paymentDao.findRecentAcrossTenants(status, PAGE_SIZE + 1, offset),
                 safePage, PAGE_SIZE);
         List<Payment> payments = paged.items();
         model.addAttribute("paged", paged);
@@ -113,6 +118,8 @@ public class PlatformOversightController {
         model.addAttribute("collegeNames", collegeNames());
         model.addAttribute("statuses", PaymentStatus.values());
         model.addAttribute("selectedStatus", status);
+        model.addAttribute("needsRefund", needsRefund);
+        model.addAttribute("refundCount", paymentDao.countNeedingReconciliation());
         // The number worth seeing first: money taken and not yet settled into an order.
         model.addAttribute("capturedCount", payments.stream()
                 .filter(p -> p.getStatus() == PaymentStatus.CAPTURED).count());

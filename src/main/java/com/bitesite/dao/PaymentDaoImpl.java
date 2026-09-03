@@ -30,6 +30,8 @@ public class PaymentDaoImpl implements PaymentDao {
             .razorpaySignature(rs.getString("razorpay_signature"))
             .amount(rs.getBigDecimal("amount"))
             .status(PaymentStatus.valueOf(rs.getString("status")))
+            .needsReconciliation(rs.getBoolean("needs_reconciliation"))
+            .reconciliationReason(rs.getString("reconciliation_reason"))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .verifiedAt(rs.getObject("verified_at", LocalDateTime.class))
             .build();
@@ -95,6 +97,35 @@ public class PaymentDaoImpl implements PaymentDao {
                 "UPDATE payments SET razorpay_payment_id = ?, razorpay_signature = ?, status = ?, "
                         + "verified_at = CURRENT_TIMESTAMP WHERE id = ?",
                 razorpayPaymentId, razorpaySignature, status.name(), id);
+    }
+
+    @Override
+    public void flagForReconciliation(Long id, String reason) {
+        jdbcTemplate.update(
+                "UPDATE payments SET needs_reconciliation = TRUE, reconciliation_reason = ? WHERE id = ?",
+                reason, id);
+    }
+
+    @Override
+    public void clearReconciliation(Long id) {
+        jdbcTemplate.update(
+                "UPDATE payments SET needs_reconciliation = FALSE, reconciliation_reason = NULL WHERE id = ?",
+                id);
+    }
+
+    @Override
+    public List<Payment> findNeedingReconciliation(int limit, int offset) {
+        return jdbcTemplate.query(
+                "SELECT * FROM payments WHERE needs_reconciliation = TRUE "
+                        + "ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                ROW_MAPPER, limit, offset);
+    }
+
+    @Override
+    public long countNeedingReconciliation() {
+        Long value = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM payments WHERE needs_reconciliation = TRUE", Long.class);
+        return value == null ? 0L : value;
     }
 
     @Override

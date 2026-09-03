@@ -15,6 +15,30 @@
         </form>
     </div>
 
+    <!-- Always offered, not only when non-zero: knowing the number is zero is the point
+         of looking. -->
+    <div class="mb-3">
+        <a th:unless="${needsRefund}" class="btn btn-sm btn-outline-secondary"
+           th:href="@{/admin/payments(needsRefund=true)}">
+            Awaiting refund<span class="badge bg-danger ms-2" th:if="${refundCount > 0}" th:text="${refundCount}">0</span>
+            <span class="ms-2" th:if="${refundCount == 0}">(none)</span>
+        </a>
+        <a th:if="${needsRefund}" class="btn btn-sm btn-outline-secondary" th:href="@{/admin/payments}">
+            <span class="material-symbols-outlined">arrow_back</span>All payments
+        </a>
+    </div>
+
+    <div class="alert alert-danger" th:if="${needsRefund and refundCount > 0}">
+        These payments were captured against an order that could not be honoured — the
+        student was charged and got nothing. Each one needs refunding in the Razorpay
+        dashboard, then clearing here.
+    </div>
+    <div class="state-panel" th:if="${needsRefund and refundCount == 0}">
+        <div th:replace="~{fragments/state :: medallion('check_circle','good')}"></div>
+        <h4>Nothing awaiting a refund</h4>
+        <p>Every captured payment is attached to an order.</p>
+    </div>
+
     <p class="text-muted small">
         Read-only. Refunds are issued from the
         <a th:href="@{/admin/support}">support desk</a>, which is restricted to super admins.

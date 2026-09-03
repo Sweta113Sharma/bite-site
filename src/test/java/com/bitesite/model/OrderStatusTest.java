@@ -33,13 +33,40 @@ class OrderStatusTest {
 
     @Test
     void terminalStatesHaveNoOutgoingTransitions() {
-        for (OrderStatus terminal : new OrderStatus[]{OrderStatus.COMPLETED, OrderStatus.EXPIRED, OrderStatus.CANCELLED}) {
+        for (OrderStatus terminal : new OrderStatus[]{OrderStatus.COMPLETED, OrderStatus.CANCELLED}) {
             assertThat(terminal.isTerminal()).isTrue();
             for (OrderStatus target : OrderStatus.values()) {
                 assertThat(terminal.canTransitionTo(target))
                         .as("%s -> %s should be blocked", terminal, target)
                         .isFalse();
             }
+        }
+    }
+
+    /**
+     * EXPIRED is terminal to the student — there is no button anywhere that moves an
+     * expired order — but it has exactly one way out, and the exception is deliberate.
+     *
+     * <p>Unpaid orders expire on a timer that a slow bank OTP can outlast. When the capture
+     * finally lands, the choice is to revive the order or to hold money for food nobody is
+     * going to make. Reviving is the better answer, so {@code confirmPayment} is allowed to
+     * make that one move. Everything else stays shut, including the moves that would let a
+     * canteen quietly resurrect an order nobody paid for.
+     */
+    @Test
+    void expiredCanOnlyBeRevivedByAPaymentThatArrivedLate() {
+        assertThat(OrderStatus.EXPIRED.isTerminal())
+                .as("still terminal as far as the student and the kitchen are concerned")
+                .isTrue();
+        assertThat(OrderStatus.EXPIRED.canTransitionTo(OrderStatus.PAID)).isTrue();
+
+        for (OrderStatus target : OrderStatus.values()) {
+            if (target == OrderStatus.PAID) {
+                continue;
+            }
+            assertThat(OrderStatus.EXPIRED.canTransitionTo(target))
+                    .as("EXPIRED -> %s should be blocked", target)
+                    .isFalse();
         }
     }
 

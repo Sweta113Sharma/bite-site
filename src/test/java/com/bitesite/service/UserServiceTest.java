@@ -21,6 +21,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.*;
 class UserServiceTest {
 
     @Mock private UserDao userDao;
+    @Mock private com.bitesite.config.RateLimiter rateLimiter;
     @Mock private AuditService auditService;
     @Mock private EmailService emailService;
     @Mock private SmsService smsService;
@@ -42,7 +44,7 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userDao, passwordEncoder, auditService, emailService, otpService,
+        userService = new UserService(userDao, rateLimiter, passwordEncoder, auditService, emailService, otpService,
                 smsService, pushNotificationService);
     }
 
@@ -91,6 +93,9 @@ class UserServiceTest {
     void registerStudentIsUnverifiedWhenSmtpIsConfigured() {
         when(userDao.existsByEmail("student3@demo.local")).thenReturn(false);
         when(emailService.isConfigured()).thenReturn(true);
+        // Verification is now also gated on the day's mail allowance, not just on a relay
+        // existing — see canSendVerificationEmail.
+        when(rateLimiter.tryConsume(anyString(), anyInt(), any())).thenReturn(true);
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         when(userDao.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -374,5 +379,41 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.sendPlatformUserPasswordReset(9L, 2L))
                 .isInstanceOf(BusinessException.class);
         verifyNoInteractions(otpService);
+    }
+
+    // --- registration when the day's mail allowance is gone ---
+
+    /**
+     * The plan is 300 messages a day and registration is one per signup, uncapped by
+     * necessity — refusing to send would refuse the signup. On the day an intake exhausts
+     * it, an account gated on a code that was never sent is an account nobody can use, so
+     * verification is skipped instead. Same behaviour as having no relay at all.
+     */
+    @Test
+    void anIntakeThatExhaustsTheMailAllowanceStillGetsUsableAccounts() {
+        when(userDao.existsByEmail("late@demo.local")).thenReturn(false);
+        when(emailService.isConfigured()).thenReturn(true);
+        when(rateLimiter.tryConsume(eq("registration-email-daily"), anyInt(), any())).thenReturn(false);
+        when(userDao.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        User created = userService.registerStudent(1L, "A Student", "late@demo.local",
+                "Password1", null, null);
+
+        assertThat(created.isEmailVerified())
+                .as("an account gated on a code that was never sent cannot be signed in to")
+                .isTrue();
+    }
+
+    @Test
+    void withinTheAllowanceRegistrationStillGatesOnVerification() {
+        when(userDao.existsByEmail("early@demo.local")).thenReturn(false);
+        when(emailService.isConfigured()).thenReturn(true);
+        when(rateLimiter.tryConsume(eq("registration-email-daily"), anyInt(), any())).thenReturn(true);
+        when(userDao.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        User created = userService.registerStudent(1L, "A Student", "early@demo.local",
+                "Password1", null, null);
+
+        assertThat(created.isEmailVerified()).isFalse();
     }
 }

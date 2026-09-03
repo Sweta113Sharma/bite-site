@@ -154,13 +154,22 @@ public class OtpService {
         return true;
     }
 
-    /** Issues a sign-in second factor to the address on the account. */
-    public void issueLoginOtp(User user) {
-        if (!emailService.isConfigured()) {
-            return;
+    /**
+     * Issues a sign-in second factor to the address on the account.
+     *
+     * @return false when no code could be issued at all — no mail relay, or no address to
+     *         send to. The caller must then let the sign-in through rather than demand a
+     *         code that was never sent: a second factor nobody can receive is not security,
+     *         it is a locked door with the key thrown away, and the account it locks out is
+     *         the one that would go and fix the relay.
+     */
+    public boolean issueLoginOtp(User user) {
+        if (!emailService.isConfigured() || user.getEmail() == null || user.getEmail().isBlank()) {
+            return false;
         }
         String code = issue(user.getId(), OtpChannel.LOGIN2FA);
         emailService.sendLoginCodeEmail(user.getEmail(), user.getName(), code);
+        return true;
     }
 
     /** Checks a sign-in second factor. No verification side effects, and the code is

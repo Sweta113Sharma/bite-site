@@ -463,4 +463,52 @@ class OrderServiceTest {
 
         assertThat(result.order().getTotalAmount()).isEqualByComparingTo("20.00");
     }
+
+    // --- a capture that arrives after the order expired ---
+
+    private Payment capturedPaymentFor(Order order) {
+        return Payment.builder().id(500L).orderId(order.getId()).tenantId(order.getTenantId())
+                .razorpayOrderId("order_late").amount(order.getTotalAmount())
+                .status(PaymentStatus.CREATED).build();
+    }
+
+    /**
+     * The money bug. The sweeper expires unpaid orders on a timer, and a bank OTP can
+     * outlast it. Before this, the capture marked the payment CAPTURED, silently failed
+     * the transition, and returned success — student charged, no order, nothing logged.
+     */
+    @Test
+    void aPaymentCapturedAfterTheOrderExpiredRevivesTheOrder() {
+        Order expired = Order.builder().id(90L).tenantId(TENANT_ID).userId(USER_ID).tokenNo("BITE-0090")
+                .totalAmount(new BigDecimal("60.00")).status(OrderStatus.EXPIRED).build();
+        Payment payment = capturedPaymentFor(expired);
+        when(paymentDao.findByRazorpayOrderId("order_late")).thenReturn(Optional.of(payment));
+        when(orderDao.findByIdAndTenantId(90L, TENANT_ID)).thenReturn(Optional.of(expired));
+        when(paymentGateway.verifyPaymentSignature(any(), any(), any())).thenReturn(true);
+
+        assertThat(orderService.confirmPayment("order_late", "pay_late", "sig")).isTrue();
+
+        verify(orderDao).updateStatus(90L, TENANT_ID, OrderStatus.PAID);
+        verify(paymentDao, never()).flagForReconciliation(any(), anyString());
+        verify(orderNotifier).notifyOrderUpdate(eq(USER_ID), eq("Order confirmed"), anyString());
+    }
+
+    /** An order that genuinely cannot be honoured is money we hold wrongly, and that is a
+     * refund — so it has to be visible rather than silently dropped. */
+    @Test
+    void aPaymentCapturedForACancelledOrderIsFlaggedForRefund() {
+        Order cancelled = Order.builder().id(91L).tenantId(TENANT_ID).userId(USER_ID).tokenNo("BITE-0091")
+                .totalAmount(new BigDecimal("60.00")).status(OrderStatus.CANCELLED).build();
+        Payment payment = capturedPaymentFor(cancelled);
+        when(paymentDao.findByRazorpayOrderId("order_late")).thenReturn(Optional.of(payment));
+        when(orderDao.findByIdAndTenantId(91L, TENANT_ID)).thenReturn(Optional.of(cancelled));
+        when(paymentGateway.verifyPaymentSignature(any(), any(), any())).thenReturn(true);
+
+        assertThat(orderService.confirmPayment("order_late", "pay_late", "sig")).isTrue();
+
+        verify(paymentDao).flagForReconciliation(eq(500L), anyString());
+        verify(orderDao, never()).updateStatus(eq(91L), any(), eq(OrderStatus.PAID));
+        // Nothing cheerful sent about an order that is not happening.
+        verifyNoInteractions(orderNotifier);
+    }
 }

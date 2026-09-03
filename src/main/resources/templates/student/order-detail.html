@@ -10,6 +10,22 @@
 
 <div class="container" style="max-width: 560px;">
 
+    <!-- Push is the only way this product reaches a student who is not looking at it, and
+         the only place that ever asked was a toggle buried in the account screen. Asked
+         here instead: on a live order, where "we will tell you when it is ready" is an
+         offer rather than a setting. Hidden by default and revealed by JS only when push
+         is supported, configured, and not already on — so it never nags someone who has
+         already said yes, and never appears where it cannot work. Dismissal is
+         remembered. -->
+    <div id="push-invite" class="alert alert-warning d-none align-items-center gap-2 flex-wrap"
+         th:if="${order.status.isLive()}">
+        <span class="material-symbols-outlined">notifications_active</span>
+        <span class="flex-grow-1">Want to know the moment this is ready? Turn on notifications.</span>
+        <button type="button" id="push-invite-yes" class="btn btn-sm btn-primary">Turn on</button>
+        <button type="button" id="push-invite-no" class="btn btn-sm btn-link text-muted">Not now</button>
+    </div>
+
+
     <!-- Status illustration — icon + tone resolved in fragments/order-status
          alongside the badge, so the two never drift apart. -->
     <div th:replace="~{fragments/order-status :: statusMedallion(${order.status})}"></div>

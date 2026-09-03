@@ -140,6 +140,16 @@ public class RoleBasedAuthenticationSuccessHandler extends SimpleUrlAuthenticati
      */
     private void startSecondFactor(HttpServletRequest request, HttpServletResponse response,
             User user, Role resolvedActiveRole) throws IOException {
+        // Issue first. If no code could be sent there is nothing to challenge against, and
+        // throwing the session away would lock the account out with no way back in short of
+        // an environment variable and a restart.
+        if (!otpService.issueLoginOtp(user)) {
+            log.warn("Second factor skipped for {}: no code could be issued", user.getEmail());
+            getRedirectStrategy().sendRedirect(request, response,
+                    RoleLandingPages.forActiveRole(resolvedActiveRole));
+            return;
+        }
+
         request.getSession().invalidate();
         SecurityContextHolder.clearContext();
         securityContextRepository.saveContext(SecurityContextHolder.createEmptyContext(), request, response);
@@ -147,7 +157,6 @@ public class RoleBasedAuthenticationSuccessHandler extends SimpleUrlAuthenticati
         HttpSession pending = request.getSession(true);
         pending.setAttribute(PENDING_2FA_USER_ID, user.getId());
 
-        otpService.issueLoginOtp(user);
         log.info("Second factor required for platform account {}", user.getEmail());
         getRedirectStrategy().sendRedirect(request, response, "/login/verify");
     }

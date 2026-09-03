@@ -15,6 +15,7 @@ public record PlatformSnapshot(
         BigDecimal revenueToday,
         long ordersInFlight,
         long failedPaymentsToday,
+        long paymentsNeedingRefund,
         long openGrievances,
         long openDataRequests,
         long activeColleges,

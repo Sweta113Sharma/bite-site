@@ -1,5 +1,6 @@
 package com.bitesite.service;
 
+import com.bitesite.config.RateLimiter;
 import com.bitesite.dao.UserDao;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
@@ -7,22 +8,30 @@ import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Role;
 import com.bitesite.model.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    /** Verification emails per day, against a plan of 300. The gap leaves room for
+     * password resets and admin sign-in codes on the same day as a large intake. */
+    private static final int DAILY_REGISTRATION_EMAIL_BUDGET = 200;
+
     private final UserDao userDao;
+    private final RateLimiter rateLimiter;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
     private final EmailService emailService;
@@ -49,10 +58,39 @@ public class UserService {
                 // Only gated once SMTP/Twilio is actually configured — otherwise there's no
                 // way to deliver a code, so self-registration stays unrestricted. Phone is
                 // additionally only gated when one was actually supplied.
-                .emailVerified(!emailService.isConfigured())
+                .emailVerified(!canSendVerificationEmail())
                 .phoneVerified(!hasPhone || !smsService.isConfigured())
                 .build();
         return userDao.save(user);
+    }
+
+    /**
+     * Whether a verification code can actually be delivered right now.
+     *
+     * <p>The mail plan is 300 messages a day, shared with password resets and admin
+     * sign-in codes. Registration is one message per new student and cannot be rationed
+     * the way notifications can — refusing to send would refuse the signup. So on the day
+     * an intake exhausts the allowance, accounts are created already verified rather than
+     * created unusable: the same thing this app already does when no relay is configured
+     * at all. A student who cannot receive a code they were never sent must not be left
+     * holding an account they cannot sign in to.
+     *
+     * <p>Consuming the budget here rather than at send time is deliberate — the caller
+     * decides whether to gate the account on the answer, so the count has to reflect the
+     * decision, not the attempt.
+     */
+    private boolean canSendVerificationEmail() {
+        if (!emailService.isConfigured()) {
+            return false;
+        }
+        boolean withinBudget = rateLimiter.tryConsume(
+                "registration-email-daily", DAILY_REGISTRATION_EMAIL_BUDGET, Duration.ofDays(1));
+        if (!withinBudget) {
+            log.warn("Daily registration-email budget of {} reached — creating accounts pre-verified "
+                    + "so signup keeps working. Raise the mail plan if this repeats.",
+                    DAILY_REGISTRATION_EMAIL_BUDGET);
+        }
+        return withinBudget;
     }
 
     public User createUser(Long tenantId, Long outletId, String name, String rawEmail, String rawPassword,

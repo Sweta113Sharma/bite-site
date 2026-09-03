@@ -41,6 +41,9 @@ public class DashboardDaoImpl implements DashboardDao {
                         + "WHERE token_day = CURDATE() AND status IN " + EARNING),
                 count("SELECT COUNT(*) FROM orders WHERE status IN " + IN_FLIGHT),
                 count("SELECT COUNT(*) FROM payments WHERE status = 'FAILED' AND DATE(created_at) = CURDATE()"),
+                // Money held against an order that cannot be honoured. Not time-boxed to
+                // today: it stays on the screen until somebody refunds it.
+                count("SELECT COUNT(*) FROM payments WHERE needs_reconciliation = TRUE"),
                 count("SELECT COUNT(*) FROM grievances WHERE status <> 'RESOLVED'"),
                 count("SELECT COUNT(*) FROM data_requests WHERE status IN ('OPEN','IN_PROGRESS')"),
                 count("SELECT COUNT(*) FROM tenants WHERE status = 'ACTIVE'"),

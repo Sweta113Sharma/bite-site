@@ -116,7 +116,11 @@ app:
       api-key: ${CLOUDINARY_API_KEY:}
       api-secret: ${CLOUDINARY_API_SECRET:}
   order:
-    payment-timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:10}
+    # Ten minutes was under the time a slow bank OTP or a reconnecting phone actually
+    # takes, so orders were expiring while the student was still paying. A late capture
+    # now revives the order rather than stranding the money (OrderService.confirmPayment),
+    # but not expiring it in the first place is the better outcome.
+    payment-timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:20}
   mail:
     # Left blank in dev: EmailService logs a warning and skips sending rather than
     # failing registration when SMTP isn't configured — see EmailService.

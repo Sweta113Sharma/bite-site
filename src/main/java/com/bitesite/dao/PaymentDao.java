@@ -29,4 +29,14 @@ public interface PaymentDao {
     void markVerified(Long id, String razorpayPaymentId, String razorpaySignature, PaymentStatus status);
 
     void updateStatus(Long id, PaymentStatus status);
+
+    /** Marks a captured payment as needing a human — see V22. */
+    void flagForReconciliation(Long id, String reason);
+
+    void clearReconciliation(Long id);
+
+    List<Payment> findNeedingReconciliation(int limit, int offset);
+
+    /** For the admin overview. Cheap: covered by idx_payments_reconciliation. */
+    long countNeedingReconciliation();
 }

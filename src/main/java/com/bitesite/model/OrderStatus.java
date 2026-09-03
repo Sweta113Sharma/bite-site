@@ -24,7 +24,12 @@ public enum OrderStatus {
             case PAID -> next == PREPARING || next == CANCELLED;
             case PREPARING -> next == READY_FOR_PICKUP;
             case READY_FOR_PICKUP -> next == COMPLETED;
-            case COMPLETED, EXPIRED, CANCELLED -> false;
+            // A capture that lands after the payment sweeper is the one way out of
+            // EXPIRED. Nothing in the UI offers this move: it exists so a student whose
+            // bank was slow gets the food they paid for, instead of an expired order and
+            // a silent charge. Every other exit from a terminal state stays closed.
+            case EXPIRED -> next == PAID;
+            case COMPLETED, CANCELLED -> false;
         };
     }
 

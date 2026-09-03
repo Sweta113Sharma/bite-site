@@ -1275,3 +1275,10 @@ body.console .stat--action.is-live .stat__label,
 body.console .stat--action.is-live .stat__note {
     color: var(--color-ink);
 }
+
+/* Somebody's money in the wrong place. The only red tile on the overview — red is
+   reserved for cancelled and refunded elsewhere, and this is the same category. */
+body.console .stat--action.is-urgent {
+    background: var(--color-danger-tint);
+    box-shadow: inset 4px 0 0 var(--color-primary);
+}

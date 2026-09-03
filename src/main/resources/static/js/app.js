@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavDrawer();
     registerServiceWorker();
     initPushToggle();
+    initPushInvite();
 });
 
 /* ============================================================
@@ -698,5 +699,52 @@ function initCategoryChips() {
         };
         const timer = setTimeout(unlock, 1200);
         window.addEventListener('scrollend', unlock, { once: true });
+    });
+}
+
+/**
+ * The push invite on a live order.
+ *
+ * Deliberately not shown on load: the banner is rendered hidden and only revealed once we
+ * know push is supported, the server has keys, permission has not already been refused,
+ * and there is no subscription yet. Anything less and it would nag people who already said
+ * yes, or offer something the browser cannot do.
+ */
+function initPushInvite() {
+    const invite = document.getElementById('push-invite');
+    if (!invite) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+    // Asking again after an explicit browser-level refusal cannot succeed, and dismissal
+    // is remembered so this is an offer rather than a recurring interruption.
+    if (Notification.permission === 'denied') return;
+    if (localStorage.getItem('pushInviteDismissed') === '1') return;
+
+    fetch('/api/push/public-key')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((config) => {
+            if (!config || !config.configured) return;
+            return navigator.serviceWorker.ready
+                .then((registration) => registration.pushManager.getSubscription())
+                .then((sub) => {
+                    if (sub) return;
+                    invite.classList.remove('d-none');
+                    invite.classList.add('d-flex');
+                });
+        })
+        .catch(() => { /* Offline or blocked: stay hidden rather than offer a dead button. */ });
+
+    document.getElementById('push-invite-yes').addEventListener('click', () => {
+        // Reuses the same subscribe path as the account toggle, so there is one
+        // implementation of enabling push and one place for it to go wrong.
+        const proxy = { checked: true };
+        enablePush(proxy);
+        invite.classList.add('d-none');
+    });
+
+    document.getElementById('push-invite-no').addEventListener('click', () => {
+        try {
+            localStorage.setItem('pushInviteDismissed', '1');
+        } catch (e) { /* Private mode: forget the dismissal rather than fail the click. */ }
+        invite.classList.add('d-none');
     });
 }

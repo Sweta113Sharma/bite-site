@@ -21,6 +21,12 @@ public class Payment {
     private String razorpaySignature;
     private BigDecimal amount;
     private PaymentStatus status;
+
+    /** Money we hold that no order is going to honour. Set when a capture arrives for an
+     * order that cannot be revived; cleared by hand once refunded. */
+    private boolean needsReconciliation;
+
+    private String reconciliationReason;
     private LocalDateTime createdAt;
     private LocalDateTime verifiedAt;
 }
