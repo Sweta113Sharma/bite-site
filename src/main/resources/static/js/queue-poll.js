@@ -177,6 +177,10 @@
 
             if (arrived > 0) {
                 chime();
+                /* Guarded rather than assumed: app.js defines this and loads first via
+                   defer, but a queue that stops polling because a helper moved would be a
+                   bad trade for a buzz. */
+                if (typeof haptic === 'function') haptic('warning');
                 announce(arrived === 1 ? 'New order in the queue' : arrived + ' new orders in the queue');
             }
 

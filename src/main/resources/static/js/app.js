@@ -105,7 +105,7 @@ function enablePush(toggle) {
                     body.set('auth', btoa(String.fromCharCode(...new Uint8Array(auth))));
                     return fetch('/api/push/subscribe', { method: 'POST', body });
                 })
-                .then(() => showToast('Notifications enabled'))
+                .then(() => { showToast('Notifications enabled'); haptic('success'); })
                 .catch(() => {
                     toggle.checked = false;
                     showToast('Could not enable notifications');
@@ -356,6 +356,7 @@ function initAddToCartForms() {
                     // cart is worse feedback than none.
                     if (data.blocked) {
                         showToast(data.message || 'That item can\'t be added right now.', 'warning');
+                        haptic('warning');
                         return;
                     }
                     const control = form.closest('.cart-control');
@@ -363,6 +364,7 @@ function initAddToCartForms() {
                         setControlQuantity(control, 1);
                     }
                     showToast('Added to cart');
+                    haptic('success');
                 })
                 .catch(() => {
                     // Fetch failed (offline, JS edge case) — fall back to a real submit
@@ -432,7 +434,7 @@ function initCartControls() {
                     setControlQuantity(control, data.quantity);
                     updateCartCount(data.count);
                 })
-                .catch(() => showToast("Couldn't update your cart"));
+                .catch(() => { showToast("Couldn't update your cart"); haptic('error'); });
         };
 
         stepper.querySelector('.cart-qty-minus')
@@ -514,7 +516,7 @@ function initCartPageControls() {
                     display.textContent = data.quantity;
                     refreshTotals(data);
                 })
-                .catch(() => showToast("Couldn't update your cart", 'error'))
+                .catch(() => { showToast("Couldn't update your cart", 'error'); haptic('error'); })
                 .finally(() => setBusy(form, false));
         };
 
@@ -553,6 +555,7 @@ function initCartPageControls() {
                 .catch(() => {
                     setBusy(form, false);
                     showToast("Couldn't remove that item", 'error');
+                    haptic('error');
                 });
         });
     });
@@ -603,17 +606,90 @@ function initNavbarScroll() {
    ============================================================ */
 
 /* `icon` is a Material Symbols glyph name, matching the customer app's icon set. */
+/* ============================================================
+   HAPTICS
+
+   One place that decides what the phone is allowed to do, so every buzz in the product
+   means the same thing and none of them are guesses.
+
+   What actually works, as of 2026: the Vibration API is Chrome, Edge, Opera and Samsung
+   Internet on Android. Safari never shipped it on iOS or macOS, and Firefox removed it in
+   129. There are polyfills that unlock it on iOS through a hidden switch-element trick;
+   this app does not use one. A payment flow is not the place for a hack that depends on
+   undocumented Safari behaviour, and silence is a perfectly good fallback. iPhone users
+   get the toast and the animation and no buzz.
+
+   Three rules the patterns follow:
+
+     * Durations are short. 10-15ms reads as a tick; anything past ~50ms reads as an
+       alarm, and an alarm for "added to cart" is why people turn haptics off.
+     * Only on a gesture the user just made. The spec requires sticky activation, so a
+       vibration fired from a poll or a page load is dropped anyway — and would be
+       intrusive even if it were not. Nothing here fires from the status watcher.
+     * prefers-reduced-motion turns it off. The setting is not only about things moving
+       on screen; it is the signal people with vestibular and sensory sensitivities
+       actually set, and a buzz is a physical event.
+   ============================================================ */
+const HAPTIC_PATTERNS = {
+    /* A selection landed: add to cart, quantity change. Barely perceptible on purpose. */
+    tap: 10,
+    /* Something completed. Two short ticks, which reads as "done" rather than "alert". */
+    success: [15, 40, 15],
+    /* Something needs attention but is not broken. */
+    warning: [25, 50, 25],
+    /* Something failed and the user has to do something about it. */
+    error: [40, 60, 40, 60, 40],
+};
+
+function haptic(kind) {
+    if (!('vibrate' in navigator)) return;
+    try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        navigator.vibrate(HAPTIC_PATTERNS[kind] || HAPTIC_PATTERNS.tap);
+    } catch (e) {
+        /* Some browsers throw rather than no-op when the page lacks activation. Never let
+           a decorative buzz break the action it was decorating. */
+    }
+}
+
 function showToast(message, icon = 'check_circle') {
     let container = document.querySelector('.toast-container');
     if (!container) {
         container = document.createElement('div');
         container.className = 'toast-container';
+        /* Every status message in this app arrives as a toast, and without a live region
+           none of them existed for anyone using a screen reader — "Added to cart",
+           "Couldn't update your cart" and the rest were purely visual. polite rather than
+           assertive so it waits for a pause instead of cutting across what is being read;
+           none of these are urgent enough to interrupt. The region is on the container and
+           created once, because a live region added to the page at the same moment as its
+           content is frequently missed. */
+        container.setAttribute('role', 'status');
+        container.setAttribute('aria-live', 'polite');
+        container.setAttribute('aria-atomic', 'true');
         document.body.appendChild(container);
     }
 
     const toast = document.createElement('div');
     toast.className = 'toast-msg';
-    toast.innerHTML = `<span class="material-symbols-outlined is-filled" style="color:var(--color-primary-soft); font-size:1.15rem;">${icon}</span> <span>${message}</span>`;
+
+    const glyph = document.createElement('span');
+    glyph.className = 'material-symbols-outlined is-filled';
+    glyph.style.color = 'var(--color-primary-soft)';
+    glyph.style.fontSize = '1.15rem';
+    /* Decorative — the text beside it already says what happened, and announcing the
+       ligature name would read the word "check_circle" aloud. */
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.textContent = icon;
+
+    const label = document.createElement('span');
+    /* textContent, not innerHTML. Some of these messages come from the server (the
+       add-to-cart failure passes data.message straight through), and building markup out
+       of a string that came off the wire is how an injection gets in later even when
+       today's callers are safe. */
+    label.textContent = message;
+
+    toast.append(glyph, ' ', label);
     container.appendChild(toast);
 
     setTimeout(() => toast.remove(), 2600);
@@ -738,6 +814,7 @@ function initPushInvite() {
         // Reuses the same subscribe path as the account toggle, so there is one
         // implementation of enabling push and one place for it to go wrong.
         const proxy = { checked: true };
+        haptic('tap');
         enablePush(proxy);
         invite.classList.add('d-none');
     });

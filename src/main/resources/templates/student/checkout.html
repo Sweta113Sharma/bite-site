@@ -93,6 +93,7 @@
                 document.getElementById('f-order-id').value = response.razorpay_order_id;
                 document.getElementById('f-payment-id').value = response.razorpay_payment_id;
                 document.getElementById('f-signature').value = response.razorpay_signature;
+                if (typeof haptic === 'function') haptic('success');
                 payBtn.disabled = true;
                 payBtn.textContent = 'Confirming payment…';
                 document.getElementById('confirm-form').submit();
@@ -102,6 +103,7 @@
                     /* Closing the modal is not an error — the order is still awaiting
                        payment and the same button reopens it. Say so plainly. */
                     payBtn.disabled = false;
+                    if (typeof haptic === 'function') haptic('warning');
                     showNotice('Payment cancelled. Your order is still held — tap Pay to try again.', 'warning');
                 }
             }
@@ -115,6 +117,7 @@
             const reason = (response && response.error && response.error.description)
                 ? response.error.description
                 : 'Your payment could not be completed.';
+            if (typeof haptic === 'function') haptic('error');
             showNotice(reason + ' Nothing was charged — you can try again.', 'danger');
         });
 
