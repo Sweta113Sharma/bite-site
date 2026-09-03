@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
@@ -119,6 +120,31 @@ public class SecurityConfig {
                     .logoutUrl("/logout")
                     .logoutSuccessUrl("/login?logout")
                     .permitAll())
+            .headers(headers -> headers
+                    /*
+                     * Spring Security already sends nosniff and X-Frame-Options: DENY, and
+                     * the platform adds HSTS. These are the two it does not.
+                     *
+                     * Referrer-Policy matters more here than it looks. Every page a student
+                     * pays from loads Razorpay's checkout script, and the pages either side
+                     * of it have order ids in the path. Without a policy the browser sends
+                     * the full URL as the Referer to every third party on the page — the
+                     * CDN, the font host, the payment gateway — handing them a running log
+                     * of which student looked at which order. strict-origin-when-cross-origin
+                     * keeps the full path for our own requests and sends only the origin
+                     * outward, which is what those third parties actually need.
+                     */
+                    .referrerPolicy(referrer -> referrer.policy(
+                            ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                    /*
+                     * Switches off device APIs this product never asks for, so a script that
+                     * does get injected cannot reach for them either. Deliberately silent on
+                     * `payment`: Razorpay's checkout may use the Payment Request API, and
+                     * denying it here would break the till to defend against nothing.
+                     */
+                    .permissionsPolicyHeader(permissions -> permissions.policy(
+                            "camera=(), microphone=(), geolocation=(), usb=(), magnetometer=(), "
+                                    + "accelerometer=(), gyroscope=(), interest-cohort=()")))
             .exceptionHandling(ex -> ex.accessDeniedPage("/access-denied"));
 
         return http.build();

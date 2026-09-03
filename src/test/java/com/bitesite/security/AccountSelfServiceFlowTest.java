@@ -42,6 +42,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -1088,5 +1089,31 @@ class AccountSelfServiceFlowTest {
     void theOrderStatusEndpointIsNotReachableAnonymously() throws Exception {
         new Client().perform(get("/api/orders/{id}/status", 1L), APP_HOST)
                 .andExpect(status().is3xxRedirection());
+    }
+
+    // ---------- Response hardening ----------
+
+    /**
+     * Headers are easy to add and easy to lose — a refactor of the filter chain drops them
+     * silently and nothing else in the suite would notice.
+     */
+    @Test
+    void everyPageCarriesItsSecurityHeaders() throws Exception {
+        new Client().perform(get("/login"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                // Order pages carry ids in the path and load a third-party payment script;
+                // without this the full URL goes out as the Referer to everyone on the page.
+                .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"))
+                .andExpect(header().string("Permissions-Policy",
+                        org.hamcrest.Matchers.containsString("camera=()")));
+    }
+
+    /** Whatever else it disables, the till has to keep working. */
+    @Test
+    void thePermissionsPolicyDoesNotBlockPayment() throws Exception {
+        new Client().perform(get("/login"))
+                .andExpect(header().string("Permissions-Policy",
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("payment="))));
     }
 }

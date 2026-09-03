@@ -65,7 +65,11 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   error:
-    include-message: always
+    # Exception messages reach the error page. BusinessException messages are written to
+    # be shown, but this also surfaces messages from exceptions that never went through
+    # GlobalExceptionHandler — container 404s, filter-level 403s — which is more of the
+    # internals than a stranger needs. On in dev, off in production.
+    include-message: ${ERROR_INCLUDE_MESSAGE:never}
   servlet:
     session:
       cookie:
