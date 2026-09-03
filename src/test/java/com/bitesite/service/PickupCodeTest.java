@@ -100,7 +100,7 @@ class PickupCodeTest {
         orderService.advanceStatus(ORDER, TENANT, OrderStatus.READY_FOR_PICKUP, USER);
 
         ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
-        verify(orderNotifier).notifyOrderUpdate(eq(USER), anyString(), body.capture());
+        verify(orderNotifier).notifyOrderUpdate(eq(USER), anyString(), body.capture(), any());
         assertThat(body.getValue()).containsPattern("\\d{4}");
     }
 

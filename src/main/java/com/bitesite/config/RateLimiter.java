@@ -60,11 +60,24 @@ public class RateLimiter {
         return attemptCount <= maxAttempts;
     }
 
-    /** Prevents unbounded table growth from one-off keys (e.g. an IP that never comes back). */
+    /**
+     * Longest window any caller asks for, plus an hour of slack.
+     *
+     * <p>This has to exceed every window in use or the sweeper becomes a way to reset a
+     * limit early: a row deleted while its window is still open takes the count with it,
+     * and the next call starts again from one. That was live when the only windows were
+     * minutes long and the sweep cut at an hour — it stopped being true the moment
+     * something asked for a daily budget (order-email volume, see OrderNotifier), which
+     * would have been silently reset every fifteen minutes and enforced nothing.
+     */
+    private static final Duration LONGEST_WINDOW = Duration.ofHours(25);
+
+    /** Prevents unbounded table growth from one-off keys (e.g. an IP that never comes back).
+     * Only touches rows whose window cannot still be open — see {@link #LONGEST_WINDOW}. */
     @Scheduled(fixedDelay = 15 * 60_000)
     public void evictStale() {
         jdbcTemplate.update(
                 "DELETE FROM rate_limit_window WHERE window_start < ?",
-                Timestamp.from(Instant.now().minus(Duration.ofHours(1))));
+                Timestamp.from(Instant.now().minus(LONGEST_WINDOW)));
     }
 }
