@@ -6,6 +6,7 @@ import com.twilio.type.PhoneNumber;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 
 /**
  * Twilio account SID/auth token are intentionally left blank until real credentials are
@@ -36,6 +37,8 @@ public class TwilioSmsService implements SmsService {
     }
 
     @Override
+    // An HTTP call to Twilio, previously made while the user's browser waited.
+    @Async
     public void sendOtp(String toPhone, String code) {
         if (!isConfigured()) {
             log.warn("Twilio not configured — skipping OTP SMS to {}", toPhone);

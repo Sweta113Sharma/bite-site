@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -25,6 +26,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
     private final EmailService emailService;
+    private final OtpService otpService;
     private final SmsService smsService;
     private final PushNotificationService pushNotificationService;
 
@@ -137,6 +139,146 @@ public class UserService {
         }
         userDao.setActive(userId, false);
         auditService.record(actorUserId, tenantId, "User", userId, "DEACTIVATE_STAFF", true, false);
+    }
+
+    // ---------- Profile ----------
+
+    /**
+     * Self-service profile edit: the fields a person can legitimately change about
+     * themselves. Email is not among them — it is the login identifier and a uniqueness
+     * constraint, so changing it is a different job with its own verification.
+     *
+     * <p>The subtle part is {@code phone_verified}. A phone number that changes has not
+     * been proved, and re-proving it is only possible when SMS is actually configured, so
+     * the flag follows the same rule {@link #registerStudent} uses: verified unless there
+     * is both a number to check and a way to check it. It is left untouched when the
+     * number did not change, which matters — recomputing it would quietly mark a
+     * half-finished signup's unverified number as verified.
+     *
+     * @return true when the new number still has to be verified, so the caller can send
+     *         the user to the OTP screen instead of leaving them locked out at next login
+     */
+    public boolean updateOwnProfile(Long userId, String name, String phone, String rollNo) {
+        User user = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        String newPhone = blankToNull(phone);
+        String newRollNo = blankToNull(rollNo);
+        boolean phoneChanged = !Objects.equals(newPhone, user.getPhone());
+        boolean needsVerification = phoneChanged && newPhone != null && smsService.isConfigured();
+        boolean phoneVerified = phoneChanged ? !needsVerification : user.isPhoneVerified();
+
+        userDao.updateProfile(userId, name.trim(), newPhone, newRollNo, phoneVerified);
+        auditService.record(userId, user.getTenantId(), "User", userId, "UPDATE_PROFILE", null, null);
+        return needsVerification;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    // ---------- Passwords ----------
+
+    /**
+     * Self-service password change for a signed-in user.
+     *
+     * <p>The current password is re-checked here rather than trusted from the session.
+     * A live session is not proof of who is at the keyboard — a phone left on a canteen
+     * counter or a library machine left signed in is enough — so knowing the existing
+     * password is what separates the account holder from whoever sat down next.
+     */
+    public void changeOwnPassword(Long userId, String currentPassword, String newPassword) {
+        User user = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new BusinessException("That isn't your current password.");
+        }
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new BusinessException("Your new password must be different from your current one.");
+        }
+        userDao.updatePasswordHash(userId, passwordEncoder.encode(newPassword));
+        // Neither password goes into the audit row — before/after stay null. The record is
+        // that a change happened and when, which is what an investigation needs.
+        auditService.record(userId, user.getTenantId(), "User", userId, "CHANGE_PASSWORD", null, null);
+    }
+
+    /**
+     * Sets a new password after a reset code has been verified. Deliberately takes no old
+     * password: the caller must already have consumed a single-use {@code PWRESET} code
+     * via {@link OtpService#verifyPasswordReset}, which is what establishes that whoever
+     * is asking holds the account's mailbox.
+     *
+     * <p>Does not touch {@code email_verified}. Proving mailbox control here would be
+     * enough to justify flipping it, but a reset should not quietly complete a
+     * verification the user never finished — they finish that on {@code /verify}, and the
+     * login page already points them there.
+     */
+    public void resetPassword(Long userId, String newPassword) {
+        User user = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        userDao.updatePasswordHash(userId, passwordEncoder.encode(newPassword));
+        auditService.record(userId, user.getTenantId(), "User", userId, "RESET_PASSWORD", null, null);
+    }
+
+    /**
+     * Manager-initiated reset for one of their own outlet's staff. Sends a code to the
+     * staff member's own inbox rather than setting a password the manager then has to read
+     * out loud — the manager never learns the new credential.
+     *
+     * <p>Outlet and tenant are checked against the target, not trusted from the request,
+     * for the same reason {@link #deactivateOutletstaff} checks them: a crafted id must
+     * not reach another canteen's account, or a platform account (which has no outlet and
+     * so never matches).
+     */
+    public void sendStaffPasswordReset(Long userId, Long outletId, Long tenantId, Long actorUserId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff account not found"));
+        if (!outletId.equals(target.getOutletId()) || !tenantId.equals(target.getTenantId())) {
+            throw new ResourceNotFoundException("Staff account not found");
+        }
+        issuePasswordReset(target, actorUserId);
+    }
+
+    /** Super-admin-initiated reset for a platform account. Platform accounts are the ones
+     * with no tenant, so the null check is also what stops this endpoint being pointed at
+     * a student or an outlet account by id. */
+    public void sendPlatformUserPasswordReset(Long userId, Long actorUserId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (target.getTenantId() != null) {
+            throw new ResourceNotFoundException("User not found");
+        }
+        issuePasswordReset(target, actorUserId);
+    }
+
+    /**
+     * Super-admin-initiated reset for an outlet account, from the college screen.
+     *
+     * <p>Distinct from {@link #sendStaffPasswordReset}, which scopes to a single outlet
+     * because a canteen manager may only reach their own. A super admin works a college at
+     * a time, so the scope is the tenant — but still a scope: the target has to belong to
+     * this college and hold an outlet role, so a platform account cannot be reset through
+     * a tenant-scoped screen.
+     */
+    public void sendTenantStaffPasswordReset(Long userId, Long tenantId, Long actorUserId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff account not found"));
+        if (!tenantId.equals(target.getTenantId()) || !target.getRole().isOutletPortalRole()) {
+            throw new ResourceNotFoundException("Staff account not found");
+        }
+        issuePasswordReset(target, actorUserId);
+    }
+
+    private void issuePasswordReset(User target, Long actorUserId) {
+        // OtpService silently no-ops without SMTP, which is right for a background send but
+        // wrong here: an admin who clicks this needs to know the mail never left, not to
+        // sit waiting for a code that isn't coming.
+        if (!emailService.isConfigured()) {
+            throw new BusinessException("Email isn't configured yet, so a reset code can't be delivered.");
+        }
+        otpService.issuePasswordResetOtp(target);
+        auditService.record(actorUserId, target.getTenantId(), "User", target.getId(),
+                "SEND_PASSWORD_RESET", null, null);
     }
 
     /**

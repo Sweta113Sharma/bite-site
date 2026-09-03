@@ -4,7 +4,6 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -22,10 +21,7 @@ public class StudentRegistrationForm implements Serializable {
     @Email(message = "Enter a valid email address")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
-    @Pattern(regexp = ".*[A-Za-z].*", message = "Password must include at least one letter")
-    @Pattern(regexp = ".*\\d.*", message = "Password must include at least one number")
+    @StrongPassword
     private String password;
 
     // Optional (phone OTP is only issued when both a number is given and SMS is

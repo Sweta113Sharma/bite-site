@@ -14,6 +14,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
     <meta name="apple-mobile-web-app-title" content="BiteSite"/>
+    <!-- Bootstrap still comes from jsDelivr and is render-blocking, so the browser cannot
+         paint until it has done a DNS lookup, a TCP connect and a TLS handshake with a
+         host it has not spoken to yet. Warming that connection in parallel with parsing
+         the rest of the head takes that cost off the critical path. -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous"/>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
     <!-- Archivo Black + Archivo: the BIG BEEF reference language. Archivo Black carries
@@ -61,6 +66,7 @@
     <link rel="stylesheet" th:href="@{/css/parts/08-customer-final.css}"/>
     <link rel="stylesheet" th:href="@{/css/parts/09-console.css}"/>
     <script th:src="@{/js/app.js}" defer></script>
+    <script th:src="@{/js/active-order-strip.js}" defer></script>
     <meta name="_csrf" th:content="${_csrf?.token}"/>
     <meta name="_csrf_parameter" th:content="${_csrf?.parameterName}"/>
 </head>

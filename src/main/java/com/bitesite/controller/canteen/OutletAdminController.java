@@ -3,6 +3,7 @@ package com.bitesite.controller.canteen;
 import com.bitesite.config.AppUserPrincipal;
 import com.bitesite.config.PortalGuard;
 import com.bitesite.dao.OrderDao;
+import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Order;
@@ -156,6 +157,31 @@ public class OutletAdminController {
             userService.createUser(user.getTenantId(), user.getOutletId(), name, email, password, role);
             redirectAttributes.addFlashAttribute("staffNotice", name + " can now sign in.");
         } catch (DuplicateEmailException e) {
+            redirectAttributes.addFlashAttribute("staffError", e.getMessage());
+        }
+        return "redirect:/canteen/staff";
+    }
+
+    /**
+     * Emails a reset code to a staff member. Before this, a forgotten password at an
+     * outlet had no remedy short of a manager creating a second account — and the account
+     * they abandoned kept its access.
+     */
+    @PostMapping("/staff/{userId}/password-reset")
+    public String sendStaffPasswordReset(@AuthenticationPrincipal AppUserPrincipal principal,
+            @PathVariable Long userId, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
+        User user = principal.getUser();
+        try {
+            userService.sendStaffPasswordReset(userId, user.getOutletId(), user.getTenantId(), user.getId());
+            redirectAttributes.addFlashAttribute("staffNotice",
+                    "A reset code is on its way to their email. It expires in 10 minutes.");
+        } catch (ResourceNotFoundException e) {
+            // ResourceNotFoundException extends BusinessException, so without this branch
+            // the one below swallows it and a bad id renders as a friendly notice on this
+            // page instead of the 404 every other lookup here produces.
+            throw e;
+        } catch (BusinessException e) {
             redirectAttributes.addFlashAttribute("staffError", e.getMessage());
         }
         return "redirect:/canteen/staff";

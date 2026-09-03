@@ -633,3 +633,25 @@
     gap: 0.35rem;
     margin-top: 0.5rem;
 }
+
+/* ============================================================
+   SEPARATOR RULE
+
+   `hr` was never styled here, so it inherited Bootstrap's 1px currentColor at 25%
+   opacity — which, on ink text, is a mid-grey line of no particular weight sitting
+   directly under whatever it followed. Where that was a bordered table or card, the
+   two lines stacked into the "double rule" the console screens were showing.
+
+   One quiet rule, and a modifier for the case where a section genuinely needs a
+   harder break.
+   ============================================================ */
+hr {
+    border: 0;
+    border-top: var(--rule-w) solid var(--rule-color);
+    opacity: 1;
+    margin: 1.25rem 0;
+}
+
+hr.rule-strong {
+    border-top-color: var(--rule-color-strong);
+}

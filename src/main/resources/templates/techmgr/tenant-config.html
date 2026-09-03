@@ -4,10 +4,13 @@
 <body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 640px;">
-    <h3 class="mb-4" th:text="${tenant.name} + ' — configuration'">Configuration</h3>
+    <div class="console-head">
+        <h3 class="console-head__title" th:text="${tenant.name}">Configuration</h3>
+        <p class="console-head__blurb">Per-college settings and credentials.</p>
+    </div>
 
-    <div class="table-responsive">
-    <table class="table bg-white mb-4" th:if="${!#lists.isEmpty(entries)}">
+    <div class="table-responsive" th:if="${!#lists.isEmpty(entries)}">
+    <table class="table bg-white mb-4">
         <thead><tr><th>Key</th><th>Value</th></tr></thead>
         <tbody>
         <tr th:each="e : ${entries}">

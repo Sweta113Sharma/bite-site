@@ -5,6 +5,7 @@ import com.bitesite.config.PortalGuard;
 import com.bitesite.dto.PlatformUserForm;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
+import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Role;
 import com.bitesite.model.StaffScope;
 import com.bitesite.service.UserService;
@@ -56,6 +57,30 @@ public class PlatformUserController {
         model.addAttribute("users", userService.findPlatformUsers());
         model.addAttribute("pageTitle", "Platform users");
         return "admin/users";
+    }
+
+    /**
+     * Emails a reset code to a platform account. Sends to the account's own inbox rather
+     * than setting a password here, so an admin never handles another admin's credential
+     * — and so the new one is never spoken aloud, pasted into a chat, or left in a ticket.
+     */
+    @PostMapping("/{id}/password-reset")
+    public String sendPasswordReset(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        try {
+            userService.sendPlatformUserPasswordReset(id, principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("notice",
+                    "A reset code is on its way to that account's email. It expires in 10 minutes.");
+        } catch (ResourceNotFoundException e) {
+            // ResourceNotFoundException extends BusinessException, so without this branch
+            // the one below swallows it and a bad id renders as a friendly notice on this
+            // page instead of the 404 every other lookup here produces.
+            throw e;
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/admin/users";
     }
 
     @PostMapping("/{id}/roles/grant")

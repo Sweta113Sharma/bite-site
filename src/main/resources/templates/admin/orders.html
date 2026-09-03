@@ -4,7 +4,10 @@
 <body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <h3 class="mb-3">All orders</h3>
+    <div class="console-head">
+        <h3 class="console-head__title">All orders</h3>
+        <p class="console-head__blurb">Every order on the platform. Filter by college to narrow it down.</p>
+    </div>
 
     <form method="get" th:action="@{/admin/orders}" class="d-flex gap-2 mb-3 flex-wrap">
         <select name="tenantId" class="form-select" style="width:auto;" onchange="this.form.submit()">

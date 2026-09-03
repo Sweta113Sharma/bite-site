@@ -38,7 +38,7 @@
    ============================================================ */
 
 .badge {
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
     font-family: var(--font-display);
     font-weight: 400;
@@ -146,7 +146,7 @@ body.console .app-chrome {
 
 body.console .app-chrome .navbar {
     position: static;
-    border-bottom: 2px solid var(--color-ink);
+    border-bottom: var(--border-w) solid var(--color-ink);
     min-height: 52px;
     padding-top: 0.35rem;
     padding-bottom: 0.35rem;
@@ -167,9 +167,19 @@ body.console .app-chrome + * {
    width, and simply scrolls when they don't fit.
    ============================================================ */
 
+/* Bone, not ink.
+
+   This strip runs across the top of every staff and admin page, directly under a
+   navbar that is also full width. Painted solid near-black it was the largest
+   single block of colour in the console — the first thing your eye landed on was
+   a black bar, on every screen, saying nothing. The destinations it holds are
+   navigation, not content, and navigation should recede.
+
+   It keeps its shape, its uppercase display type and its yellow current-page
+   marker, so nothing about the language changes. It simply stops shouting. */
 .console-nav {
-    background: var(--color-ink);
-    border-bottom: 3px solid var(--color-ink);
+    background: var(--color-bg);
+    border-bottom: var(--rule-w) solid var(--rule-color-strong);
 }
 
 .console-nav__strip {
@@ -205,7 +215,7 @@ body.console .app-chrome + * {
     width: 32px;
     margin-left: auto;
     align-self: stretch;
-    background: linear-gradient(to right, rgba(20, 16, 13, 0), var(--color-ink) 85%);
+    background: linear-gradient(to right, rgba(242, 234, 217, 0), var(--color-bg) 85%);
     pointer-events: none;
 }
 
@@ -215,7 +225,7 @@ body.console .app-chrome + * {
     gap: 0.35rem;
     flex: none;
     padding: 0.6rem 0.85rem;
-    color: var(--color-bg);
+    color: var(--color-ink-muted);
     text-decoration: none;
     font-family: var(--font-display);
     font-weight: 400;
@@ -223,7 +233,7 @@ body.console .app-chrome + * {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
-    border-right: 1px solid rgba(242, 234, 217, 0.22);
+    border-right: var(--rule-w) solid var(--rule-color);
     transition: background-color 120ms ease, color 120ms ease;
 }
 
@@ -234,16 +244,17 @@ body.console .app-chrome + * {
 
 .console-nav__link:hover,
 .console-nav__link:focus-visible {
-    background: var(--color-primary);
-    color: #fff;
+    background: var(--color-surface-deep);
+    color: var(--color-ink);
     outline: none;
 }
 
-/* Where you are. Yellow on ink is the strongest pairing in the palette, and it is
-   not used for any status, so it never reads as a state. */
+/* Where you are. Yellow is not used for any status, so it never reads as a state.
+   The underline carries the marker on its own if the fill is ever missed. */
 .console-nav__link[aria-current="page"] {
     background: var(--color-accent-tint);
     color: var(--color-ink);
+    box-shadow: inset 0 -3px 0 var(--color-ink);
 }
 
 @media (max-width: 575.98px) {
@@ -274,7 +285,7 @@ body.console .console-head {
     gap: 0.75rem 1rem;
     margin-bottom: 1.25rem;
     padding-bottom: 0.75rem;
-    border-bottom: 3px solid var(--color-ink);
+    border-bottom: var(--border-w) solid var(--color-ink);
 }
 
 /* Works with the markup already in the templates: a heading plus whatever action
@@ -342,7 +353,7 @@ body.console .console-head__count {
     margin-left: 0.5rem;
     padding: 0.15em 0.5em;
     background: var(--color-accent-tint);
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     font-family: var(--font-display);
     font-size: 0.72rem;
     text-transform: uppercase;
@@ -390,8 +401,8 @@ body.console .console-head__count {
    ============================================================ */
 
 body.console .table-responsive {
-    border: 3px solid var(--color-ink);
-    box-shadow: 5px 5px 0 var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
+    box-shadow: var(--shadow-md);
     background: var(--color-surface);
     overscroll-behavior-x: contain;
 }
@@ -415,12 +426,17 @@ body.console .table > :not(caption) > * > * {
     background: transparent;
     padding: 0.6rem 0.75rem;
     vertical-align: middle;
-    border-bottom-color: var(--color-ink);
+    /* A thirty-row table drew thirty near-black rules. Separating rows only needs
+       enough contrast to follow one across; at full ink it became a grid of bars. */
+    border-bottom-color: var(--rule-color);
 }
 
 body.console .table thead th {
     background: var(--color-accent-tint);
-    border-bottom: 3px solid var(--color-ink);
+    /* Sits a couple of pixels below the panel border above it. Two structural
+       weights that close together read as one thick bar rather than as a frame and
+       a header, which is what made these tables look banded. */
+    border-bottom: var(--rule-w) solid var(--rule-color-strong);
     font-family: var(--font-display);
     font-weight: 400;
     text-transform: uppercase;
@@ -457,7 +473,7 @@ body.console .table .row-actions {
 }
 
 body.console .table .row-actions .btn {
-    box-shadow: 2px 2px 0 var(--color-ink);
+    box-shadow: var(--shadow-xs);
 }
 
 /* Columns that carry decoration rather than data (a logo thumbnail, say) step aside
@@ -484,8 +500,8 @@ body.console .table .mono {
    ============================================================ */
 
 body.console .console-panel {
-    border: 3px solid var(--color-ink);
-    box-shadow: 5px 5px 0 var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
+    box-shadow: var(--shadow-md);
     background: var(--color-surface);
     padding: 1rem 1.1rem;
     margin-bottom: 1.25rem;
@@ -512,8 +528,8 @@ body.console .stat-row {
 }
 
 body.console .stat {
-    border: 3px solid var(--color-ink);
-    box-shadow: 4px 4px 0 var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
+    box-shadow: var(--shadow-sm);
     background: var(--color-surface);
     padding: 0.75rem 0.9rem;
 }
@@ -559,7 +575,7 @@ body.console .form-label {
 body.console .form-control,
 body.console .form-select {
     background: var(--color-field);
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
     font-size: 0.9rem;
     padding: 0.45rem 0.6rem;
@@ -568,7 +584,7 @@ body.console .form-select {
 body.console .form-control:focus,
 body.console .form-select:focus {
     border-color: var(--color-ink);
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     outline: none;
 }
 
@@ -604,9 +620,9 @@ body.console .form-row > .form-field--narrow {
    shouts. */
 body.console .outlet-switch {
     background: var(--color-surface);
-    border: 3px solid var(--color-ink);
-    border-left: 8px solid var(--color-ink);
-    box-shadow: 4px 4px 0 var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
+    border-left: 4px solid var(--color-ink);
+    box-shadow: var(--shadow-sm);
     padding: 0.8rem 1rem;
 }
 
@@ -631,7 +647,7 @@ body.console .live-dot {
     width: 10px;
     height: 10px;
     border-radius: 0;
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     background: var(--color-accent-tint);
     box-shadow: none;
     margin-right: 0.45rem;
@@ -699,8 +715,8 @@ body.console .menu-admin {
     list-style: none;
     margin: 0;
     padding: 0;
-    border: 3px solid var(--color-ink);
-    box-shadow: 5px 5px 0 var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
+    box-shadow: var(--shadow-md);
     background: var(--color-surface);
 }
 
@@ -710,7 +726,7 @@ body.console .menu-admin__row {
     align-items: center;
     gap: 0.85rem;
     padding: 0.7rem 0.85rem;
-    border-bottom: 2px solid var(--color-ink);
+    border-bottom: var(--border-w) solid var(--color-ink);
 }
 
 body.console .menu-admin__row:last-child {
@@ -731,7 +747,7 @@ body.console .menu-admin__row.is-off {
 body.console .menu-admin__thumb {
     width: 56px;
     height: 56px;
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     background: var(--color-field);
     overflow: hidden;
     display: flex;
@@ -806,7 +822,7 @@ body.console .menu-admin__actions {
 }
 
 body.console .menu-admin__actions .btn {
-    box-shadow: 2px 2px 0 var(--color-ink);
+    box-shadow: var(--shadow-xs);
 }
 
 /* The daily-limit bar sits inside the row rather than owning one. */
@@ -816,7 +832,7 @@ body.console .menu-admin .daily-limit-row {
 
 body.console .menu-admin .daily-limit-bar {
     height: 6px;
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     background: var(--color-field);
     max-width: 12rem;
 }
@@ -878,7 +894,7 @@ body.console .state-panel {
    product — arrived looking like failures. Scoped to the console because the
    customer app's empty states are signed off as they are. */
 body.console .state-medallion__disc {
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
 }
 
@@ -932,7 +948,7 @@ body.console .alert {
     font-size: 0.88rem;
     letter-spacing: 0;
     padding: 0.7rem 0.9rem;
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
 }
 
 body.console .alert-success {
@@ -1035,7 +1051,7 @@ a:hover { color: var(--color-primary); }
 
 .form-check-input {
     border-radius: 0;
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     background-color: var(--color-field);
     box-shadow: none;
 }
@@ -1045,7 +1061,7 @@ a:hover { color: var(--color-primary); }
 }
 .form-check-input:focus {
     border-color: var(--color-ink);
-    box-shadow: 2px 2px 0 var(--color-ink);
+    box-shadow: var(--shadow-xs);
     outline: none;
 }
 /* The switch variant draws its knob as a background image tinted Bootstrap blue. */

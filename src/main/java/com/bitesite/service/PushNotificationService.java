@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.Security;
+import org.springframework.scheduling.annotation.Async;
+import java.util.List;
 
 /**
  * VAPID keys are blank until generated (see README) — while blank, isConfigured() is false
@@ -86,6 +88,15 @@ public class PushNotificationService {
      * fails to send (dead subscription, gateway hiccup) — this is a nice-to-have alert,
      * not a step in the order flow itself. A 404/410 response means the browser dropped
      * the subscription, so we drop it too rather than retry it forever. */
+    // The important one. Every caller is inside an @Transactional order transition,
+    // so this loop's network round trips were being made with the order row still
+    // locked. Moving it off the request thread ends the transaction at the speed of
+    // the database instead of the speed of a push gateway.
+    //
+    // Safe to run before that transaction commits: it reads users and
+    // push_subscriptions, never the order it is announcing, and the message text is
+    // passed in already built.
+    @Async
     public void notifyUser(Long userId, String title, String body) {
         if (!isConfigured()) {
             return;
@@ -96,13 +107,28 @@ public class PushNotificationService {
         if (!userDao.findById(userId).map(User::isNotifyOrderUpdates).orElse(false)) {
             return;
         }
-        for (PushSubscription sub : pushSubscriptionDao.findByUserId(userId)) {
-            try {
-                PushService pushService = new PushService();
-                pushService.setSubject(subject);
-                pushService.setPublicKey(publicKey);
-                pushService.setPrivateKey(privateKey);
+        List<PushSubscription> subscriptions = pushSubscriptionDao.findByUserId(userId);
+        if (subscriptions.isEmpty()) {
+            return;
+        }
 
+        // Built once, not once per subscription. Constructing a PushService parses the
+        // VAPID key pair and spins up the crypto provider, which is the expensive part of
+        // this method — and a phone, a laptop and a desktop is three subscriptions for one
+        // person, so it was being paid three times to send one notification.
+        PushService pushService;
+        try {
+            pushService = new PushService();
+            pushService.setSubject(subject);
+            pushService.setPublicKey(publicKey);
+            pushService.setPrivateKey(privateKey);
+        } catch (Exception e) {
+            log.error("Could not initialise the push service for user {}", userId, e);
+            return;
+        }
+
+        for (PushSubscription sub : subscriptions) {
+            try {
                 String payload = "{\"title\":" + jsonString(title) + ",\"body\":" + jsonString(body) + "}";
                 Notification notification = Notification.builder()
                         .endpoint(sub.getEndpoint())

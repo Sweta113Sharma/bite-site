@@ -4,7 +4,10 @@
 <body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 480px;">
-    <h3 class="mb-4" th:text="${pageTitle}">Add a lead</h3>
+    <div class="console-head">
+        <h3 class="console-head__title" th:text="${pageTitle}">Add a lead</h3>
+        <p class="console-head__blurb">A college you are talking to but have not onboarded yet.</p>
+    </div>
     <form method="post" th:action="@{/admin/onboarding}" th:object="${form}">
         <div class="mb-3">
             <label class="form-label">College name</label>

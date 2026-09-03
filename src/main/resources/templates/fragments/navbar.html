@@ -31,15 +31,6 @@
 
         <!-- Right-side cluster: menu button, identity, role switcher, logout. -->
         <div class="navbar-right d-flex align-items-center gap-3">
-            <!-- Opens the full destination list. The bottom tab bar carries five places
-                 and the console strip scrolls; this is where everything is visible at
-                 once, including the pages neither of those has room for. -->
-            <button sec:authorize="isAuthenticated()" type="button"
-                    class="nav-drawer-btn" id="nav-drawer-btn"
-                    aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
-                <span class="material-symbols-outlined">menu</span>
-            </button>
-
             <span sec:authorize="isAuthenticated()" class="navbar-text small d-none d-lg-inline" sec:authentication="name">user</span>
 
             <!-- USER links — hidden on mobile (bottom nav takes over) -->
@@ -64,10 +55,20 @@
                 </select>
             </form>
 
-            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="d-inline m-0">
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="navbar-logout d-inline m-0">
                 <button class="btn btn-sm btn-outline-secondary" type="submit"><span class="material-symbols-outlined">logout</span><span class="btn-label">Logout</span></button>
             </form>
             <a sec:authorize="!isAuthenticated()" class="btn btn-sm btn-outline-secondary" th:href="@{/login}"><span class="material-symbols-outlined">login</span><span class="btn-label">Login</span></a>
+
+            <!-- Last in the cluster, so it sits against the right edge of the bar.
+                 It used to be first — between the brand and the user's own name — which
+                 put a bordered menu box in the middle of the header pointing at nothing
+                 in particular. A menu control belongs at an edge. -->
+            <button sec:authorize="isAuthenticated()" type="button"
+                    class="nav-drawer-btn" id="nav-drawer-btn"
+                    aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
         </div>
     </div>
 </nav>
@@ -250,6 +251,14 @@
                 <a class="nav-drawer__link" th:href="@{/techmgr/health}"><span class="material-symbols-outlined">monitor_heart</span>System health</a>
             </div>
 
+            <!-- Not inside any role's group: every account has a name and a password, and
+                 until now no portal offered a way to change either. -->
+            <div class="nav-drawer__group">
+                <p class="nav-drawer__label">Your account</p>
+                <a class="nav-drawer__link" th:href="@{/account/profile}"><span class="material-symbols-outlined">person</span>Your profile</a>
+                <a class="nav-drawer__link" th:href="@{/account/password}"><span class="material-symbols-outlined">lock</span>Change password</a>
+            </div>
+
             <!-- Legal. Published pages that previously had no navigation at all. -->
             <div class="nav-drawer__group nav-drawer__group--quiet">
                 <p class="nav-drawer__label">Legal</p>
@@ -280,36 +289,39 @@
      live order (see OrderStatus.attentionRank) and counts the rest, so it never grows
      into a second list.
      ============================================================ -->
-<a th:fragment="activeOrderStrip"
-   sec:authorize="hasRole('USER')"
-   th:if="${activeOrders != null and !#lists.isEmpty(activeOrders)}"
-   th:with="top=${activeOrders[0]}, s=${activeOrders[0].status.name()}"
-   class="active-order-strip"
-   th:classappend="${s == 'READY_FOR_PICKUP'} ? 'is-ready' :
-                   (${s == 'PREPARING'} ? 'is-preparing' :
-                   (${s == 'AWAITING_PAYMENT' or s == 'PAYMENT_FAILED'} ? 'is-unpaid' : 'is-paid'))"
-   th:href="@{/student/orders/{id}(id=${top.id})}">
+<!-- Host element, always present for a signed-in student even when there is nothing
+     live, so the poller has somewhere to put a strip that appears mid-session and
+     somewhere to clear when one ends. The strip is in normal flow, not sticky (see
+     08-customer-final.css), so an extra wrapper costs nothing positionally.
 
-    <span class="active-order-strip__pulse" aria-hidden="true"></span>
+     The status-to-wording mapping is NOT here: it is in ActiveOrderStripView, which
+     this and /api/orders/active both read, so the first paint and every refresh
+     afterwards cannot disagree. -->
+<div th:fragment="activeOrderStrip" sec:authorize="hasRole('USER')"
+     id="active-order-strip-host"
+     th:with="strip=${T(com.bitesite.dto.ActiveOrderStripView).from(activeOrders)}">
+    <a th:if="${strip != null}"
+       class="active-order-strip"
+       th:classappend="${strip.variant}"
+       th:attr="data-signature=${strip.signature()}"
+       th:href="@{/student/orders/{id}(id=${strip.orderId})}">
 
-    <span class="active-order-strip__text">
-        <strong th:text="${s == 'READY_FOR_PICKUP'} ? 'Ready to collect' :
-                         (${s == 'PREPARING'} ? 'Being prepared' :
-                         (${s == 'PAID'} ? 'Order confirmed' :
-                         (${s == 'PAYMENT_FAILED'} ? 'Payment failed' : 'Payment pending')))">Status</strong>
-        <span class="active-order-strip__meta">
-            <span th:text="${top.tokenNo}">BITE-0000</span>
-            <span th:if="${#lists.size(activeOrders) > 1}"
-                  th:text="' · +' + (${#lists.size(activeOrders)} - 1) + ' more'"></span>
+        <span class="active-order-strip__pulse" aria-hidden="true"></span>
+
+        <span class="active-order-strip__text">
+            <strong th:text="${strip.label}">Status</strong>
+            <span class="active-order-strip__meta">
+                <span th:text="${strip.tokenNo}">BITE-0000</span>
+                <span th:if="${strip.moreCount > 0}" th:text="' · +' + ${strip.moreCount} + ' more'"></span>
+            </span>
         </span>
-    </span>
 
-    <span class="active-order-strip__cta">
-        <span th:text="${s == 'READY_FOR_PICKUP'} ? 'Show code' :
-                       (${s == 'AWAITING_PAYMENT' or s == 'PAYMENT_FAILED'} ? 'Pay now' : 'Track')">Track</span>
-        <span class="material-symbols-outlined">arrow_forward</span>
-    </span>
-</a>
+        <span class="active-order-strip__cta">
+            <span th:text="${strip.cta}">Track</span>
+            <span class="material-symbols-outlined">arrow_forward</span>
+        </span>
+    </a>
+</div>
 
 <!-- ============================================================
      BOTTOM TAB NAV — mobile only, USER role only

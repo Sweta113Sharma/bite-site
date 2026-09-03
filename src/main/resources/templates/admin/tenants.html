@@ -19,8 +19,8 @@
         <a class="btn btn-primary" th:href="@{/admin/tenants/new}"><span class="material-symbols-outlined">add</span>Onboard a college</a>
     </div>
 
-    <div class="table-responsive">
-    <table class="table bg-white" th:if="${!#lists.isEmpty(tenants)}">
+    <div class="table-responsive" th:if="${!#lists.isEmpty(tenants)}">
+    <table class="table bg-white">
         <thead><tr><th class="col-optional">Logo</th><th>Name</th><th>Status</th><th></th></tr></thead>
         <tbody>
         <tr th:each="t : ${tenants}">

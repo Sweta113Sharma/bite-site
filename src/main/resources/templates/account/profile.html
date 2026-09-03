@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body th:classappend="${consoleUser} ? 'console' : ''">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 520px;">
+
+    <div class="console-head" th:if="${consoleUser}">
+        <h3 class="console-head__title">Your profile</h3>
+        <p class="console-head__blurb">The details this account is known by.</p>
+    </div>
+    <div class="d-flex align-items-center gap-3 mb-4 mt-2" th:unless="${consoleUser}">
+        <div class="icon-circle" style="width: 52px; height: 52px; font-size: 1.6rem;">
+            <span class="material-symbols-outlined">person</span>
+        </div>
+        <div>
+            <h3 class="page-header-title m-0">Your profile</h3>
+            <div class="text-muted" style="font-size:0.9rem;">Fix a typo, or update your number.</div>
+        </div>
+    </div>
+
+    <div class="alert alert-success" th:if="${profileSaved}">Profile updated.</div>
+
+    <form method="post" th:action="@{/account/profile}" th:object="${form}">
+        <div class="mb-3">
+            <label class="form-label" for="profile-name">Name</label>
+            <input type="text" th:field="*{name}" id="profile-name" class="form-control"
+                   required="required" autocomplete="name"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="profile-email">Email</label>
+            <!-- Shown but not editable: it is the login identifier and is unique across the
+                 platform, so changing it needs a verify-before-swap flow of its own. -->
+            <input type="email" id="profile-email" class="form-control" th:value="${email}"
+                   disabled="disabled"/>
+            <div class="form-text">You sign in with this. Contact support to change it.</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="profile-phone">Mobile number</label>
+            <input type="tel" th:field="*{phone}" id="profile-phone" class="form-control"
+                   inputmode="numeric" maxlength="10" placeholder="Optional" autocomplete="tel-national"/>
+            <div class="form-text">Changing this may ask you to confirm the new number by SMS.</div>
+            <div class="text-danger small" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></div>
+        </div>
+
+        <div class="mb-4" th:if="${showRollNo}">
+            <label class="form-label" for="profile-roll">Roll number</label>
+            <input type="text" th:field="*{rollNo}" id="profile-roll" class="form-control"
+                   placeholder="Optional"/>
+            <div class="form-text">Shown to the canteen when you collect an order.</div>
+            <div class="text-danger small" th:if="${#fields.hasErrors('rollNo')}" th:errors="*{rollNo}"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 py-2">
+            <span class="material-symbols-outlined">check</span>Save changes
+        </button>
+    </form>
+
+    <p class="text-muted text-center mt-4 mb-5" style="font-size:0.88rem;">
+        Looking for your password? <a th:href="@{/account/password}">Change it here</a>.
+    </p>
+</div>
+</body>
+</html>

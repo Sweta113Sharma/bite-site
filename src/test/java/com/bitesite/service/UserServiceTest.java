@@ -2,6 +2,7 @@ package com.bitesite.service;
 
 import com.bitesite.dao.UserDao;
 import com.bitesite.exception.BusinessException;
+import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.exception.DuplicateEmailException;
 import com.bitesite.model.Role;
 import com.bitesite.model.User;
@@ -31,6 +32,7 @@ class UserServiceTest {
     @Mock private EmailService emailService;
     @Mock private SmsService smsService;
     @Mock private PushNotificationService pushNotificationService;
+    @Mock private OtpService otpService;
 
     // A real encoder, not a mock — this is exactly the kind of "does the password actually
     // verify afterward" property a mock would silently paper over.
@@ -40,8 +42,8 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userDao, passwordEncoder, auditService, emailService, smsService,
-                pushNotificationService);
+        userService = new UserService(userDao, passwordEncoder, auditService, emailService, otpService,
+                smsService, pushNotificationService);
     }
 
     @Test
@@ -222,5 +224,155 @@ class UserServiceTest {
 
         verify(userDao).revokeRole(7L, Role.TECH_MANAGER, 1L);
         verify(userDao, never()).updateActiveRole(any(), any());
+    }
+
+    // --- changeOwnPassword ---
+
+    @Test
+    void changeOwnPasswordRejectsAWrongCurrentPassword() {
+        User user = User.builder().id(7L).tenantId(1L)
+                .passwordHash(passwordEncoder.encode("Correct1")).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.changeOwnPassword(7L, "Guessed1", "Brandnew1"))
+                .isInstanceOf(BusinessException.class);
+        verify(userDao, never()).updatePasswordHash(any(), anyString());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void changeOwnPasswordRejectsReusingTheCurrentPassword() {
+        User user = User.builder().id(7L).tenantId(1L)
+                .passwordHash(passwordEncoder.encode("Correct1")).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.changeOwnPassword(7L, "Correct1", "Correct1"))
+                .isInstanceOf(BusinessException.class);
+        verify(userDao, never()).updatePasswordHash(any(), anyString());
+    }
+
+    @Test
+    void changeOwnPasswordStoresAHashTheNewPasswordActuallyVerifiesAgainst() {
+        User user = User.builder().id(7L).tenantId(1L)
+                .passwordHash(passwordEncoder.encode("Correct1")).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        userService.changeOwnPassword(7L, "Correct1", "Brandnew1");
+
+        ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
+        verify(userDao).updatePasswordHash(eq(7L), hash.capture());
+        assertThat(passwordEncoder.matches("Brandnew1", hash.getValue())).isTrue();
+        assertThat(passwordEncoder.matches("Correct1", hash.getValue())).isFalse();
+        verify(auditService).record(7L, 1L, "User", 7L, "CHANGE_PASSWORD", null, null);
+    }
+
+    @Test
+    void changeOwnPasswordNeverPutsEitherPasswordInTheAuditTrail() {
+        User user = User.builder().id(7L).tenantId(1L)
+                .passwordHash(passwordEncoder.encode("Correct1")).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        userService.changeOwnPassword(7L, "Correct1", "Brandnew1");
+
+        // before/after are the audit row's payload columns; a password reaching them would
+        // be readable by every super admin on /admin/audit-log.
+        verify(auditService).record(anyLong(), anyLong(), anyString(), anyLong(), anyString(),
+                isNull(), isNull());
+    }
+
+    // --- resetPassword ---
+
+    @Test
+    void resetPasswordSetsTheNewPasswordWithoutNeedingTheOldOne() {
+        User user = User.builder().id(7L).tenantId(1L)
+                .passwordHash(passwordEncoder.encode("Forgotten1")).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        userService.resetPassword(7L, "Brandnew1");
+
+        ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
+        verify(userDao).updatePasswordHash(eq(7L), hash.capture());
+        assertThat(passwordEncoder.matches("Brandnew1", hash.getValue())).isTrue();
+        verify(auditService).record(7L, 1L, "User", 7L, "RESET_PASSWORD", null, null);
+    }
+
+    @Test
+    void resetPasswordDoesNotSilentlyVerifyTheEmail() {
+        User user = User.builder().id(7L).tenantId(1L).emailVerified(false)
+                .passwordHash(passwordEncoder.encode("Forgotten1")).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        userService.resetPassword(7L, "Brandnew1");
+
+        verify(userDao, never()).markEmailVerified(any());
+    }
+
+    // --- admin-initiated resets ---
+
+    @Test
+    void sendStaffPasswordResetEmailsACodeToTheStaffMember() {
+        User target = User.builder().id(9L).tenantId(1L).outletId(4L).email("cook@demo.local").build();
+        when(userDao.findById(9L)).thenReturn(Optional.of(target));
+        when(emailService.isConfigured()).thenReturn(true);
+
+        userService.sendStaffPasswordReset(9L, 4L, 1L, 2L);
+
+        verify(otpService).issuePasswordResetOtp(target);
+        verify(auditService).record(2L, 1L, "User", 9L, "SEND_PASSWORD_RESET", null, null);
+    }
+
+    @Test
+    void sendStaffPasswordResetRefusesAnAccountAtAnotherOutlet() {
+        User target = User.builder().id(9L).tenantId(1L).outletId(99L).email("cook@demo.local").build();
+        when(userDao.findById(9L)).thenReturn(Optional.of(target));
+
+        assertThatThrownBy(() -> userService.sendStaffPasswordReset(9L, 4L, 1L, 2L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verifyNoInteractions(otpService);
+    }
+
+    @Test
+    void sendStaffPasswordResetRefusesAnAccountAtAnotherTenant() {
+        User target = User.builder().id(9L).tenantId(77L).outletId(4L).email("cook@demo.local").build();
+        when(userDao.findById(9L)).thenReturn(Optional.of(target));
+
+        assertThatThrownBy(() -> userService.sendStaffPasswordReset(9L, 4L, 1L, 2L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verifyNoInteractions(otpService);
+    }
+
+    @Test
+    void sendPlatformUserPasswordResetRefusesANonPlatformAccount() {
+        // A student has a tenant; platform accounts do not. Without this check the endpoint
+        // would happily mail a reset code for any account id a super admin typed.
+        User student = User.builder().id(9L).tenantId(1L).email("student@demo.local").build();
+        when(userDao.findById(9L)).thenReturn(Optional.of(student));
+
+        assertThatThrownBy(() -> userService.sendPlatformUserPasswordReset(9L, 2L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verifyNoInteractions(otpService);
+    }
+
+    @Test
+    void sendPlatformUserPasswordResetEmailsACodeForAPlatformAccount() {
+        User admin = User.builder().id(9L).tenantId(null).email("admin@demo.local").build();
+        when(userDao.findById(9L)).thenReturn(Optional.of(admin));
+        when(emailService.isConfigured()).thenReturn(true);
+
+        userService.sendPlatformUserPasswordReset(9L, 2L);
+
+        verify(otpService).issuePasswordResetOtp(admin);
+        verify(auditService).record(2L, null, "User", 9L, "SEND_PASSWORD_RESET", null, null);
+    }
+
+    @Test
+    void adminInitiatedResetSaysSoRatherThanSilentlySendingNothingWhenSmtpIsOff() {
+        User admin = User.builder().id(9L).tenantId(null).email("admin@demo.local").build();
+        when(userDao.findById(9L)).thenReturn(Optional.of(admin));
+        when(emailService.isConfigured()).thenReturn(false);
+
+        assertThatThrownBy(() -> userService.sendPlatformUserPasswordReset(9L, 2L))
+                .isInstanceOf(BusinessException.class);
+        verifyNoInteractions(otpService);
     }
 }

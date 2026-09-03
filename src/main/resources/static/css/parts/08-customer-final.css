@@ -59,9 +59,9 @@
     max-width: 300px;
 }
 .menu-hero-outlet .form-select {
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
-    box-shadow: 4px 4px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     font-weight: 700;
     font-family: var(--font-display);
     text-transform: uppercase;
@@ -73,8 +73,8 @@
     height: clamp(84px, 14vw, 128px);
     border-radius: 50%;
     background: var(--color-accent-tint);
-    border: 3px solid var(--color-ink);
-    box-shadow: 6px 6px 0 var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
+    box-shadow: var(--shadow-md);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -92,8 +92,8 @@
 /* ---------- Ticker ---------- */
 .ticker {
     background: var(--color-primary);
-    border-top: 3px solid var(--color-ink);
-    border-bottom: 3px solid var(--color-ink);
+    border-top: var(--border-w) solid var(--color-ink);
+    border-bottom: var(--border-w) solid var(--color-ink);
     overflow: hidden;
     margin: 0 0 1.75rem;
 }
@@ -125,11 +125,11 @@
     right: auto;
     bottom: auto;
     margin-top: 0.85rem;
-    border-top: 3px solid var(--color-ink);
+    border-top: var(--border-w) solid var(--color-ink);
     padding-top: 0.85rem;
 }
 .menu-card-actions .btn-add {
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
 }
 
 /* The card itself: keep the photo square-ish and the body stacked,
@@ -137,9 +137,9 @@
 .menu-card {
     display: flex;
     flex-direction: column;
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
-    box-shadow: 5px 5px 0 var(--color-ink);
+    box-shadow: var(--shadow-md);
     background: var(--color-surface);
     overflow: hidden;
 }
@@ -199,7 +199,7 @@
     font-family: var(--font-display);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -208,7 +208,7 @@
 .menu-card-actions .btn-add:hover {
     background: var(--color-primary-dark);
     transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0 var(--color-ink);
+    box-shadow: var(--shadow-pressed);
 }
 .menu-card-actions .btn-add:active { transform: translate(3px, 3px); box-shadow: none; }
 
@@ -218,10 +218,10 @@
     flex: 1;
     width: 100%;
     height: 44px;
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
     background: var(--color-accent-tint);
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     align-items: stretch;
     overflow: hidden;
 }
@@ -247,15 +247,15 @@
     justify-content: center;
     font-family: var(--font-display);
     font-size: 1.05rem;
-    border-left: 3px solid var(--color-ink);
-    border-right: 3px solid var(--color-ink);
+    border-left: var(--border-w) solid var(--color-ink);
+    border-right: var(--border-w) solid var(--color-ink);
 }
 
 /* ---------- Deal cards (today's specials) ---------- */
 .deal-card {
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
-    box-shadow: 4px 4px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
     background: var(--color-accent-tint);
 }
@@ -271,10 +271,10 @@
     height: 38px;
     padding: 0 1.1rem;
     border-radius: 0;
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     background: var(--color-primary);
     color: #fff;
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     font-family: var(--font-display);
     text-transform: uppercase;
     font-size: 0.8rem;
@@ -283,9 +283,9 @@
 
 /* ---------- Search + chips stay tidy ---------- */
 .search-bar {
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
-    box-shadow: 4px 4px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     background: var(--color-field);
 }
 /* This layer turned the chip from a borderless icon-and-label into a bordered card, but
@@ -300,7 +300,7 @@
    outlets and can be any length, so the label is clamped to two lines at a fixed height —
    that keeps the row even no matter what a canteen types. */
 .category-chip {
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
     background: var(--color-surface);
     font-family: var(--font-display);
@@ -308,7 +308,7 @@
     font-size: 0.8rem;
     letter-spacing: 0.03em;
     color: var(--color-ink);
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
 
     flex: 0 0 100px;
     width: 100px;
@@ -353,7 +353,7 @@
 
 /* ---------- Sticky cart bar ---------- */
 #sticky-cart-bar {
-    border-top: 3px solid var(--color-ink);
+    border-top: var(--border-w) solid var(--color-ink);
     box-shadow: 0 -4px 0 var(--color-ink);
     background: var(--color-surface);
 }
@@ -437,7 +437,7 @@
     color: var(--color-ink) !important;
 }
 .navbar .navbar-toggler-custom {
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
     color: var(--color-ink);
 }
@@ -452,7 +452,7 @@
     top: 0;
     z-index: 1030;
     background: var(--color-bg) !important;
-    border-bottom: 3px solid var(--color-ink);
+    border-bottom: var(--border-w) solid var(--color-ink);
     box-shadow: none;
     
     
@@ -480,13 +480,58 @@
     flex: none;
 }
 
+/* Bootstrap's .navbar is flex-wrap: wrap and its .container inherits that, so as soon
+   as the brand plus the button cluster exceeded one line the cluster dropped onto a
+   second row — which is what a phone was showing: a college name on one line, then a
+   logout button and a menu button floating on the line beneath it.
+
+   The bar is two things, a brand and its controls, and it is always one row. The brand
+   is the part that gives: it already truncates. */
+.navbar > .container {
+    flex-wrap: nowrap;
+}
+
+.navbar .navbar-brand {
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
 .navbar-right {
     margin-left: auto;
     min-width: 0;
+    flex: 0 0 auto;
+    /* The cluster is a menu button, a name, a role switcher and a sign-out control. Left
+       to wrap it stacked into two ragged rows on the console, where all four are present
+       at once; the brand beside it already truncates, so the space comes from there. */
+    flex-wrap: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    /* Sign-out leaves the bar on a phone. It is not lost — the drawer this hamburger
+       opens ends with a full-width "Sign out", so the control is one tap away and the
+       header is left with the two things it needs: who you are looking at, and the way
+       into everything else. Signed-out visitors keep their Login button, since there is
+       no drawer to put it in. */
+    .navbar .navbar-logout {
+        display: none !important;
+    }
+
+    /* A multi-role account's switcher is the one remaining item that can outgrow the
+       row. Cap it rather than let it push the brand out. */
+    .navbar-right .form-select {
+        max-width: 8.5rem;
+    }
+}
+
+.navbar .navbar-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 14rem;
 }
 
 .navbar-toggler-custom {
-    border: 2px solid var(--color-ink) !important;
+    border: var(--border-w) solid var(--color-ink) !important;
     border-radius: 0 !important;
     background: transparent;
     color: var(--color-ink);
@@ -496,12 +541,12 @@
     align-items: center;
     justify-content: center;
     flex: none;
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
 }
 
 .navbar-toggler-custom:active {
     transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0 var(--color-ink);
+    box-shadow: var(--shadow-pressed);
 }
 
 .navbar .nav-link {
@@ -524,12 +569,12 @@
 
 /* Logout / login buttons match the brutalist language */
 .navbar .btn-outline-secondary {
-    border: 2px solid var(--color-ink) !important;
+    border: var(--border-w) solid var(--color-ink) !important;
     border-radius: 0 !important;
     color: var(--color-ink) !important;
     background: transparent;
     font-weight: 700;
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     white-space: nowrap;
     flex: none;
 }
@@ -546,9 +591,9 @@
 
 /* Collapsed staff/admin menu on mobile */
 .navbar-links-collapse.is-open {
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-top: none;
-    box-shadow: 5px 5px 0 var(--color-ink);
+    box-shadow: var(--shadow-md);
     background: var(--color-bg);
 }
 
@@ -645,7 +690,7 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     padding-bottom: 4px;
-    border-bottom: 3px solid var(--color-ink);
+    border-bottom: var(--border-w) solid var(--color-ink);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -686,7 +731,7 @@
         top: 60px;
         z-index: 1020;
         background: var(--color-bg);
-        border-bottom: 3px solid var(--color-ink);
+        border-bottom: var(--border-w) solid var(--color-ink);
         margin-inline: -1rem;
         padding: 8px 1rem 10px;
         overflow-x: auto;
@@ -769,7 +814,7 @@ body { overscroll-behavior-y: auto !important; }
 /* Everything else on these screens is square; this was the last circle. */
 .icon-circle {
     border-radius: 0;
-    border: 3px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     box-shadow: var(--shadow-sm);
 }
 
@@ -793,7 +838,7 @@ body { overscroll-behavior-y: auto !important; }
         align-items: stretch;
         height: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
         padding: 0 4px var(--safe-area-bottom);
-        border-top: 3px solid var(--color-ink);
+        border-top: var(--border-w) solid var(--color-ink);
         background: var(--color-surface);
     }
 
@@ -868,7 +913,7 @@ body { overscroll-behavior-y: auto !important; }
     align-items: center;
     gap: 12px;
     padding: 10px 16px;
-    border-bottom: 3px solid var(--color-ink);
+    border-bottom: var(--border-w) solid var(--color-ink);
     background: var(--color-ink);
     color: var(--color-bg);
     text-decoration: none;
@@ -976,7 +1021,7 @@ body { overscroll-behavior-y: auto !important; }
 
 .orders-group--active .order-card {
     border-width: 3px;
-    box-shadow: 5px 5px 0 var(--color-ink);
+    box-shadow: var(--shadow-md);
 }
 
 /* The category strip offsets 60px for the top navbar, but that bar does not stay put —

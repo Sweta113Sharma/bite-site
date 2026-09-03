@@ -7,6 +7,7 @@ import com.bitesite.dto.StaffForm;
 import com.bitesite.dto.TenantForm;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
+import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Outlet;
 import com.bitesite.model.Role;
 import com.bitesite.model.StaffScope;
@@ -137,6 +138,30 @@ public class TenantController {
         }
         redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.staffForm", bindingResult);
         redirectAttributes.addFlashAttribute("staffForm", form);
+        return "redirect:/admin/tenants/" + id;
+    }
+
+    /**
+     * Emails a reset code to an outlet account. This screen listed staff with no actions
+     * at all, so a canteen whose manager had forgotten their password had nobody who could
+     * help — the manager's own staff screen can reset their operators, but nothing could
+     * reset the manager.
+     */
+    @PostMapping("/{id}/staff/{userId}/password-reset")
+    public String sendStaffPasswordReset(@AuthenticationPrincipal AppUserPrincipal principal,
+            @PathVariable Long id, @PathVariable Long userId, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        try {
+            userService.sendTenantStaffPasswordReset(userId, id, principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("staffNotice",
+                    "A reset code is on its way to their email. It expires in 10 minutes.");
+        } catch (ResourceNotFoundException e) {
+            // Extends BusinessException, so without this branch the one below swallows it
+            // and a bad id renders as a notice instead of the 404 it is.
+            throw e;
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("staffError", e.getMessage());
+        }
         return "redirect:/admin/tenants/" + id;
     }
 

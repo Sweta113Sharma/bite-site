@@ -81,6 +81,44 @@ public class OtpService {
         return true;
     }
 
+    /**
+     * Issues a password-reset code and emails it. Silent when SMTP is unconfigured, for
+     * the same reason the verification path is: a missing relay must not throw into a
+     * request the caller cannot fix.
+     */
+    public void issuePasswordResetOtp(User user) {
+        if (!emailService.isConfigured()) {
+            return;
+        }
+        String code = issue(user.getId(), OtpChannel.PWRESET);
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), code);
+    }
+
+    /**
+     * Checks a reset code without the verification side effects.
+     *
+     * <p>{@link #verify} marks the email or phone verified on success, which is right when
+     * the user is proving a new address and wrong here — a reset should not silently
+     * upgrade an unverified account. Successful codes are consumed either way, so one code
+     * cannot be replayed to change the password twice.
+     */
+    public boolean verifyPasswordReset(Long userId, String submittedCode) {
+        Optional<OtpCode> found = otpCodeDao.findLatest(userId, OtpChannel.PWRESET);
+        if (found.isEmpty()) {
+            return false;
+        }
+        OtpCode otp = found.get();
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
+            return false;
+        }
+        if (!otp.getCodeHash().equals(hash(submittedCode))) {
+            otpCodeDao.incrementAttempts(otp.getId());
+            return false;
+        }
+        otpCodeDao.deleteByUserIdAndChannel(userId, OtpChannel.PWRESET);
+        return true;
+    }
+
     private String issue(Long userId, OtpChannel channel) {
         String code = generateCode();
         otpCodeDao.deleteByUserIdAndChannel(userId, channel);

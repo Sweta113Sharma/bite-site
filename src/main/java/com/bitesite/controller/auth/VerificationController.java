@@ -29,7 +29,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class VerificationController {
 
-    static final String PENDING_USER_ID = "pendingVerificationUserId";
+    /** Public because changing your phone number under {@code /account} has to hand the
+     * user to this flow, and that controller is in another package. */
+    public static final String PENDING_USER_ID = "pendingVerificationUserId";
 
     private static final int MAX_RESENDS = 3;
     private static final Duration RESEND_WINDOW = Duration.ofMinutes(15);

@@ -7,6 +7,22 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # Spelled out rather than left to the defaults, because the default is invisible and
+      # a pool problem is not: a long-running instance of this app was found holding 135
+      # MySQL connections against a server whose max_connections is 151 — enough to stop
+      # anything else, the test database included, from connecting at all.
+      #
+      # leak-detection-threshold is the important line. It logs a stack trace for any
+      # connection held longer than 30s, which turns "the site got slow and nobody knows
+      # why" into a log entry naming the method that did it. It costs nothing when nothing
+      # leaks.
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+      connection-timeout: 10000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      leak-detection-threshold: 30000
 
   sql:
     init:
@@ -71,10 +87,12 @@ management:
       enabled: true
   health:
     mail:
-      # SMTP is intentionally unconfigured until real credentials are supplied (see
-      # app.mail below) — without this, Boot's mail health indicator tries to connect
-      # and drags the whole aggregate /actuator/health status to DOWN.
-      enabled: false
+      # Off by default because SMTP is unconfigured in dev: Boot's mail health indicator
+      # would try to connect and drag the aggregate /actuator/health status to DOWN.
+      # Once real credentials are set, turn this on (MAIL_HEALTH_ENABLED=true) so a
+      # broken mail relay shows up in health rather than as students who never receive
+      # their verification code.
+      enabled: ${MAIL_HEALTH_ENABLED:false}
 
 app:
   portal:

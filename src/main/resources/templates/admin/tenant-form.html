@@ -4,7 +4,10 @@
 <body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 480px;">
-    <h3 class="mb-4" th:text="${pageTitle}">Onboard a college</h3>
+    <div class="console-head">
+        <h3 class="console-head__title" th:text="${pageTitle}">Onboard a college</h3>
+        <p class="console-head__blurb">Creates the college. Canteens and staff are added afterwards, on its own page.</p>
+    </div>
     <form method="post" th:action="@{/admin/tenants}" th:object="${form}">
         <div class="mb-3">
             <label class="form-label">College name</label>

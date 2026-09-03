@@ -117,9 +117,13 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title"><span class="material-symbols-outlined">group</span>Canteen staff accounts</h5>
-                    <div class="table-responsive">
-                    <table class="table table-sm" th:if="${!#lists.isEmpty(staff)}">
-                        <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+
+                    <div class="alert alert-success" th:if="${staffNotice}" th:text="${staffNotice}"></div>
+                    <div class="alert alert-danger" th:if="${staffError}" th:text="${staffError}"></div>
+
+                    <div class="table-responsive" th:if="${!#lists.isEmpty(staff)}">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th class="text-end">Password</th></tr></thead>
                         <tbody>
                         <tr th:each="s : ${staff}" th:if="${s.role.isOutletPortalRole()}">
                             <td th:text="${s.name}">Name</td>
@@ -129,14 +133,24 @@
                                       th:classappend="${s.role.name() == 'CANTEEN_MANAGER'} ? 'bg-primary' : 'bg-secondary'"
                                       th:text="${s.role.name() == 'CANTEEN_MANAGER'} ? 'Manager' : 'Operator'">Role</span>
                             </td>
+                            <td class="text-end">
+                                <!-- Mails a code to the staff member rather than setting a
+                                     password here, so an admin never handles someone else's
+                                     credential. -->
+                                <form method="post"
+                                      th:action="@{/admin/tenants/{id}/staff/{userId}/password-reset(id=${tenant.id},userId=${s.id})}"
+                                      class="m-0"
+                                      onsubmit="return confirm('Email a password reset code to this person?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Reset password</button>
+                                </form>
+                            </td>
                         </tr>
                         </tbody>
                     </table>
-    </div>
+                    </div>
                     <p class="text-muted" th:if="${#lists.isEmpty(staff)}">No staff accounts yet.</p>
 
-                    <hr/>
-                    <h6>Add canteen staff</h6>
+                    <h6 class="mt-4">Add canteen staff</h6>
                     <form method="post" th:action="@{/admin/tenants/{id}/staff(id=${tenant.id})}" th:object="${staffForm}">
                         <div class="mb-2">
                             <select th:field="*{outletId}" class="form-select">

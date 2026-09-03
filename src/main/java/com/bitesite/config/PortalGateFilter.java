@@ -40,9 +40,10 @@ public class PortalGateFilter extends OncePerRequestFilter {
             "/login", "/logout", "/register", "/css/", "/js/", "/img/", "/uploads/",
             "/error", "/actuator", "/api/payments/webhook",
             "/privacy-policy", "/terms", "/refund-policy", "/shipping-policy", "/grievance-policy", "/tenant-unavailable",
-            "/verify", "/resend-verification",
+            "/verify", "/resend-verification", "/forgot-password", "/reset-password",
             "/manifest.webmanifest", "/sw.js", "/offline.html",
-            "/api/role/switch"  // role-switching must be accessible from any portal
+            "/api/role/switch",  // role-switching must be accessible from any portal
+            "/account/"          // changing your own password, likewise — every portal has passwords
     );
 
     @Override

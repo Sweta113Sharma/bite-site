@@ -35,6 +35,16 @@ public interface UserDao {
      * still resolve to a person. */
     void detachFromOutlet(Long id);
 
+    /** Replaces the stored bcrypt hash. The caller is responsible for having established
+     * that the request is legitimate — either the current password was checked, or a
+     * single-use reset code was consumed. */
+    /** The fields a user may edit about themselves. {@code phoneVerified} is passed rather
+     * than inferred because only the caller knows whether the number actually changed —
+     * see {@code UserService.updateOwnProfile}. */
+    void updateProfile(Long id, String name, String phone, String rollNo, boolean phoneVerified);
+
+    void updatePasswordHash(Long id, String passwordHash);
+
     void markEmailVerified(Long id);
 
     void markPhoneVerified(Long id);

@@ -714,7 +714,7 @@
 .qty-stepper button:focus-visible,
 .category-chip:focus-visible,
 .sticky-cart-inner:focus-visible {
-    outline: 3px solid var(--color-primary);
+    outline: var(--border-w-loud) solid var(--color-primary);
     outline-offset: 2px;
 }
 

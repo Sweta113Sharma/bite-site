@@ -4,7 +4,10 @@
 <body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container" style="max-width: 480px;">
-    <h3 class="mb-4">System health</h3>
+    <div class="console-head">
+        <h3 class="console-head__title">System health</h3>
+        <p class="console-head__blurb">Whether the app can reach the things it depends on.</p>
+    </div>
     <div class="card">
         <div class="card-body d-flex align-items-center gap-3">
             <span class="icon-circle" th:classappend="${up} ? '' : 'text-danger'"

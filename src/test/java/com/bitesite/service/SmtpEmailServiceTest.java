@@ -36,4 +36,13 @@ class SmtpEmailServiceTest {
 
         verifyNoInteractions(mailSender);
     }
+
+    @Test
+    void sendPasswordResetEmailSkipsSendingWhenNotConfigured() {
+        SmtpEmailService service = new SmtpEmailService(mailSender, "", "no-reply@bitesite.local");
+
+        service.sendPasswordResetEmail("student@demo.local", "A Student", "123456");
+
+        verifyNoInteractions(mailSender);
+    }
 }

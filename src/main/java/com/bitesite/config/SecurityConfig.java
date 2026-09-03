@@ -85,6 +85,9 @@ public class SecurityConfig {
                             "/privacy-policy", "/terms", "/refund-policy",
                             "/shipping-policy", "/grievance-policy",
                             "/verify", "/verify/**", "/resend-verification",
+                            // Recovery has to be reachable by someone who cannot sign in —
+                            // that is the entire situation it exists for.
+                            "/forgot-password", "/reset-password",
                             "/manifest.webmanifest", "/sw.js", "/offline.html").permitAll()
                     // Admin portal routes — any admin-portal role
                     .requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "TECH_MANAGER")

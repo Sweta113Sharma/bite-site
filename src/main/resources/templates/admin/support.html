@@ -4,11 +4,13 @@
 <body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <h3 class="mb-1">Support desk</h3>
-    <p class="text-muted mb-4">
-        Find an order from what a student can tell you: their order token, or the Razorpay
-        reference off their statement.
-    </p>
+    <div class="console-head">
+        <h3 class="console-head__title">Support desk</h3>
+        <p class="console-head__blurb">
+            Find an order from what a student can tell you: their order token, or the Razorpay
+            reference off their statement.
+        </p>
+    </div>
 
     <form method="get" th:action="@{/admin/support}" class="mb-4">
         <div class="input-group input-group-lg">

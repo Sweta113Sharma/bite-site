@@ -3,6 +3,14 @@ spring:
     url: jdbc:mysql://localhost:3306/bitesite_test_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
     password: ${DB_PASSWORD:}
+    hikari:
+      # The suite builds several Spring contexts (each set of bean overrides gets its own)
+      # and none are closed until the JVM exits, so every pool is alive at once. At the
+      # production default of ten apiece that is sixty connections to run a test run, which
+      # is most of a stock MySQL's budget. Small pools that release when idle instead.
+      maximum-pool-size: 4
+      minimum-idle: 0
+      idle-timeout: 10000
   flyway:
     # Tests need the seed data (demo accounts, menu items) the same way they always have —
     # application.yml's default now excludes it for production safety, so restore it here.

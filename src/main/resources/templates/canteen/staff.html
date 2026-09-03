@@ -29,19 +29,25 @@
                           th:text="${s.active} ? 'Active' : 'Off'">Active</span>
                 </td>
                 <td class="text-end">
-                    <form method="post" th:if="${s.active}"
-                          th:action="@{/canteen/staff/{id}/deactivate(id=${s.id})}"
-                          onsubmit="return confirm('Deactivate this account? They will not be able to sign in.');">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Deactivate</button>
-                    </form>
+                    <div class="d-inline-flex gap-2">
+                        <form method="post" th:if="${s.active}"
+                              th:action="@{/canteen/staff/{id}/password-reset(id=${s.id})}" class="m-0"
+                              onsubmit="return confirm('Email a password reset code to this person?');">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Reset password</button>
+                        </form>
+                        <form method="post" th:if="${s.active}"
+                              th:action="@{/canteen/staff/{id}/deactivate(id=${s.id})}" class="m-0"
+                              onsubmit="return confirm('Deactivate this account? They will not be able to sign in.');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Deactivate</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             </tbody>
         </table>
     </div>
 
-    <hr/>
-    <h6>Add a staff account</h6>
+    <h6 class="mt-4">Add a staff account</h6>
     <form method="post" th:action="@{/canteen/staff}">
         <div class="mb-2">
             <select name="role" class="form-select" required="required">

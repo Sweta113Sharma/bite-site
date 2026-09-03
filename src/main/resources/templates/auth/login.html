@@ -30,6 +30,7 @@
         <div class="alert alert-success" th:if="${param.logout}">You have been signed out.</div>
         <div class="alert alert-success" th:if="${param.accountDeleted}">Your account has been deleted.</div>
         <div class="alert alert-success" th:if="${param.verified}">Account verified — sign in below.</div>
+        <div class="alert alert-success" th:if="${param.passwordReset}">Password updated — sign in with your new password.</div>
         <div class="alert alert-success" th:if="${registered == true and verificationRequired == true}">Account created — check your email/phone for a verification code, then sign in below.</div>
         <div class="alert alert-success" th:if="${registered == true and verificationRequired == false}">Account created — sign in below.</div>
 
@@ -52,6 +53,9 @@
                     </button>
                 </div>
             </div>
+            <p class="text-end mb-3" style="font-size:0.88rem;">
+                <a th:href="@{/forgot-password}">Forgot password?</a>
+            </p>
             <button type="submit" class="btn btn-primary btn-auth">Sign in</button>
         </form>
 

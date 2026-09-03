@@ -4,7 +4,10 @@
 <body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <h3 class="mb-4">Audit log</h3>
+    <div class="console-head">
+        <h3 class="console-head__title">Audit log</h3>
+        <p class="console-head__blurb">Every recorded change, newest first. Pick a college to see its history.</p>
+    </div>
 
     <form method="get" th:action="@{/admin/audit-log}" class="mb-4" style="max-width: 320px;">
         <select name="tenantId" class="form-select" onchange="this.form.submit()">
@@ -13,10 +16,23 @@
         </select>
     </form>
 
-    <div th:if="${selectedTenantId != null and #lists.isEmpty(entries)}" class="alert alert-secondary"><span class="material-symbols-outlined">assignment</span> No activity recorded yet.</div>
+    <!-- Two different empty states, because they mean different things: one is "you have
+         not asked yet", the other is "there is genuinely nothing". The page previously
+         rendered neither before a college was chosen, so it opened completely blank. -->
+    <div th:if="${selectedTenantId == null}" class="state-panel">
+        <div th:replace="~{fragments/state :: medallion('history','neutral')}"></div>
+        <h4>Pick a college</h4>
+        <p>Activity is recorded per college. Choose one above to see its history.</p>
+    </div>
 
-    <div class="table-responsive">
-    <table class="table bg-white" th:if="${!#lists.isEmpty(entries)}">
+    <div th:if="${selectedTenantId != null and #lists.isEmpty(entries)}" class="state-panel">
+        <div th:replace="~{fragments/state :: medallion('assignment','neutral')}"></div>
+        <h4>Nothing recorded yet</h4>
+        <p>Changes to this college's canteens, menus, staff and orders will appear here.</p>
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(entries)}">
+    <table class="table bg-white">
         <thead><tr><th>When</th><th>Entity</th><th>Action</th><th>Before</th><th>After</th></tr></thead>
         <tbody>
         <tr th:each="e : ${entries}">

@@ -291,7 +291,7 @@
     align-items: center;
     gap: 16px;
     background: var(--color-surface-food);
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     padding: 20px 22px;
@@ -466,7 +466,7 @@
 .sticky-pay-bar {
     
     
-    border-top: 3px solid var(--color-ink);
+    border-top: var(--border-w) solid var(--color-ink);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     box-shadow: var(--shadow-sticky);
     padding-bottom: calc(16px + var(--safe-area-bottom));

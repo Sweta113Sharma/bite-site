@@ -71,17 +71,43 @@
     --radius-lg:   2px;
     --radius-pill: 2px;
 
-    /* --- Depth. Hard offset shadows, no soft blur. --- */
-    --shadow-sm: 3px 3px 0 #14100d;
-    --shadow-md: 5px 5px 0 #14100d;
-    --shadow-lg: 8px 8px 0 #14100d;
-    --shadow-sticky: 0 -3px 0 #14100d;
+    /* --- Line weight. ---------------------------------------------------------
+       Every structural border in the product reads from these, so the weight of
+       the whole UI is four numbers rather than ninety literals.
+
+       The original system drew everything at 3px near-black. At the density the
+       customer app runs — a few big cards on a phone — that is the look. On the
+       staff and admin consoles, where a screen is a table of thirty rows inside a
+       bordered panel inside a bordered card, the same weight stacks: a 3px panel
+       edge two pixels above a 3px header rule reads as one thick black bar, and
+       the page stops looking designed and starts looking heavy.
+
+       So: one structural weight, thin enough to stack without turning into a
+       slab, plus a genuinely quiet rule for separators that were never meant to
+       be structure at all. The shapes, palette and type are untouched. */
+    --border-w:      1.5px;  /* cards, panels, tables, controls */
+    --border-w-loud: 2px;    /* the few things that must assert: primary buttons */
+    --rule-w:        1px;    /* separators between rows and sections */
+    --rule-color:    rgba(20, 16, 13, 0.14);
+    --rule-color-strong: rgba(20, 16, 13, 0.28);
+
+    /* --- Depth. Still hard offset shadows, no blur — but cast as translucent ink
+       rather than solid near-black, so a card reads as lifted instead of as a
+       second black rectangle behind the first. --- */
+    --shadow-xs:      1px 1px 0 rgba(20, 16, 13, 0.20);
+    --shadow-sm:      2px 2px 0 rgba(20, 16, 13, 0.18);
+    --shadow-md:      3px 3px 0 rgba(20, 16, 13, 0.16);
+    --shadow-lg:      4px 4px 0 rgba(20, 16, 13, 0.14);
+    --shadow-pressed: 1px 1px 0 rgba(20, 16, 13, 0.20);
+    --shadow-sticky:  0 -1.5px 0 rgba(20, 16, 13, 0.18);
 
     --color-coral:      #ffc918;
     --color-coral-deep: #ffb300;
 
-    /* --- Focus ring: thick black outline. --- */
-    --focus-ring: 0 0 0 3px #14100d;
+    /* --- Focus ring. --- */
+    /* Two rings: a yellow halo that separates the control from the page, and a thin
+       ink edge that keeps the contrast ratio. Reads clearly without the 3px slab. */
+    --focus-ring: 0 0 0 2px var(--color-accent-tint), 0 0 0 3.5px var(--color-ink);
 
     /* --- Type. Archivo for body, Archivo Black for display. --- */
     --font-display: 'Archivo Black', system-ui, sans-serif;

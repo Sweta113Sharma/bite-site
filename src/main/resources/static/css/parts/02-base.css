@@ -541,15 +541,15 @@ html, body { overflow-x: clip; }
     flex: none;
     padding: 0;
     background: var(--color-surface);
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     border-radius: 0;
     color: var(--color-ink);
-    box-shadow: 3px 3px 0 var(--color-ink);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
 }
 
 .nav-drawer-btn:hover { background: var(--color-accent-tint); }
-.nav-drawer-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--color-ink); }
+.nav-drawer-btn:active { transform: translate(1px, 1px); box-shadow: none; }
 .nav-drawer-btn .material-symbols-outlined { font-size: 22px; }
 
 .nav-drawer-backdrop {
@@ -572,7 +572,7 @@ html, body { overflow-x: clip; }
     display: flex;
     flex-direction: column;
     background: var(--color-surface);
-    border-left: 3px solid var(--color-ink);
+    border-left: var(--border-w) solid var(--color-ink);
     transform: translateX(100%);
     transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
     overscroll-behavior: contain;
@@ -592,9 +592,12 @@ body.has-drawer-open { overflow: hidden; }
     justify-content: space-between;
     gap: 8px;
     padding: 12px 14px;
-    border-bottom: 3px solid var(--color-ink);
-    background: var(--color-ink);
-    color: var(--color-bg);
+    /* Was a solid ink bar. The drawer opens over the page as a tall bone panel, so a
+       black cap on it was the loudest thing on screen for a header that only says who
+       you are signed in as. */
+    border-bottom: var(--rule-w) solid var(--rule-color-strong);
+    background: var(--color-surface-deep);
+    color: var(--color-ink);
 }
 
 .nav-drawer__who {
@@ -660,11 +663,16 @@ body.has-drawer-open { overflow: hidden; }
     font-weight: 500;
 }
 .nav-drawer__link .material-symbols-outlined { font-size: 20px; flex: none; }
-.nav-drawer__link:hover { background: var(--color-accent-tint); color: var(--color-ink); }
+.nav-drawer__link:hover { background: var(--color-surface-deep); color: var(--color-ink); }
 
+/* Yellow marks where you are, matching the console strip, so "current" means the same
+   thing in both navigations. Hover is a quiet grey underneath it — previously hover was
+   yellow and current was an ink slab, which made a moused-over row look selected and the
+   selected row look like a button. */
 .nav-drawer__link[aria-current="page"] {
-    background: var(--color-ink);
-    color: var(--color-accent-tint);
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+    box-shadow: inset 3px 0 0 var(--color-ink);
     font-family: var(--font-display);
     text-transform: uppercase;
     font-size: 0.78rem;
@@ -680,7 +688,7 @@ body.has-drawer-open { overflow: hidden; }
     text-align: center;
     background: var(--color-primary-dark);
     color: #fff;
-    border: 2px solid var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
     font-family: var(--font-display);
     font-size: 0.68rem;
 }
@@ -696,6 +704,6 @@ body.has-drawer-open { overflow: hidden; }
 .nav-drawer__foot {
     flex: none;
     padding: 12px 14px calc(12px + var(--safe-area-bottom));
-    border-top: 3px solid var(--color-ink);
+    border-top: var(--border-w) solid var(--color-ink);
     margin: 0;
 }

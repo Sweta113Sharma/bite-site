@@ -156,6 +156,18 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
+    public void updateProfile(Long id, String name, String phone, String rollNo, boolean phoneVerified) {
+        jdbcTemplate.update(
+                "UPDATE users SET name = ?, phone = ?, roll_no = ?, phone_verified = ? WHERE id = ?",
+                name, phone, rollNo, phoneVerified, id);
+    }
+
+    @Override
+    public void updatePasswordHash(Long id, String passwordHash) {
+        jdbcTemplate.update("UPDATE users SET password_hash = ? WHERE id = ?", passwordHash, id);
+    }
+
+    @Override
     public void markEmailVerified(Long id) {
         jdbcTemplate.update("UPDATE users SET email_verified = TRUE WHERE id = ?", id);
     }

@@ -4,7 +4,10 @@
 <body class="console">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div class="container">
-    <h3 class="mb-4">Grievances</h3>
+    <div class="console-head">
+        <h3 class="console-head__title">Grievances</h3>
+        <p class="console-head__blurb">Complaints raised by students, across every college.</p>
+    </div>
 
     <div th:if="${#lists.isEmpty(grievances)}" class="state-panel">
         <div th:replace="~{fragments/state :: medallion('check_circle','good')}"></div>
