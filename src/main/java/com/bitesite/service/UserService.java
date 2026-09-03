@@ -177,6 +177,70 @@ public class UserService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    // ---------- Email address ----------
+
+    /**
+     * Stages a new sign-in address and sends a code to it. Nothing changes on the account
+     * until {@link #confirmEmailChange} succeeds — the old address still signs in, and a
+     * request that is never confirmed simply expires unused.
+     *
+     * <p>The password is re-checked for the same reason a password change re-checks it:
+     * whoever takes over this address takes over the account, so a left-open session must
+     * not be enough on its own.
+     */
+    public void requestEmailChange(Long userId, String rawNewEmail, String currentPassword) {
+        User user = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new BusinessException("That isn't your current password.");
+        }
+        String newEmail = rawNewEmail.trim().toLowerCase(Locale.ROOT);
+        if (newEmail.equals(user.getEmail())) {
+            throw new BusinessException("That is already your email address.");
+        }
+        // Checked here for a useful error, and again at the swap — between the two a
+        // different account could claim it, and users.email is what actually decides.
+        if (userDao.existsByEmail(newEmail)) {
+            throw new BusinessException("That email address is already in use.");
+        }
+        if (!emailService.isConfigured()) {
+            throw new BusinessException("Email isn't configured yet, so a new address can't be confirmed.");
+        }
+        userDao.setPendingEmail(userId, newEmail);
+        otpService.issueEmailChangeOtp(user, newEmail);
+        auditService.record(userId, user.getTenantId(), "User", userId, "REQUEST_EMAIL_CHANGE", null, null);
+    }
+
+    /**
+     * Completes a staged change once the code sent to the new address has been verified.
+     *
+     * <p>Re-checks uniqueness immediately before the swap. The check at request time is
+     * for a good error message; this one is the one that matters, because two people can
+     * stage the same address and only the first to prove it should get it.
+     */
+    public void confirmEmailChange(Long userId) {
+        User user = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        String pending = user.getPendingEmail();
+        if (pending == null || pending.isBlank()) {
+            throw new BusinessException("There is no email change waiting to be confirmed.");
+        }
+        if (userDao.existsByEmail(pending)) {
+            userDao.setPendingEmail(userId, null);
+            throw new BusinessException("That email address was taken while you were confirming it.");
+        }
+        userDao.applyPendingEmail(userId, pending);
+        // The old address is worth recording: it is the only trace of who the account used
+        // to be reachable as, and support will be asked about it.
+        auditService.record(userId, user.getTenantId(), "User", userId, "CHANGE_EMAIL",
+                user.getEmail(), pending);
+    }
+
+    /** Abandons a staged change. */
+    public void cancelEmailChange(Long userId) {
+        userDao.setPendingEmail(userId, null);
+    }
+
     // ---------- Passwords ----------
 
     /**

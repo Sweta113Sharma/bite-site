@@ -113,6 +113,9 @@
                 <span class="material-symbols-outlined">settings</span>Settings</a>
 
             <!-- Admin -->
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin}"
+               th:attrappend="aria-current=${currentPath != null and currentPath == '/admin'} ? 'page' : null">
+                <span class="material-symbols-outlined">home</span>Overview</a>
             <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/tenants}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/tenants')} ? 'page' : null">
                 <span class="material-symbols-outlined">apartment</span>Colleges</a>
@@ -229,6 +232,7 @@
             <!-- Admin -->
             <div sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-drawer__group">
                 <p class="nav-drawer__label">Platform</p>
+                <a class="nav-drawer__link" th:href="@{/admin}"><span class="material-symbols-outlined">home</span>Overview</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Onboarding pipeline</a>
                 <a class="nav-drawer__link" th:href="@{/admin/outlets}"><span class="material-symbols-outlined">storefront</span>Canteens</a>

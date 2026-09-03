@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -651,7 +652,8 @@ class AccountSelfServiceFlowTest {
         AppUserPrincipal manager = new AppUserPrincipal(seedUser("render-manager", Role.CANTEEN_MANAGER));
         Client client = new Client();
         for (String path : new String[] {"/canteen/staff", "/canteen/categories", "/canteen/queue",
-                                         "/canteen/menu", "/canteen/orders", "/canteen/settings"}) {
+                                         "/canteen/menu", "/canteen/orders", "/canteen/orders?page=1",
+                                         "/canteen/settings"}) {
             client.perform(get(path).with(user(manager)), OUTLET_HOST)
                     .andExpect(status().isOk());
         }
@@ -670,6 +672,8 @@ class AccountSelfServiceFlowTest {
         AppUserPrincipal admin = new AppUserPrincipal(seedUser("render-admin", Role.SUPER_ADMIN));
         Client client = new Client();
         for (String path : new String[] {
+                "/admin", "/admin/orders?page=1", "/admin/orders?q=BITE",
+                "/admin/payments?page=1", "/admin/audit-log?tenantId=" + tenant.getId() + "&page=1",
                 "/admin/tenants", "/admin/tenants/new", "/admin/tenants/" + tenant.getId(),
                 "/admin/users", "/admin/audit-log", "/admin/grievances", "/admin/orders",
                 "/admin/support", "/admin/outlets", "/admin/payments", "/admin/dpdp",
@@ -803,5 +807,261 @@ class AccountSelfServiceFlowTest {
                 .andExpect(status().isForbidden());
 
         verify(emailService, never()).sendPasswordResetEmail(eq(manager.getEmail()), anyString(), anyString());
+    }
+
+    // ---------- Changing the sign-in address ----------
+
+    /** Runs the request step and returns the code that was mailed to the NEW address. */
+    private String requestEmailChange(User user, String newEmail, Client client) throws Exception {
+        client.perform(post("/account/email").with(csrf()).with(user(new AppUserPrincipal(user)))
+                        .param("newEmail", newEmail)
+                        .param("currentPassword", ORIGINAL_PASSWORD))
+                .andExpect(redirectedUrl("/account/email"));
+
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendEmailChangeEmail(eq(newEmail), anyString(), code.capture());
+        return code.getValue();
+    }
+
+    @Test
+    void aUserCanMoveTheirAccountToANewAddress() throws Exception {
+        User student = seedUser("swap-student", Role.USER);
+        String newEmail = "swapped-" + UUID.randomUUID().toString().substring(0, 8) + "@test.local";
+        Client client = new Client();
+
+        String code = requestEmailChange(student, newEmail, client);
+        client.perform(post("/account/email/confirm").with(csrf())
+                        .with(user(new AppUserPrincipal(student))).param("code", code))
+                .andExpect(redirectedUrl("/login?emailChanged"));
+
+        User reloaded = userDao.findById(student.getId()).orElseThrow();
+        assertThat(reloaded.getEmail()).isEqualTo(newEmail);
+        assertThat(reloaded.getPendingEmail()).isNull();
+        assertSignsIn(newEmail, ORIGINAL_PASSWORD);
+    }
+
+    /** The whole point of staging it: until the code is entered, the account is untouched. */
+    @Test
+    void theOldAddressKeepsWorkingUntilTheNewOneIsProved() throws Exception {
+        User student = seedUser("swap-pending", Role.USER);
+        String newEmail = "unproved-" + UUID.randomUUID().toString().substring(0, 8) + "@test.local";
+
+        requestEmailChange(student, newEmail, new Client());
+
+        User reloaded = userDao.findById(student.getId()).orElseThrow();
+        assertThat(reloaded.getEmail()).isEqualTo(student.getEmail());
+        assertThat(reloaded.getPendingEmail()).isEqualTo(newEmail);
+        assertSignsIn(student.getEmail(), ORIGINAL_PASSWORD);
+        assertCannotSignIn(newEmail, ORIGINAL_PASSWORD);
+    }
+
+    @Test
+    void aWrongCodeDoesNotMoveTheAddress() throws Exception {
+        User student = seedUser("swap-wrong-code", Role.USER);
+        String newEmail = "wrongcode-" + UUID.randomUUID().toString().substring(0, 8) + "@test.local";
+        Client client = new Client();
+
+        String code = requestEmailChange(student, newEmail, client);
+        String wrong = code.equals("000000") ? "111111" : "000000";
+
+        client.perform(post("/account/email/confirm").with(csrf())
+                        .with(user(new AppUserPrincipal(student))).param("code", wrong))
+                .andExpect(redirectedUrl("/account/email"));
+
+        assertThat(userDao.findById(student.getId()).orElseThrow().getEmail())
+                .isEqualTo(student.getEmail());
+    }
+
+    /** Without the password an open session would be enough to take the account away. */
+    @Test
+    void theCurrentPasswordIsRequiredToStartAnAddressChange() throws Exception {
+        User student = seedUser("swap-no-password", Role.USER);
+        String newEmail = "nopw-" + UUID.randomUUID().toString().substring(0, 8) + "@test.local";
+
+        new Client().perform(post("/account/email").with(csrf())
+                        .with(user(new AppUserPrincipal(student)))
+                        .param("newEmail", newEmail)
+                        .param("currentPassword", "NotTheOne1"))
+                .andExpect(status().isOk());
+
+        assertThat(userDao.findById(student.getId()).orElseThrow().getPendingEmail()).isNull();
+        verify(emailService, never()).sendEmailChangeEmail(eq(newEmail), anyString(), anyString());
+    }
+
+    /** An address already signed up cannot be taken by staging it. */
+    @Test
+    void anAddressAlreadyInUseIsRefused() throws Exception {
+        User student = seedUser("swap-taken-a", Role.USER);
+        User other = seedUser("swap-taken-b", Role.USER);
+
+        new Client().perform(post("/account/email").with(csrf())
+                        .with(user(new AppUserPrincipal(student)))
+                        .param("newEmail", other.getEmail())
+                        .param("currentPassword", ORIGINAL_PASSWORD))
+                .andExpect(status().isOk());
+
+        assertThat(userDao.findById(student.getId()).orElseThrow().getPendingEmail()).isNull();
+        verify(emailService, never()).sendEmailChangeEmail(eq(other.getEmail()), anyString(), anyString());
+    }
+
+    /**
+     * Two accounts may stage the same address — nothing stops them, deliberately, because
+     * letting someone reserve an address they cannot prove would be a way to block another
+     * person's signup. Both stage it, then the first to confirm takes it and the second's
+     * confirmation must be refused without disturbing either account.
+     */
+    @Test
+    void whenTwoAccountsRaceForOneAddressOnlyTheFirstToConfirmGetsIt() throws Exception {
+        User first = seedUser("swap-race-a", Role.USER);
+        User second = seedUser("swap-race-b", Role.USER);
+        String contested = "contested-" + UUID.randomUUID().toString().substring(0, 8) + "@test.local";
+        Client c1 = new Client();
+        Client c2 = new Client();
+
+        // Both stage it, while it still belongs to nobody.
+        c1.perform(post("/account/email").with(csrf()).with(user(new AppUserPrincipal(first)))
+                        .param("newEmail", contested).param("currentPassword", ORIGINAL_PASSWORD))
+                .andExpect(redirectedUrl("/account/email"));
+        c2.perform(post("/account/email").with(csrf()).with(user(new AppUserPrincipal(second)))
+                        .param("newEmail", contested).param("currentPassword", ORIGINAL_PASSWORD))
+                .andExpect(redirectedUrl("/account/email"));
+
+        ArgumentCaptor<String> codes = ArgumentCaptor.forClass(String.class);
+        verify(emailService, times(2)).sendEmailChangeEmail(eq(contested), anyString(), codes.capture());
+        String firstCode = codes.getAllValues().get(0);
+        String secondCode = codes.getAllValues().get(1);
+
+        c1.perform(post("/account/email/confirm").with(csrf())
+                        .with(user(new AppUserPrincipal(first))).param("code", firstCode))
+                .andExpect(redirectedUrl("/login?emailChanged"));
+
+        // Second holds a valid code for an address that is no longer available.
+        c2.perform(post("/account/email/confirm").with(csrf())
+                        .with(user(new AppUserPrincipal(second))).param("code", secondCode))
+                .andExpect(redirectedUrl("/account/email"));
+
+        assertThat(userDao.findById(first.getId()).orElseThrow().getEmail()).isEqualTo(contested);
+        User loser = userDao.findById(second.getId()).orElseThrow();
+        assertThat(loser.getEmail()).isEqualTo(second.getEmail());
+        // The dead staging is cleared, so the screen does not keep offering a change that
+        // can never complete.
+        assertThat(loser.getPendingEmail()).isNull();
+    }
+
+    @Test
+    void theEmailChangePageRendersForEveryRole() throws Exception {
+        new Client().perform(get("/account/email")
+                .with(user(new AppUserPrincipal(seedUser("email-student", Role.USER)))), APP_HOST)
+                .andExpect(status().isOk());
+        new Client().perform(get("/account/email")
+                .with(user(new AppUserPrincipal(seedUser("email-admin", Role.SUPER_ADMIN)))), ADMIN_HOST)
+                .andExpect(status().isOk());
+    }
+
+    // ---------- Second factor on platform accounts ----------
+
+    /** The property is on by default and SMTP is mocked-as-configured here, so platform
+     * logins in this class take the two-step path. */
+    private String signInExpectingSecondFactor(User admin, Client client, String host) throws Exception {
+        client.perform(post("/login").with(csrf())
+                        .param("username", admin.getEmail()).param("password", ORIGINAL_PASSWORD), host)
+                .andExpect(redirectedUrl("/login/verify"));
+
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendLoginCodeEmail(eq(admin.getEmail()), anyString(), code.capture());
+        return code.getValue();
+    }
+
+    @Test
+    void aPlatformAccountMustEnterAnEmailedCodeAfterItsPassword() throws Exception {
+        User admin = seedUser("2fa-admin", Role.SUPER_ADMIN);
+        Client client = new Client();
+
+        String code = signInExpectingSecondFactor(admin, client, ADMIN_HOST);
+        client.perform(post("/login/verify").with(csrf()).param("code", code), ADMIN_HOST)
+                .andExpect(redirectedUrl("/admin"));
+
+        client.perform(get("/admin/tenants"), ADMIN_HOST).andExpect(status().isOk());
+    }
+
+    /**
+     * The point of the whole thing. The password alone produced a working session before
+     * this existed; it must now produce nothing but a prompt.
+     */
+    @Test
+    void theCorrectPasswordAloneDoesNotOpenTheConsole() throws Exception {
+        User admin = seedUser("2fa-password-only", Role.SUPER_ADMIN);
+        Client client = new Client();
+
+        signInExpectingSecondFactor(admin, client, ADMIN_HOST);
+
+        client.perform(get("/admin/tenants"), ADMIN_HOST).andExpect(status().is3xxRedirection());
+        client.perform(get("/admin/users"), ADMIN_HOST).andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void aWrongCodeDoesNotOpenTheConsole() throws Exception {
+        User admin = seedUser("2fa-wrong-code", Role.SUPER_ADMIN);
+        Client client = new Client();
+
+        String code = signInExpectingSecondFactor(admin, client, ADMIN_HOST);
+        String wrong = code.equals("000000") ? "111111" : "000000";
+
+        client.perform(post("/login/verify").with(csrf()).param("code", wrong), ADMIN_HOST)
+                .andExpect(redirectedUrl("/login/verify"));
+        client.perform(get("/admin/tenants"), ADMIN_HOST).andExpect(status().is3xxRedirection());
+    }
+
+    /** A code is single use, so an intercepted one cannot be spent a second time. */
+    @Test
+    void aSignInCodeCannotBeUsedTwice() throws Exception {
+        User admin = seedUser("2fa-replay", Role.SUPER_ADMIN);
+        Client first = new Client();
+
+        String code = signInExpectingSecondFactor(admin, first, ADMIN_HOST);
+        first.perform(post("/login/verify").with(csrf()).param("code", code), ADMIN_HOST)
+                .andExpect(redirectedUrl("/admin"));
+
+        // A separate client that never supplied the password holds the same code.
+        Client attacker = new Client();
+        attacker.perform(post("/login/verify").with(csrf()).param("code", code), ADMIN_HOST)
+                .andExpect(redirectedUrl("/login"));
+        attacker.perform(get("/admin/tenants"), ADMIN_HOST).andExpect(status().is3xxRedirection());
+    }
+
+    /** Reaching the code screen without having passed a password gets you nothing. */
+    @Test
+    void theCodeScreenIsUselessWithoutHavingSignedIn() throws Exception {
+        new Client().perform(get("/login/verify"), ADMIN_HOST).andExpect(redirectedUrl("/login"));
+        new Client().perform(post("/login/verify").with(csrf()).param("code", "123456"), ADMIN_HOST)
+                .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    void aTechManagerIsAlsoAPlatformAccount() throws Exception {
+        User tech = seedUser("2fa-tech", Role.TECH_MANAGER);
+        Client client = new Client();
+
+        String code = signInExpectingSecondFactor(tech, client, ADMIN_HOST);
+        client.perform(post("/login/verify").with(csrf()).param("code", code), ADMIN_HOST)
+                .andExpect(redirectedUrl("/techmgr"));
+    }
+
+    /** Students and outlet staff are untouched: one step, straight in. Making everyone do
+     * this would put a code between a hungry student and their lunch for no gain. */
+    @Test
+    void studentsAndOutletStaffStillSignInInOneStep() throws Exception {
+        User student = seedUser("2fa-not-student", Role.USER);
+        new Client().perform(post("/login").with(csrf())
+                        .param("username", student.getEmail()).param("password", ORIGINAL_PASSWORD), APP_HOST)
+                .andExpect(redirectedUrl("/student/menu"));
+
+        User manager = seedUser("2fa-not-manager", Role.CANTEEN_MANAGER);
+        new Client().perform(post("/login").with(csrf())
+                        .param("username", manager.getEmail()).param("password", ORIGINAL_PASSWORD), OUTLET_HOST)
+                .andExpect(redirectedUrl("/canteen/queue"));
+
+        verify(emailService, never()).sendLoginCodeEmail(eq(student.getEmail()), anyString(), anyString());
+        verify(emailService, never()).sendLoginCodeEmail(eq(manager.getEmail()), anyString(), anyString());
     }
 }

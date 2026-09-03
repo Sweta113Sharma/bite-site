@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ============================================================
+     PAGER
+
+     One control for every paged list, so "next page" behaves and looks the same on
+     orders, payments, the audit log and outlet history.
+
+     Each screen passes the two URLs itself, built with @{...} including whichever
+     filters it is currently showing. That is more typing per screen than a generic
+     querystring-rebuilder, and it is the right trade: the alternative silently drops a
+     filter the day someone adds one and forgets to thread it through.
+
+     `paged` knows whether a next page exists because the query asked for one row more
+     than the page needed, so there is no COUNT(*) behind these buttons — and therefore
+     no total to show. Nobody has needed to know they are on page 3 of 47 to find an
+     order; they need the next page.
+     ============================================================ -->
+<nav th:fragment="pager(paged, prevUrl, nextUrl)" class="pager"
+     th:if="${paged != null and (paged.hasPrev() or paged.hasNext())}"
+     aria-label="Pagination">
+
+    <a class="pager__step" th:if="${paged.hasPrev()}" th:href="${prevUrl}">
+        <span class="material-symbols-outlined">arrow_back</span>Previous
+    </a>
+    <!-- Kept in the DOM when unavailable rather than removed, so the row does not reflow
+         as you page and Next stays under the cursor. -->
+    <span class="pager__step is-disabled" th:unless="${paged.hasPrev()}" aria-hidden="true">
+        <span class="material-symbols-outlined">arrow_back</span>Previous
+    </span>
+
+    <span class="pager__where">Page <span th:text="${paged.displayPage()}">1</span></span>
+
+    <a class="pager__step" th:if="${paged.hasNext()}" th:href="${nextUrl}">
+        Next<span class="material-symbols-outlined">arrow_forward</span>
+    </a>
+    <span class="pager__step is-disabled" th:unless="${paged.hasNext()}" aria-hidden="true">
+        Next<span class="material-symbols-outlined">arrow_forward</span>
+    </span>
+</nav>
+
+</body>
+</html>

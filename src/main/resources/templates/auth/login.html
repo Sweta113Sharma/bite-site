@@ -31,6 +31,7 @@
         <div class="alert alert-success" th:if="${param.accountDeleted}">Your account has been deleted.</div>
         <div class="alert alert-success" th:if="${param.verified}">Account verified — sign in below.</div>
         <div class="alert alert-success" th:if="${param.passwordReset}">Password updated — sign in with your new password.</div>
+        <div class="alert alert-success" th:if="${param.emailChanged}">Email updated — sign in with your new address.</div>
         <div class="alert alert-success" th:if="${registered == true and verificationRequired == true}">Account created — check your email/phone for a verification code, then sign in below.</div>
         <div class="alert alert-success" th:if="${registered == true and verificationRequired == false}">Account created — sign in below.</div>
 

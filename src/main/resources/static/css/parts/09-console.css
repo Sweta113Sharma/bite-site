@@ -1164,3 +1164,114 @@ a:hover { color: var(--color-primary); }
     /* Staff already have every destination on the strip below the bar. */
     body.console .nav-drawer-btn { display: none; }
 }
+
+
+/* ============================================================
+   PAGER — the control under every paged list.
+
+   Quiet by design: it is navigation between pages of the same thing, not an action, so
+   it takes the rule weight of a separator rather than the border weight of a control.
+   ============================================================ */
+body.console .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1rem 0 2rem;
+    font-family: var(--font-display);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+body.console .pager__step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 0.85rem;
+    color: var(--color-ink);
+    text-decoration: none;
+    border: var(--border-w) solid var(--color-ink);
+    background: var(--color-surface);
+}
+
+body.console .pager__step:hover {
+    background: var(--color-accent-tint);
+}
+
+/* Kept in the DOM rather than removed so the row does not reflow as you page — the
+   Next button stays under the cursor from one page to the next. */
+body.console .pager__step.is-disabled {
+    border-color: var(--rule-color);
+    color: var(--color-ink-muted);
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+body.console .pager__where {
+    padding: 0 0.5rem;
+    color: var(--color-ink-muted);
+}
+
+body.console .pager .material-symbols-outlined {
+    font-size: 16px;
+}
+
+
+/* ============================================================
+   STAT TILES — the admin overview.
+
+   Deliberately flat: a number wants to be read, not decorated. The only tile that
+   changes appearance is one with a non-zero queue behind it, so a screen with nothing
+   to do looks calm and a screen with work on it does not.
+   ============================================================ */
+body.console .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+body.console .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.9rem 1rem;
+    border: var(--border-w) solid var(--color-ink);
+    background: var(--color-surface);
+    text-decoration: none;
+    color: var(--color-ink);
+}
+
+body.console .stat__label {
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-ink-muted);
+}
+
+body.console .stat__value {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    line-height: 1.1;
+}
+
+body.console .stat__note {
+    font-size: 0.76rem;
+    color: var(--color-ink-muted);
+}
+
+body.console a.stat--action:hover {
+    background: var(--color-surface-deep);
+}
+
+/* Something is actually waiting. Yellow, not red — a queue is work, not a failure. */
+body.console .stat--action.is-live {
+    background: var(--color-accent-tint);
+}
+
+body.console .stat--action.is-live .stat__label,
+body.console .stat--action.is-live .stat__note {
+    color: var(--color-ink);
+}

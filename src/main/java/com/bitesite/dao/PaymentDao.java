@@ -24,7 +24,7 @@ public interface PaymentDao {
      * Recent payments across every tenant, newest first, optionally narrowed by status.
      * Admin reconciliation only — gate on the admin role, as with the finder above.
      */
-    List<Payment> findRecentAcrossTenants(PaymentStatus status, int limit);
+    List<Payment> findRecentAcrossTenants(PaymentStatus status, int limit, int offset);
 
     void markVerified(Long id, String razorpayPaymentId, String razorpaySignature, PaymentStatus status);
 

@@ -33,7 +33,7 @@ public interface OrderDao {
      *
      * @param status null for every status
      */
-    List<Order> findByOutlet(Long tenantId, Long outletId, OrderStatus status, int limit);
+    List<Order> findByOutlet(Long tenantId, Long outletId, OrderStatus status, int limit, int offset);
 
     /**
      * Per-day totals for one outlet, newest day first: how many orders and how much money.
@@ -106,7 +106,12 @@ public interface OrderDao {
      * @param tenantId null for every tenant
      * @param status   null for every status
      */
-    List<Order> findRecentAcrossTenants(Long tenantId, OrderStatus status, int limit);
+    /** Ask for one row more than the page needs; Paged.of uses the extra to decide whether
+     * a next page exists without a second COUNT over the same predicate.
+     *
+     * <p>{@code search} matches an order token or the student's email, which is what a
+     * support conversation actually gives you. Null or blank means no text filter. */
+    List<Order> findRecentAcrossTenants(Long tenantId, OrderStatus status, String search, int limit, int offset);
 
     /** Orders still AWAITING_PAYMENT for longer than {@code timeoutMinutes} — used by the
      * expiry sweep. Takes the timeout rather than a cutoff instant for the same reason as

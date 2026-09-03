@@ -45,6 +45,10 @@
         </tbody>
     </table>
     </div>
+
+    <div th:replace="~{fragments/pager :: pager(${paged},
+            @{/admin/audit-log(page=${paged != null ? paged.page - 1 : 0},tenantId=${selectedTenantId})},
+            @{/admin/audit-log(page=${paged != null ? paged.page + 1 : 0},tenantId=${selectedTenantId})})}"></div>
 </div>
 </body>
 </html>

@@ -29,6 +29,9 @@ public class UserDaoImpl implements UserDao {
             .outletId(rs.getObject("outlet_id", Long.class))
             .name(rs.getString("name"))
             .email(rs.getString("email"))
+            .pendingEmail(rs.getString("pending_email"))
+            .pendingEmailRequestedAt(rs.getTimestamp("pending_email_requested_at") == null ? null
+                    : rs.getTimestamp("pending_email_requested_at").toLocalDateTime())
             .passwordHash(rs.getString("password_hash"))
             .phone(rs.getString("phone"))
             .rollNo(rs.getString("roll_no"))
@@ -160,6 +163,24 @@ public class UserDaoImpl implements UserDao {
         jdbcTemplate.update(
                 "UPDATE users SET name = ?, phone = ?, roll_no = ?, phone_verified = ? WHERE id = ?",
                 name, phone, rollNo, phoneVerified, id);
+    }
+
+    @Override
+    public void setPendingEmail(Long id, String pendingEmail) {
+        jdbcTemplate.update(
+                "UPDATE users SET pending_email = ?, pending_email_requested_at = "
+                        + (pendingEmail == null ? "NULL" : "CURRENT_TIMESTAMP") + " WHERE id = ?",
+                pendingEmail, id);
+    }
+
+    @Override
+    public void applyPendingEmail(Long id, String newEmail) {
+        // Clears the staging columns in the same statement that moves the address across,
+        // so there is no window where both are set.
+        jdbcTemplate.update(
+                "UPDATE users SET email = ?, email_verified = TRUE, pending_email = NULL, "
+                        + "pending_email_requested_at = NULL WHERE id = ?",
+                newEmail, id);
     }
 
     @Override

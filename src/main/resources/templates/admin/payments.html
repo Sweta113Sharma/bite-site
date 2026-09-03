@@ -44,8 +44,9 @@
         </table>
     </div>
 
-    <p class="text-muted small" th:if="${#lists.size(payments) >= limit}"
-       th:text="'Showing the most recent ' + ${limit} + '.'"></p>
+    <div th:replace="~{fragments/pager :: pager(${paged},
+            @{/admin/payments(page=${paged != null ? paged.page - 1 : 0},status=${selectedStatus})},
+            @{/admin/payments(page=${paged != null ? paged.page + 1 : 0},status=${selectedStatus})})}"></div>
 </div>
 </body>
 </html>

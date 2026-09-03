@@ -1,14 +1,18 @@
 package com.bitesite.config;
 
 import com.bitesite.dao.UserDao;
+import com.bitesite.service.EmailService;
+import com.bitesite.service.OtpService;
 import com.bitesite.model.PortalTarget;
 import com.bitesite.model.Role;
 import com.bitesite.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -40,9 +44,22 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class RoleBasedAuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
+    /** Where the half-finished sign-in is remembered between the password and the code. */
+    public static final String PENDING_2FA_USER_ID = "pending2faUserId";
+
     private final PortalResolver portalResolver;
     private final UserDao userDao;
     private final SecurityContextRepository securityContextRepository;
+    private final OtpService otpService;
+    private final EmailService emailService;
+
+    /**
+     * Escape hatch. A second factor delivered by email means a broken relay locks every
+     * platform account out of the console — including the account that would go and fix
+     * the relay. Set {@code ADMIN_2FA_ENABLED=false} and restart to get back in.
+     */
+    @Value("${app.security.admin-2fa:true}")
+    private boolean adminTwoFactorEnabled;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -90,6 +107,48 @@ public class RoleBasedAuthenticationSuccessHandler extends SimpleUrlAuthenticati
             securityContextRepository.saveContext(newContext, request, response);
         }
 
+        if (requiresSecondFactor(user)) {
+            startSecondFactor(request, response, user, resolvedActiveRole);
+            return;
+        }
+
         getRedirectStrategy().sendRedirect(request, response, RoleLandingPages.forActiveRole(resolvedActiveRole));
+    }
+
+    /**
+     * Platform accounts only. A super admin reaches every college's orders, payments and
+     * audit trail, and a password was the whole of the front door.
+     *
+     * <p>Gated on email actually being configured, matching how every other optional
+     * integration in this app behaves: with no way to deliver a code, demanding one would
+     * lock the console rather than protect it. That does mean the factor is only as present
+     * as the mail relay, which is why the flag above exists.
+     */
+    private boolean requiresSecondFactor(User user) {
+        if (!adminTwoFactorEnabled || !emailService.isConfigured()) {
+            return false;
+        }
+        return user.hasRole(Role.SUPER_ADMIN) || user.hasRole(Role.TECH_MANAGER);
+    }
+
+    /**
+     * Drops the authenticated session and replaces it with a note of who is halfway in.
+     *
+     * <p>The framework has already saved an authenticated context by the time this handler
+     * runs, so clearing the holder is not enough — the session itself has to go, or the
+     * password alone would have produced a usable session and the code would be decoration.
+     */
+    private void startSecondFactor(HttpServletRequest request, HttpServletResponse response,
+            User user, Role resolvedActiveRole) throws IOException {
+        request.getSession().invalidate();
+        SecurityContextHolder.clearContext();
+        securityContextRepository.saveContext(SecurityContextHolder.createEmptyContext(), request, response);
+
+        HttpSession pending = request.getSession(true);
+        pending.setAttribute(PENDING_2FA_USER_ID, user.getId());
+
+        otpService.issueLoginOtp(user);
+        log.info("Second factor required for platform account {}", user.getEmail());
+        getRedirectStrategy().sendRedirect(request, response, "/login/verify");
     }
 }

@@ -119,6 +119,69 @@ public class OtpService {
         return true;
     }
 
+    /**
+     * Issues a code proving a proposed new address, and sends it <em>there</em> — not to
+     * the address currently on the account, which would prove nothing about the new one.
+     */
+    public void issueEmailChangeOtp(User user, String newEmail) {
+        if (!emailService.isConfigured()) {
+            return;
+        }
+        String code = issue(user.getId(), OtpChannel.EMAILSWAP);
+        emailService.sendEmailChangeEmail(newEmail, user.getName(), code);
+    }
+
+    /**
+     * Checks an address-change code. Like {@link #verifyPasswordReset} this deliberately
+     * skips {@link #verify}'s side effects: marking the <em>old</em> address verified on
+     * the strength of a code sent to a different mailbox would be exactly backwards.
+     * Applying the change is the caller's job, and that is what sets email_verified.
+     */
+    public boolean verifyEmailChange(Long userId, String submittedCode) {
+        Optional<OtpCode> found = otpCodeDao.findLatest(userId, OtpChannel.EMAILSWAP);
+        if (found.isEmpty()) {
+            return false;
+        }
+        OtpCode otp = found.get();
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
+            return false;
+        }
+        if (!otp.getCodeHash().equals(hash(submittedCode))) {
+            otpCodeDao.incrementAttempts(otp.getId());
+            return false;
+        }
+        otpCodeDao.deleteByUserIdAndChannel(userId, OtpChannel.EMAILSWAP);
+        return true;
+    }
+
+    /** Issues a sign-in second factor to the address on the account. */
+    public void issueLoginOtp(User user) {
+        if (!emailService.isConfigured()) {
+            return;
+        }
+        String code = issue(user.getId(), OtpChannel.LOGIN2FA);
+        emailService.sendLoginCodeEmail(user.getEmail(), user.getName(), code);
+    }
+
+    /** Checks a sign-in second factor. No verification side effects, and the code is
+     * consumed on success so it cannot be replayed into a second session. */
+    public boolean verifyLoginOtp(Long userId, String submittedCode) {
+        Optional<OtpCode> found = otpCodeDao.findLatest(userId, OtpChannel.LOGIN2FA);
+        if (found.isEmpty()) {
+            return false;
+        }
+        OtpCode otp = found.get();
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
+            return false;
+        }
+        if (!otp.getCodeHash().equals(hash(submittedCode))) {
+            otpCodeDao.incrementAttempts(otp.getId());
+            return false;
+        }
+        otpCodeDao.deleteByUserIdAndChannel(userId, OtpChannel.LOGIN2FA);
+        return true;
+    }
+
     private String issue(Long userId, OtpChannel channel) {
         String code = generateCode();
         otpCodeDao.deleteByUserIdAndChannel(userId, channel);

@@ -39,7 +39,7 @@ class OrderServiceTest {
     @Mock private OutletService outletService;
     @Mock private PaymentGateway paymentGateway;
     @Mock private AuditService auditService;
-    @Mock private PushNotificationService pushNotificationService;
+    @Mock private OrderNotifier orderNotifier;
 
     private OrderService orderService;
 
@@ -50,7 +50,7 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService, paymentGateway,
-                auditService, pushNotificationService);
+                auditService, orderNotifier);
     }
 
     private MenuItem availableItem(long id, String name, BigDecimal price) {

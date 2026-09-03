@@ -20,6 +20,15 @@
             <option th:each="s : ${statuses}" th:value="${s}" th:selected="${s == selectedStatus}"
                     th:text="${s.name().replace('_',' ')}"></option>
         </select>
+        <!-- The two things a student can actually give you. Until now this screen filtered
+             by college and status only, so finding one person's order meant paging by eye
+             or going to the support desk for its separate lookup. -->
+        <input type="search" name="q" class="form-control" style="width:auto; min-width:16rem;"
+               th:value="${q}" placeholder="Order token or student email"/>
+        <button type="submit" class="btn btn-outline-secondary">
+            <span class="material-symbols-outlined">search</span>Search
+        </button>
+        <a th:if="${q != null and !q.isEmpty()}" class="btn btn-link" th:href="@{/admin/orders}">Clear</a>
     </form>
 
     <div th:if="${#lists.isEmpty(orders)}" class="alert alert-secondary">No orders match that filter.</div>
@@ -40,8 +49,9 @@
         </table>
     </div>
 
-    <p class="text-muted small" th:if="${#lists.size(orders) >= limit}"
-       th:text="'Showing the most recent ' + ${limit} + '. Narrow the filters to see older orders.'"></p>
+    <div th:replace="~{fragments/pager :: pager(${paged},
+            @{/admin/orders(page=${paged != null ? paged.page - 1 : 0},tenantId=${selectedTenantId},status=${selectedStatus},q=${q})},
+            @{/admin/orders(page=${paged != null ? paged.page + 1 : 0},tenantId=${selectedTenantId},status=${selectedStatus},q=${q})})}"></div>
 </div>
 </body>
 </html>

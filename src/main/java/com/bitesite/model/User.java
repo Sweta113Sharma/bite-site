@@ -23,6 +23,12 @@ public class User implements Serializable {
     private Long outletId;
     private String name;
     private String email;
+
+    /** An address the user has asked to move to but has not proved yet. Null unless a
+     * change is in flight; see V21 and {@code UserService.requestEmailChange}. */
+    private String pendingEmail;
+
+    private java.time.LocalDateTime pendingEmailRequestedAt;
     private String passwordHash;
     private String phone;
     private String rollNo;

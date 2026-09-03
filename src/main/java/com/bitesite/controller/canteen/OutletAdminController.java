@@ -6,6 +6,7 @@ import com.bitesite.dao.OrderDao;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
 import com.bitesite.exception.ResourceNotFoundException;
+import com.bitesite.dto.Paged;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderStatus;
 import com.bitesite.model.Role;
@@ -40,9 +41,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OutletAdminController {
 
-    /** Lists are bounded, not paged. Matches AuditLogDao's explicit-limit convention —
-     * the only bounding pattern this codebase has, and honest at canteen volumes. */
-    private static final int HISTORY_LIMIT = 200;
+    /** Rows per page of order history. Was a flat 200-row cap with no way past it. */
+    private static final int HISTORY_PAGE_SIZE = 50;
     private static final int REPORT_DAYS = 30;
 
     private final OrderDao orderDao;
@@ -55,14 +55,19 @@ public class OutletAdminController {
     /** Both roles: an operator fielding "where is my order" needs to look it up. */
     @GetMapping("/orders")
     public String history(@AuthenticationPrincipal AppUserPrincipal principal,
-            @RequestParam(required = false) OrderStatus status, Model model) {
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(defaultValue = "0") int page, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
-        model.addAttribute("orders",
-                orderDao.findByOutlet(user.getTenantId(), user.getOutletId(), status, HISTORY_LIMIT));
+        int safePage = Math.max(0, page);
+        Paged<Order> paged = Paged.of(
+                orderDao.findByOutlet(user.getTenantId(), user.getOutletId(), status,
+                        HISTORY_PAGE_SIZE + 1, Paged.offsetFor(safePage, HISTORY_PAGE_SIZE)),
+                safePage, HISTORY_PAGE_SIZE);
+        model.addAttribute("paged", paged);
+        model.addAttribute("orders", paged.items());
         model.addAttribute("statuses", OrderStatus.values());
         model.addAttribute("selectedStatus", status);
-        model.addAttribute("limit", HISTORY_LIMIT);
         model.addAttribute("pageTitle", "Order history");
         return "canteen/orders";
     }

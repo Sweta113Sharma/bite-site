@@ -76,16 +76,17 @@ public class PaymentDaoImpl implements PaymentDao {
     }
 
     @Override
-    public List<Payment> findRecentAcrossTenants(PaymentStatus status, int limit) {
+    public List<Payment> findRecentAcrossTenants(PaymentStatus status, int limit, int offset) {
         // idx_payments_status_created / idx_payments_created (V19) keep both shapes off a
         // full scan.
         if (status == null) {
             return jdbcTemplate.query(
-                    "SELECT * FROM payments ORDER BY created_at DESC LIMIT ?", ROW_MAPPER, limit);
+                    "SELECT * FROM payments ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                    ROW_MAPPER, limit, offset);
         }
         return jdbcTemplate.query(
-                "SELECT * FROM payments WHERE status = ? ORDER BY created_at DESC LIMIT ?",
-                ROW_MAPPER, status.name(), limit);
+                "SELECT * FROM payments WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                ROW_MAPPER, status.name(), limit, offset);
     }
 
     @Override

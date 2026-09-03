@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+
+    <div class="console-head">
+        <h3 class="console-head__title">Overview</h3>
+        <p class="console-head__blurb">Where the platform is right now, and what is waiting on someone.</p>
+    </div>
+
+    <!-- Today. Answers "is it working", which is the first thing you want on opening this. -->
+    <div class="stat-row">
+        <div class="stat">
+            <span class="stat__label">Orders today</span>
+            <span class="stat__value" th:text="${snapshot.ordersToday()}">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat__label">Takings today</span>
+            <span class="stat__value" th:text="'₹' + ${snapshot.revenueToday()}">₹0</span>
+        </div>
+        <div class="stat">
+            <span class="stat__label">In flight</span>
+            <span class="stat__value" th:text="${snapshot.ordersInFlight()}">0</span>
+            <span class="stat__note">Paid, cooking, or waiting to be collected</span>
+        </div>
+    </div>
+
+    <!-- Queues with a person at the end of them. Each links to the screen that clears it,
+         and each goes quiet when there is nothing to do rather than showing a proud zero. -->
+    <h6 class="mt-4 mb-2">Needs attention</h6>
+    <div class="stat-row">
+        <a class="stat stat--action" th:classappend="${snapshot.openGrievances() > 0} ? 'is-live'"
+           th:href="@{/admin/grievances}">
+            <span class="stat__label">Open grievances</span>
+            <span class="stat__value" th:text="${snapshot.openGrievances()}">0</span>
+        </a>
+        <a class="stat stat--action" th:classappend="${snapshot.failedPaymentsToday() > 0} ? 'is-live'"
+           th:href="@{/admin/payments(status='FAILED')}">
+            <span class="stat__label">Failed payments today</span>
+            <span class="stat__value" th:text="${snapshot.failedPaymentsToday()}">0</span>
+        </a>
+        <a sec:authorize="hasRole('SUPER_ADMIN')" class="stat stat--action"
+           th:classappend="${snapshot.openDataRequests() > 0} ? 'is-live'" th:href="@{/admin/dpdp}">
+            <span class="stat__label">Open data requests</span>
+            <span class="stat__value" th:text="${snapshot.openDataRequests()}">0</span>
+            <span class="stat__note">DPDP requests have a statutory clock on them</span>
+        </a>
+    </div>
+
+    <h6 class="mt-4 mb-2">Estate</h6>
+    <div class="stat-row">
+        <a class="stat stat--action" th:href="@{/admin/tenants}">
+            <span class="stat__label">Active colleges</span>
+            <span class="stat__value" th:text="${snapshot.activeColleges()}">0</span>
+        </a>
+        <a class="stat stat--action" th:href="@{/admin/outlets}">
+            <span class="stat__label">Active canteens</span>
+            <span class="stat__value" th:text="${snapshot.activeCanteens()}">0</span>
+        </a>
+        <a class="stat stat--action" th:href="@{/admin/orders}">
+            <span class="stat__label">All orders</span>
+            <span class="stat__value"><span class="material-symbols-outlined">arrow_forward</span></span>
+        </a>
+    </div>
+</div>
+</body>
+</html>

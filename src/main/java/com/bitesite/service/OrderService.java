@@ -45,7 +45,7 @@ public class OrderService {
     private final OutletService outletService;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
-    private final PushNotificationService pushNotificationService;
+    private final OrderNotifier orderNotifier;
 
     /**
      * Builds the order from the cart (re-pricing every line from the database, never
@@ -254,6 +254,12 @@ public class OrderService {
         Order order = getForTenant(payment.getOrderId(), payment.getTenantId());
         if (order.getStatus().canTransitionTo(OrderStatus.PAID)) {
             orderDao.updateStatus(order.getId(), order.getTenantId(), OrderStatus.PAID);
+            // Doubles as the receipt. Payment succeeded and the only acknowledgement was
+            // the page the student happened to be looking at — nothing they could keep,
+            // and nothing at all if the browser closed on the redirect back from Razorpay.
+            orderNotifier.notifyOrderUpdate(order.getUserId(), "Order confirmed",
+                    "We have your payment for order " + order.getTokenNo() + ". The canteen is on it — "
+                            + "you will hear from us again when it is ready to collect.");
         }
         return true;
     }
@@ -269,7 +275,7 @@ public class OrderService {
                 order.getStatus(), newStatus);
         if (newStatus == OrderStatus.READY_FOR_PICKUP) {
             String code = issuePickupCode(orderId, tenantId, order.getOutletId());
-            pushNotificationService.notifyUser(order.getUserId(), "Order ready for pickup",
+            orderNotifier.notifyOrderUpdate(order.getUserId(), "Order ready for pickup",
                     "Your order " + order.getTokenNo() + " is ready — show code " + code + " at the counter.");
         }
     }
@@ -352,7 +358,7 @@ public class OrderService {
         String explanation = normalizeReason(reason);
         orderDao.cancel(orderId, tenantId, explanation);
         auditService.record(actorUserId, tenantId, "Order", orderId, "STATUS_CANCELLED", previous, OrderStatus.CANCELLED);
-        pushNotificationService.notifyUser(order.getUserId(), "Order cancelled",
+        orderNotifier.notifyOrderUpdate(order.getUserId(), "Order cancelled",
                 "Your order " + order.getTokenNo() + " was cancelled" + (previous == OrderStatus.PAID ? " and refunded" : "")
                         + ": " + explanation);
     }
@@ -414,7 +420,7 @@ public class OrderService {
                     previous, OrderStatus.CANCELLED);
         }
 
-        pushNotificationService.notifyUser(order.getUserId(), "Refund issued",
+        orderNotifier.notifyOrderUpdate(order.getUserId(), "Refund issued",
                 "Your order " + order.getTokenNo() + " has been refunded. It should reach your account in 5-7 days.");
         log.info("Manual refund on order {} (tenant {}) by user {}: {}", orderId, tenantId, actorUserId, reason);
     }

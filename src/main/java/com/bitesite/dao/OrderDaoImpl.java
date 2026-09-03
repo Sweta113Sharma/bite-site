@@ -129,7 +129,7 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
-    public List<Order> findByOutlet(Long tenantId, Long outletId, OrderStatus status, int limit) {
+    public List<Order> findByOutlet(Long tenantId, Long outletId, OrderStatus status, int limit, int offset) {
         // idx_orders_outlet_created (outlet_id, created_at) covers both the filter and the
         // sort. The status predicate is appended rather than always-present so the common
         // "everything" case stays a clean index range scan.
@@ -140,8 +140,9 @@ public class OrderDaoImpl implements OrderDao {
             sql.append(" AND status = ?");
             args.add(status.name());
         }
-        sql.append(" ORDER BY created_at DESC LIMIT ?");
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
         args.add(limit);
+        args.add(offset);
 
         List<Order> orders = jdbcTemplate.query(sql.toString(), ORDER_ROW_MAPPER, args.toArray());
         attachItems(orders);
@@ -246,19 +247,37 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
-    public List<Order> findRecentAcrossTenants(Long tenantId, OrderStatus status, int limit) {
-        StringBuilder sql = new StringBuilder("SELECT * FROM orders WHERE 1 = 1");
+    public List<Order> findRecentAcrossTenants(Long tenantId, OrderStatus status, String search,
+            int limit, int offset) {
+        StringBuilder sql = new StringBuilder("SELECT o.* FROM orders o");
         List<Object> args = new ArrayList<>();
+        boolean searching = search != null && !search.isBlank();
+        if (searching) {
+            // Joined only when there is something to search for, so the common unfiltered
+            // listing stays a plain index scan over orders.
+            sql.append(" JOIN users u ON u.id = o.user_id");
+        }
+        sql.append(" WHERE 1 = 1");
         if (tenantId != null) {
-            sql.append(" AND tenant_id = ?");
+            sql.append(" AND o.tenant_id = ?");
             args.add(tenantId);
         }
         if (status != null) {
-            sql.append(" AND status = ?");
+            sql.append(" AND o.status = ?");
             args.add(status.name());
         }
-        sql.append(" ORDER BY created_at DESC LIMIT ?");
+        if (searching) {
+            // The two things a student can actually tell you over a counter: the token on
+            // their screen, or the address they signed up with. Anchored prefix match on
+            // the token so the index is usable; email is contains, since people paraphrase.
+            sql.append(" AND (o.token_no LIKE ? OR u.email LIKE ?)");
+            String term = search.trim();
+            args.add(term + "%");
+            args.add("%" + term + "%");
+        }
+        sql.append(" ORDER BY o.created_at DESC LIMIT ? OFFSET ?");
         args.add(limit);
+        args.add(offset);
         List<Order> orders = jdbcTemplate.query(sql.toString(), ORDER_ROW_MAPPER, args.toArray());
         attachItems(orders);
         return orders;

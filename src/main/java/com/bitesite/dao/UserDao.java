@@ -43,6 +43,14 @@ public interface UserDao {
      * see {@code UserService.updateOwnProfile}. */
     void updateProfile(Long id, String name, String phone, String rollNo, boolean phoneVerified);
 
+    /** Stages an address change. Pass null to abandon one. */
+    void setPendingEmail(Long id, String pendingEmail);
+
+    /** Moves the staged address into {@code email} once a code sent to it has been
+     * verified, and marks the account email-verified — proving the new mailbox is exactly
+     * what verification means. */
+    void applyPendingEmail(Long id, String newEmail);
+
     void updatePasswordHash(Long id, String passwordHash);
 
     void markEmailVerified(Long id);

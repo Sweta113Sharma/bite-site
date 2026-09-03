@@ -99,4 +99,101 @@ public class SmtpEmailService implements EmailService {
             log.error("Failed to send password reset email to {}", toEmail, e);
         }
     }
+
+    @Async
+    @Override
+    public void sendOrderUpdateEmail(String toEmail, String recipientName, String subject, String body) {
+        if (!isConfigured()) {
+            log.warn("SMTP not configured — skipping order update email to {}", toEmail);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromAddress);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText("""
+                    Hi %s,
+
+                    %s
+
+                    You can see the order in the app under My Orders.
+
+                    To stop these emails, turn off order notifications under Privacy & data
+                    in your account.
+                    """.formatted(recipientName, body));
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send order update email to {}", toEmail, e);
+        }
+    }
+
+    @Async
+    @Override
+    public void sendEmailChangeEmail(String toEmail, String recipientName, String code) {
+        if (!isConfigured()) {
+            log.warn("SMTP not configured — skipping email change code to {}", toEmail);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromAddress);
+            helper.setTo(toEmail);
+            helper.setSubject("Confirm your new BiteSite email address");
+            // This can land in the inbox of someone whose address was typed by mistake, so
+            // it has to say what it is for and make ignoring it the safe option.
+            helper.setText("""
+                    Hi %s,
+
+                    Someone asked to move a BiteSite account to this email address. To confirm
+                    it, enter this code in the app:
+
+                    %s
+
+                    The code expires in 10 minutes. Until it is entered, nothing changes and
+                    the account keeps its current address.
+
+                    If you were not expecting this, ignore this email — no account of yours
+                    has been touched, and whoever typed this address cannot use it without
+                    the code above.
+                    """.formatted(recipientName, code));
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send email change code to {}", toEmail, e);
+        }
+    }
+
+    @Async
+    @Override
+    public void sendLoginCodeEmail(String toEmail, String recipientName, String code) {
+        if (!isConfigured()) {
+            log.warn("SMTP not configured — skipping sign-in code to {}", toEmail);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromAddress);
+            helper.setTo(toEmail);
+            helper.setSubject("Your BiteSite sign-in code");
+            helper.setText("""
+                    Hi %s,
+
+                    Your sign-in code is:
+
+                    %s
+
+                    It expires in 10 minutes.
+
+                    If you are not signing in right now, someone else has your password.
+                    Change it as soon as you can — they cannot get in without this code,
+                    but they will keep trying.
+                    """.formatted(recipientName, code));
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send sign-in code to {}", toEmail, e);
+        }
+    }
 }

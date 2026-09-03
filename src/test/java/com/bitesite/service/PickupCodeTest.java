@@ -31,7 +31,7 @@ class PickupCodeTest {
     @Mock private OutletService outletService;
     @Mock private PaymentGateway paymentGateway;
     @Mock private AuditService auditService;
-    @Mock private PushNotificationService pushNotificationService;
+    @Mock private OrderNotifier orderNotifier;
 
     private OrderService orderService;
 
@@ -40,7 +40,7 @@ class PickupCodeTest {
     @BeforeEach
     void setUp() {
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService,
-                paymentGateway, auditService, pushNotificationService);
+                paymentGateway, auditService, orderNotifier);
     }
 
     private Order at(OrderStatus status, String code) {
@@ -100,7 +100,7 @@ class PickupCodeTest {
         orderService.advanceStatus(ORDER, TENANT, OrderStatus.READY_FOR_PICKUP, USER);
 
         ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
-        verify(pushNotificationService).notifyUser(eq(USER), anyString(), body.capture());
+        verify(orderNotifier).notifyOrderUpdate(eq(USER), anyString(), body.capture());
         assertThat(body.getValue()).containsPattern("\\d{4}");
     }
 

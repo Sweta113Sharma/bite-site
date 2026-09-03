@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div class="auth-shell">
+<div th:replace="~{fragments/auth-brand :: panel('One more check.','Platform accounts reach every college on the platform.')}"></div>
+<main class="auth-main">
+    <div th:replace="~{fragments/auth-brand :: lockup}"></div>
+    <div class="auth-card" style="max-width: 420px;">
+        <div class="mb-4">
+            <span class="auth-kicker">Sign-in code</span>
+            <h3 class="mb-1">Check your email</h3>
+            <p class="text-muted mb-0" style="font-size:0.92rem;">
+                We have sent a 6-digit code to the address on your account. It expires in 10 minutes.
+            </p>
+        </div>
+
+        <div class="alert alert-danger" th:if="${codeError}">That code is invalid or has expired.</div>
+        <div class="alert alert-danger" th:if="${rateLimited}">Too many attempts — please wait a few minutes.</div>
+
+        <form method="post" th:action="@{/login/verify}">
+            <div class="mb-3">
+                <label class="form-label" for="login-code">Code</label>
+                <input type="text" name="code" id="login-code" class="form-control"
+                       inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit code"
+                       required="required" autocomplete="one-time-code" autofocus="autofocus"/>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Sign in</button>
+        </form>
+
+        <p class="mt-4 text-center mb-0" style="font-size:0.9rem;">
+            <!-- Starting over means entering the password again, which is the point:
+                 a fresh code should cost what the first one cost. -->
+            <a th:href="@{/login}">Start again</a>
+        </p>
+    </div>
+</main>
+</div>
+</body>
+</html>

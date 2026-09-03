@@ -37,7 +37,7 @@ public class PortalGateFilter extends OncePerRequestFilter {
 
     /** Paths that should never be gated — login, logout, static assets, public pages. */
     private static final Set<String> BYPASS_PREFIXES = Set.of(
-            "/login", "/logout", "/register", "/css/", "/js/", "/img/", "/uploads/",
+            "/login", "/login/verify", "/logout", "/register", "/css/", "/js/", "/img/", "/uploads/",
             "/error", "/actuator", "/api/payments/webhook",
             "/privacy-policy", "/terms", "/refund-policy", "/shipping-policy", "/grievance-policy", "/tenant-unavailable",
             "/verify", "/resend-verification", "/forgot-password", "/reset-password",

@@ -35,7 +35,10 @@
                  platform, so changing it needs a verify-before-swap flow of its own. -->
             <input type="email" id="profile-email" class="form-control" th:value="${email}"
                    disabled="disabled"/>
-            <div class="form-text">You sign in with this. Contact support to change it.</div>
+            <div class="form-text">
+                You sign in with this. <a th:href="@{/account/email}">Change it</a> — we will
+                send a code to the new address first.
+            </div>
         </div>
 
         <div class="mb-3">

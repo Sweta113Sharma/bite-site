@@ -8,6 +8,7 @@ import com.bitesite.dao.PaymentDao;
 import com.bitesite.dao.UserDao;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderStatus;
+import com.bitesite.dto.Paged;
 import com.bitesite.model.Outlet;
 import com.bitesite.model.Payment;
 import com.bitesite.model.PaymentStatus;
@@ -47,8 +48,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PlatformOversightController {
 
-    /** Bounded, not paged — the AuditLogDao convention. The screens say so out loud. */
-    private static final int LIST_LIMIT = 100;
+    /** Rows per page. These lists are now paged rather than truncated: the old behaviour
+     * showed the most recent hundred and offered no way at all to reach the hundred-and-first. */
+    private static final int PAGE_SIZE = 50;
 
     private final OutletDao outletDao;
     private final OrderDao orderDao;
@@ -69,9 +71,19 @@ public class PlatformOversightController {
     @GetMapping("/orders")
     public String orders(@AuthenticationPrincipal AppUserPrincipal principal,
             @RequestParam(required = false) Long tenantId,
-            @RequestParam(required = false) OrderStatus status, Model model) {
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OPS_SCOPE);
-        List<Order> orders = orderDao.findRecentAcrossTenants(tenantId, status, LIST_LIMIT);
+        int safePage = Math.max(0, page);
+        // One row more than the page needs, so Paged can tell whether there is a next one.
+        Paged<Order> paged = Paged.of(
+                orderDao.findRecentAcrossTenants(tenantId, status, q, PAGE_SIZE + 1,
+                        Paged.offsetFor(safePage, PAGE_SIZE)),
+                safePage, PAGE_SIZE);
+        List<Order> orders = paged.items();
+        model.addAttribute("paged", paged);
+        model.addAttribute("q", q);
         model.addAttribute("orders", orders);
         model.addAttribute("collegeNames", collegeNames());
         // Resolved per row rather than joined, matching how the support desk builds its
@@ -81,21 +93,26 @@ public class PlatformOversightController {
         model.addAttribute("statuses", OrderStatus.values());
         model.addAttribute("selectedTenantId", tenantId);
         model.addAttribute("selectedStatus", status);
-        model.addAttribute("limit", LIST_LIMIT);
         model.addAttribute("pageTitle", "All orders");
         return "admin/orders";
     }
 
     @GetMapping("/payments")
     public String payments(@AuthenticationPrincipal AppUserPrincipal principal,
-            @RequestParam(required = false) PaymentStatus status, Model model) {
+            @RequestParam(required = false) PaymentStatus status,
+            @RequestParam(defaultValue = "0") int page, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OPS_SCOPE);
-        List<Payment> payments = paymentDao.findRecentAcrossTenants(status, LIST_LIMIT);
+        int safePage = Math.max(0, page);
+        Paged<Payment> paged = Paged.of(
+                paymentDao.findRecentAcrossTenants(status, PAGE_SIZE + 1,
+                        Paged.offsetFor(safePage, PAGE_SIZE)),
+                safePage, PAGE_SIZE);
+        List<Payment> payments = paged.items();
+        model.addAttribute("paged", paged);
         model.addAttribute("payments", payments);
         model.addAttribute("collegeNames", collegeNames());
         model.addAttribute("statuses", PaymentStatus.values());
         model.addAttribute("selectedStatus", status);
-        model.addAttribute("limit", LIST_LIMIT);
         // The number worth seeing first: money taken and not yet settled into an order.
         model.addAttribute("capturedCount", payments.stream()
                 .filter(p -> p.getStatus() == PaymentStatus.CAPTURED).count());

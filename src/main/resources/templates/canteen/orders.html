@@ -41,9 +41,9 @@
         </table>
     </div>
 
-    <!-- Said out loud rather than implied by a short list: this screen is capped, not paged. -->
-    <p class="text-muted small" th:if="${#lists.size(orders) >= limit}"
-       th:text="'Showing the most recent ' + ${limit} + ' orders.'">Showing the most recent 200 orders.</p>
+    <div th:replace="~{fragments/pager :: pager(${paged},
+            @{/canteen/orders(page=${paged != null ? paged.page - 1 : 0},status=${selectedStatus})},
+            @{/canteen/orders(page=${paged != null ? paged.page + 1 : 0},status=${selectedStatus})})}"></div>
 </div>
 </body>
 </html>

@@ -88,6 +88,9 @@ public class SecurityConfig {
                             // Recovery has to be reachable by someone who cannot sign in —
                             // that is the entire situation it exists for.
                             "/forgot-password", "/reset-password",
+                            // Second half of a platform sign-in. Reachable without being
+                            // authenticated, because by definition you are not yet.
+                            "/login/verify",
                             "/manifest.webmanifest", "/sw.js", "/offline.html").permitAll()
                     // Admin portal routes — any admin-portal role
                     .requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "TECH_MANAGER")
