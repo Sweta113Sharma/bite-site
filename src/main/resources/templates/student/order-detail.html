@@ -36,6 +36,10 @@
          alongside the badge, so the two never drift apart. -->
     <div th:replace="~{fragments/order-status :: statusMedallion(${order.status})}"></div>
 
+    <!-- How far along, and what happens next — the question a student actually has while
+         waiting, answered without reading the badge and inferring the rest. -->
+    <div th:replace="~{fragments/order-status :: progressRail(${order})}"></div>
+
     <!-- Header Details -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>

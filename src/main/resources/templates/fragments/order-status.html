@@ -24,3 +24,58 @@
 </div>
 </body>
 </html>
+
+<!-- ============================================================
+     PROGRESS RAIL
+
+     "Where is my order" answered without reading anything. The badge says the current
+     state; this says how far along that is and what happens next, which is the question
+     a student actually has while waiting.
+
+     Only drawn for orders on the happy path. A cancelled or expired order gets the
+     medallion and nothing else — showing it stalled at step two would imply it is still
+     moving.
+
+     Times come from the columns the transitions already stamp, so a step that has
+     happened can say when, and one that has not stays quiet rather than guessing.
+     ============================================================ -->
+<div th:fragment="progressRail(order)" class="rail" th:if="${order.status.progressStep() >= 0}"
+     th:with="now=${order.status.progressStep()}">
+
+    <div class="rail__step" th:classappend="${now > 0} ? 'is-done' : (${now == 0} ? 'is-now' : 'is-todo')">
+        <span class="rail__pip"></span>
+        <span class="rail__label">
+            <span th:text="${now > 0} ? 'Payment received' : 'Waiting for payment'">Payment received</span>
+            <span class="rail__at" th:if="${order.paidAt != null}"
+                  th:text="${#temporals.format(order.paidAt, 'HH:mm')}">12:41</span>
+        </span>
+    </div>
+
+    <!-- Current for both PAID and PREPARING. From the student's side those are one thing —
+         the canteen has it — and a rail with no current step at all, which is what a paid
+         order showed before, reads as though nothing is happening. The label still tells
+         the two apart, because waiting in the queue and being cooked are different answers
+         to "how long". -->
+    <div class="rail__step" th:classappend="${now > 2} ? 'is-done' : ((${now == 1} or ${now == 2}) ? 'is-now' : 'is-todo')">
+        <span class="rail__pip"></span>
+        <span class="rail__label" th:text="${now == 1} ? 'In the kitchen queue' : 'Being prepared'">Being prepared</span>
+    </div>
+
+    <div class="rail__step" th:classappend="${now > 3} ? 'is-done' : (${now == 3} ? 'is-now' : 'is-todo')">
+        <span class="rail__pip"></span>
+        <span class="rail__label">
+            <span>Ready to collect</span>
+            <span class="rail__at" th:if="${order.readyAt != null}"
+                  th:text="${#temporals.format(order.readyAt, 'HH:mm')}">12:52</span>
+        </span>
+    </div>
+
+    <div class="rail__step" th:classappend="${now == 4} ? 'is-done' : 'is-todo'">
+        <span class="rail__pip"></span>
+        <span class="rail__label">
+            <span>Collected</span>
+            <span class="rail__at" th:if="${order.completedAt != null}"
+                  th:text="${#temporals.format(order.completedAt, 'HH:mm')}">12:58</span>
+        </span>
+    </div>
+</div>

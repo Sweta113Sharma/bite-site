@@ -82,4 +82,27 @@ class OrderStatusTest {
     void paymentFailedCanBeRetried() {
         assertThat(OrderStatus.PAYMENT_FAILED.canTransitionTo(OrderStatus.AWAITING_PAYMENT)).isTrue();
     }
+
+    /**
+     * The order page draws its progress rail from this, so a status landing on the wrong
+     * step, or on the path at all when it should not be, is a wrong answer to "where is my
+     * order" rather than a cosmetic slip.
+     */
+    @Test
+    void theHappyPathIsNumberedInOrder() {
+        assertThat(OrderStatus.AWAITING_PAYMENT.progressStep()).isZero();
+        assertThat(OrderStatus.PAID.progressStep()).isEqualTo(1);
+        assertThat(OrderStatus.PREPARING.progressStep()).isEqualTo(2);
+        assertThat(OrderStatus.READY_FOR_PICKUP.progressStep()).isEqualTo(3);
+        assertThat(OrderStatus.COMPLETED.progressStep()).isEqualTo(4);
+    }
+
+    /** An order that stopped is off the path entirely. Drawing it stalled midway would say
+     * it is still moving. */
+    @Test
+    void ordersThatWentWrongAreNotOnTheHappyPath() {
+        assertThat(OrderStatus.CANCELLED.progressStep()).isNegative();
+        assertThat(OrderStatus.EXPIRED.progressStep()).isNegative();
+        assertThat(OrderStatus.PAYMENT_FAILED.progressStep()).isNegative();
+    }
 }

@@ -794,3 +794,75 @@
         transition: none;
     }
 }
+
+/* ============================================================
+   PROGRESS RAIL — where an order has got to.
+
+   A vertical run of steps rather than a horizontal stepper: the labels carry times and
+   real words, and horizontal steppers force those into abbreviations that then need
+   decoding. Vertical also survives a 320px screen without a media query.
+   ============================================================ */
+.rail {
+    display: flex;
+    flex-direction: column;
+    margin: 0 0 1.5rem;
+}
+
+.rail__step {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.45rem 0;
+    position: relative;
+    font-size: 0.92rem;
+}
+
+/* The connecting line, drawn from each step to the next rather than as a separate
+   element — one rule, and it cannot fall out of alignment with the pips. */
+.rail__step:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 10.25px;
+    top: 50%;
+    width: var(--rule-w);
+    height: 100%;
+    background: var(--rule-color-strong);
+}
+
+.rail__pip {
+    width: 13px;
+    height: 13px;
+    justify-self: center;
+    border: var(--border-w) solid var(--color-ink);
+    background: var(--color-bg);
+    position: relative;
+    z-index: 1;
+}
+
+.rail__label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.rail__at {
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.rail__step.is-done .rail__pip { background: var(--color-ink); }
+
+/* The current step is the only one that changes shape. Yellow means work in progress
+   here exactly as it does on the console and in the order strip. */
+.rail__step.is-now .rail__pip {
+    background: var(--color-accent-tint);
+    box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+.rail__step.is-now { font-weight: 700; }
+
+.rail__step.is-todo { color: var(--color-ink-muted); }
+.rail__step.is-todo .rail__pip { border-color: var(--rule-color-strong); }

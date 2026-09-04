@@ -1294,3 +1294,29 @@ h1, h2, h3 {
     border-radius: 0;
     box-shadow: var(--shadow-md);
 }
+
+
+/* ============================================================
+   TABULAR FIGURES
+
+   Anywhere digits are read as a quantity rather than as prose. Archivo's proportional
+   figures set a 1 narrower than a 7, so a column of prices, a list of order tokens or a
+   4-digit pickup code all shift line to line — which reads as sloppy on a price list and
+   makes a code genuinely harder to read aloud across a counter.
+
+   Applied by role rather than globally: body copy with a number in it still wants
+   proportional figures.
+   ============================================================ */
+.price,
+.token-badge,
+.pickup-code-panel__code,
+.order-card-token,
+.cart-item-price,
+.cart-item-subtotal,
+.sticky-pay-total,
+.bottom-nav-badge,
+.nav-drawer__count,
+.money,
+.num {
+    font-variant-numeric: tabular-nums;
+}

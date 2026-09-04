@@ -38,6 +38,26 @@ public enum OrderStatus {
         return this == PAID || this == PREPARING || this == READY_FOR_PICKUP;
     }
 
+    /**
+     * Position on the happy path — placed, paid, cooking, ready, collected — or -1 for a
+     * status that never reaches it.
+     *
+     * <p>Exists so the order page can draw a progress rail without a chain of ternaries in
+     * the template deciding which step is behind, which is current and which is still to
+     * come. A cancelled or expired order is deliberately off the path: showing it as
+     * "stalled at step two" would imply it is still moving.
+     */
+    public int progressStep() {
+        return switch (this) {
+            case AWAITING_PAYMENT -> 0;
+            case PAID -> 1;
+            case PREPARING -> 2;
+            case READY_FOR_PICKUP -> 3;
+            case COMPLETED -> 4;
+            case PAYMENT_FAILED, EXPIRED, CANCELLED -> -1;
+        };
+    }
+
     public boolean isTerminal() {
         return this == COMPLETED || this == EXPIRED || this == CANCELLED;
     }
