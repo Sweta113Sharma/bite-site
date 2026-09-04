@@ -1,0 +1,38 @@
+# Nothing scanned this project's dependencies for known vulnerabilities. For an app that
+# takes payments through a Spring stack, the first anyone would have heard about a CVE in
+# Spring Security, the MySQL driver or the Razorpay SDK is the news.
+#
+# Dependabot rather than a CI scanning step, deliberately: it runs on GitHub's schedule
+# rather than the build's, so a slow or rate-limited vulnerability feed can never turn into
+# a red build that people learn to ignore. Security updates arrive as pull requests with
+# the changelog attached.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    # Version bumps in one PR; a security fix is worth interrupting for on its own, and
+    # GitHub raises those separately regardless of this grouping.
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*"
+      test-tooling:
+        patterns:
+          - "org.junit*"
+          - "org.mockito*"
+          - "org.assertj*"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+
+  # The deploy and CI workflows pin actions by major version; these drift too, and a
+  # compromised action is a build-time supply-chain problem rather than a runtime one.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    labels:
+      - dependencies

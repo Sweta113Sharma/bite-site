@@ -1116,4 +1116,55 @@ class AccountSelfServiceFlowTest {
                 .andExpect(header().string("Permissions-Policy",
                         org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("payment="))));
     }
+
+    /**
+     * Report-only until the reports are quiet. Shipping this as an enforcing policy would
+     * break checkout in production, so the test pins the mode as much as the contents —
+     * flipping it is a deliberate config change, not an accident.
+     */
+    @Test
+    void theContentSecurityPolicyShipsInReportOnlyMode() throws Exception {
+        new Client().perform(get("/login"))
+                .andExpect(header().doesNotExist("Content-Security-Policy"))
+                .andExpect(header().string("Content-Security-Policy-Report-Only",
+                        org.hamcrest.Matchers.containsString("report-uri /api/csp-report")));
+    }
+
+    @Test
+    void thePolicyAllowsEverythingCheckoutActuallyLoads() throws Exception {
+        var result = new Client().perform(get("/login")).andReturn();
+        String policy = result.getResponse().getHeader("Content-Security-Policy-Report-Only");
+
+        assertThat(policy)
+                .as("Razorpay's checkout script, its API and its iframe all have to be reachable")
+                .contains("https://checkout.razorpay.com")
+                .contains("https://api.razorpay.com")
+                .contains("frame-src");
+        assertThat(policy)
+                .as("Bootstrap and the fonts are render-blocking; blocking them blanks the app")
+                .contains("https://cdn.jsdelivr.net")
+                .contains("https://fonts.gstatic.com");
+        assertThat(policy)
+                .as("menu photos are served from Cloudinary in production")
+                .contains("https://res.cloudinary.com");
+    }
+
+    /** The browser posts these itself, with no session and no CSRF token. If either check
+     * were applied the reports would never arrive and the rollout would look clean when it
+     * was simply silent. */
+    @Test
+    void violationReportsAreAcceptedWithoutASessionOrAToken() throws Exception {
+        new Client().perform(post("/api/csp-report")
+                        .contentType("application/csp-report")
+                        .content("{\"csp-report\":{\"violated-directive\":\"script-src\","
+                                + "\"blocked-uri\":\"https://evil.example/x.js\"}}"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void aMalformedReportIsSwallowedRatherThanErroring() throws Exception {
+        new Client().perform(post("/api/csp-report")
+                        .contentType("application/csp-report").content("not json"))
+                .andExpect(status().isNoContent());
+    }
 }

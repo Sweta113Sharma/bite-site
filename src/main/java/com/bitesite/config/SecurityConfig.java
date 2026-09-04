@@ -1,6 +1,7 @@
 package com.bitesite.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -21,6 +22,32 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    /**
+     * Everything the app is known to load, plus a report endpoint.
+     *
+     * <p>{@code frame-ancestors 'none'} restates X-Frame-Options: DENY for browsers that
+     * prefer the CSP form, and {@code object-src 'none'} plus {@code base-uri 'self'}
+     * close two injection routes that cost nothing to shut.
+     */
+    private static final String CONTENT_SECURITY_POLICY = String.join("; ",
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+                    + "https://checkout.razorpay.com https://cdn.razorpay.com",
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
+            "font-src 'self' data: https://fonts.gstatic.com",
+            "img-src 'self' data: blob: https://res.cloudinary.com",
+            "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com",
+            "frame-src https://api.razorpay.com https://checkout.razorpay.com",
+            "form-action 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+            "frame-ancestors 'none'",
+            "report-uri /api/csp-report");
+
+    /** Flip to true only once the reports have been quiet on real traffic. */
+    @Value("${app.security.csp-enforce:false}")
+    private boolean cspEnforce;
 
     private final RoleBasedAuthenticationSuccessHandler successHandler;
     private final LoginFailureHandler failureHandler;
@@ -76,13 +103,16 @@ public class SecurityConfig {
         http
             .securityContext(context -> context.securityContextRepository(securityContextRepository))
             .csrf(csrf -> csrf.ignoringRequestMatchers(
-                    new AntPathRequestMatcher("/api/payments/webhook")))
+                    new AntPathRequestMatcher("/api/payments/webhook"),
+                    // The browser posts violation reports itself, with no session and no
+                    // token. It is write-only, stores nothing, and is rate limited.
+                    new AntPathRequestMatcher("/api/csp-report")))
             // Portal gate filter runs after authentication but before authorization
             .addFilterAfter(portalGateFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/", "/login", "/tenant-unavailable",
                             "/register/student", "/css/**", "/js/**", "/img/**", "/fonts/**", "/uploads/**", "/error",
-                            "/actuator/health", "/api/payments/webhook",
+                            "/actuator/health", "/api/payments/webhook", "/api/csp-report",
                             "/privacy-policy", "/terms", "/refund-policy",
                             "/shipping-policy", "/grievance-policy",
                             "/verify", "/verify/**", "/resend-verification",
@@ -142,6 +172,30 @@ public class SecurityConfig {
                      * `payment`: Razorpay's checkout may use the Payment Request API, and
                      * denying it here would break the till to defend against nothing.
                      */
+                    /*
+                     * Report-only, and deliberately so. Razorpay does not publish a
+                     * definitive list of the origins its checkout reaches, and this app
+                     * also pulls Bootstrap from a CDN, Google Fonts, and inline script
+                     * that Thymeleaf generates. A policy written from the outside and
+                     * enforced would break the till in production, and you would hear
+                     * about it from students rather than from a test.
+                     *
+                     * So the browser reports what this policy WOULD have blocked, nobody
+                     * is affected, and the reports say what to fix. Once /api/csp-report
+                     * has been quiet for a few days on real traffic, set
+                     * CSP_ENFORCE=true — the policy string is shared, so what gets
+                     * enforced is exactly what was observed to be clean.
+                     *
+                     * unsafe-inline is present for now because the templates carry inline
+                     * script and style. Nonces are the proper fix and the reports will
+                     * show how much is actually involved before that work is scoped.
+                     */
+                    .contentSecurityPolicy(csp -> {
+                        csp.policyDirectives(CONTENT_SECURITY_POLICY);
+                        if (!cspEnforce) {
+                            csp.reportOnly();
+                        }
+                    })
                     .permissionsPolicyHeader(permissions -> permissions.policy(
                             "camera=(), microphone=(), geolocation=(), usb=(), magnetometer=(), "
                                     + "accelerometer=(), gyroscope=(), interest-cohort=()")))
