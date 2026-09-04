@@ -54,11 +54,20 @@ public class RoleBasedAuthenticationSuccessHandler extends SimpleUrlAuthenticati
     private final EmailService emailService;
 
     /**
-     * Escape hatch. A second factor delivered by email means a broken relay locks every
-     * platform account out of the console — including the account that would go and fix
-     * the relay. Set {@code ADMIN_2FA_ENABLED=false} and restart to get back in.
+     * Off unless asked for.
+     *
+     * <p>It was briefly on by default, and that was the wrong default for this product
+     * today. A second factor delivered by email is only as reliable as the mail relay, and
+     * a relay that is configured but broken locks every platform account out of the
+     * console — including the account that would go and fix the relay. That is a bad trade
+     * while the platform has a handful of admins who all know each other, and the failure
+     * mode is worse than the risk it covers.
+     *
+     * <p>The mechanism stays, tested and one setting away: {@code ADMIN_2FA_ENABLED=true}
+     * turns it on. Worth revisiting when the admin console reaches people who are not in
+     * the room, or when there is enough money moving through it to be worth stealing.
      */
-    @Value("${app.security.admin-2fa:true}")
+    @Value("${app.security.admin-2fa:false}")
     private boolean adminTwoFactorEnabled;
 
     @Override

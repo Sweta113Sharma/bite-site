@@ -60,7 +60,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * hashed, which is the point of them. {@link SmsService} is mocked so the phone-change
  * path can be exercised on both sides of "is SMS even configured".
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+// admin-2fa is off by default (see RoleBasedAuthenticationSuccessHandler). Turned on here
+// so the flow stays covered while it is dormant — a feature nobody exercises is a feature
+// that has quietly stopped working by the time somebody wants it.
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+        properties = "app.security.admin-2fa=true")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

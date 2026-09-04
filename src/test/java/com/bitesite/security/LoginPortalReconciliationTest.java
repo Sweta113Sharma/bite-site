@@ -212,4 +212,18 @@ class LoginPortalReconciliationTest {
         assertThat(cookie).isNotNull();
         return cookie;
     }
+
+    /**
+     * This class does not set app.security.admin-2fa, so it sees the shipped default —
+     * which is off. That makes it the one place proving a platform account signs straight
+     * in, and the thing that would fail if the default ever drifted back to on.
+     */
+    @Test
+    void aPlatformAccountSignsInWithoutASecondFactorByDefault() throws Exception {
+        User admin = seed("default-no-2fa", Role.SUPER_ADMIN, Set.of(), Role.SUPER_ADMIN);
+
+        mockMvc.perform(loginRequest(ADMIN_HOST, admin))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/admin"));
+    }
 }
