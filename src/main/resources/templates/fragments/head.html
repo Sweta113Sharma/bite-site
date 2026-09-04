@@ -2,7 +2,12 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:fragment="head">
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to anything other
+         than zero on a notched iPhone. Sixteen rules across seven stylesheets already read
+         --safe-area-bottom to keep the tab bar, the sticky cart bar and the toasts clear of
+         the home indicator; without this attribute every one of them was computing with a
+         zero and the bar sat under the indicator on every iPhone X and later. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
     <title th:text="${pageTitle != null ? pageTitle + ' - BiteSite' : 'BiteSite'}">BiteSite</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/img/logo-mark.svg}"/>
     <link rel="manifest" th:href="@{/manifest.webmanifest}"/>

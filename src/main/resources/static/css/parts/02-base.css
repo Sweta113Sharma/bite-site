@@ -707,3 +707,42 @@ body.has-drawer-open { overflow: hidden; }
     border-top: var(--border-w) solid var(--color-ink);
     margin: 0;
 }
+
+
+/* ============================================================
+   TOUCH INPUT
+
+   Two rules that only matter on a phone, and both were biting.
+
+   iOS Safari zooms the whole page when a field with a font-size under 16px takes focus,
+   and does not zoom back out. .form-control and .form-select were 0.95rem and 0.9rem —
+   15.2px and 14.4px — so tapping the email box on the sign-in screen, the menu search, a
+   quantity select or the pickup-code field threw the layout sideways and left it there.
+   Scoped to coarse pointers rather than a width breakpoint: it is a property of touch
+   input, not of screen size, and a narrow desktop window should keep its typography.
+
+   44px is Apple's minimum target and 48 is Material's; the controls below were 40 and 42,
+   which is inside the range where a thumb misses. --hit-area has existed as a token since
+   the beginning and was never applied to anything. */
+@media (pointer: coarse) {
+    .form-control,
+    .form-select,
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="search"],
+    input[type="number"],
+    textarea,
+    select {
+        font-size: 16px;
+    }
+
+    .nav-drawer-btn,
+    .navbar-toggler-custom,
+    .field__toggle,
+    .bottom-nav-item {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
