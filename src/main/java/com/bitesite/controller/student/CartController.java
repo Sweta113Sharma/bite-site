@@ -6,6 +6,7 @@ import com.bitesite.model.MenuItem;
 import com.bitesite.model.Outlet;
 import com.bitesite.model.User;
 import com.bitesite.service.Cart;
+import com.bitesite.service.CartPersistence;
 import com.bitesite.service.MenuService;
 import com.bitesite.service.OutletService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,12 +37,16 @@ public class CartController {
 
     private final Cart cart;
     private final MenuService menuService;
+    private final CartPersistence cartPersistence;
     private final OutletService outletService;
     private final ObjectMapper objectMapper;
 
     @GetMapping
     public String view(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
         User user = principal.getUser();
+        // A cart built before a lecture should still be here after it. Once per session,
+        // and only into an empty cart — see CartPersistence.
+        cartPersistence.hydrateOnce(user, cart);
         Outlet outlet = cart.getOutletId() != null
                 ? outletService.get(cart.getOutletId(), user.getTenantId()) : null;
         // One roll-up for the whole cart rather than one per line.
@@ -97,6 +102,7 @@ public class CartController {
         if (blocked == null) {
             cart.ensureOutlet(outletId);
             cart.add(menuItemId, wanted);
+            cartPersistence.persist(user, cart);
         }
         // The menu page adds to cart via fetch() so it can update the badge/sticky bar without a
         // page reload; it asks for JSON explicitly. A plain form post (no-JS fallback) still gets
@@ -159,6 +165,7 @@ public class CartController {
             HttpServletResponse response) throws IOException {
         int clamped = Math.max(0, Math.min(20, quantity));
         cart.setQuantity(menuItemId, clamped);
+        cartPersistence.persist(principal.getUser(), cart);
 
         if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
             // Re-read prices from the service (never trust a client) and roll up the
@@ -189,8 +196,9 @@ public class CartController {
     }
 
     @PostMapping("/remove")
-    public String remove(@RequestParam Long menuItemId) {
+    public String remove(@AuthenticationPrincipal AppUserPrincipal principal, @RequestParam Long menuItemId) {
         cart.remove(menuItemId);
+        cartPersistence.persist(principal.getUser(), cart);
         return "redirect:/student/cart";
     }
 }

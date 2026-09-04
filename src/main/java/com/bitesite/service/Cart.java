@@ -1,6 +1,7 @@
 package com.bitesite.service;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.annotation.SessionScope;
 
@@ -25,6 +26,12 @@ import java.util.Objects;
 public class Cart implements Serializable {
 
     private Long outletId;
+
+    /** Whether this session has already tried to restore a saved cart. One attempt per
+     * session, not per page — see CartPersistence. */
+    @Setter
+    private boolean hydrated;
+
     private final Map<Long, Integer> quantities = new LinkedHashMap<>();
 
     public void ensureOutlet(Long outletId) {

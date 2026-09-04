@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initPushToggle();
     initPushInvite();
     initOrderStatusWatch();
+    initOfflineState();
 });
 
 /* ============================================================
@@ -842,8 +843,12 @@ function initOrderStatusWatch() {
 
     const orderId = host.dataset.orderId;
     let rendered = host.dataset.orderStatus;
-    // Terminal orders never change again; polling them would be pure noise.
-    if (['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(rendered)) return;
+    /* COMPLETED and CANCELLED never change again, so polling them is pure noise.
+       EXPIRED is deliberately not in that list: a payment captured after the timeout
+       revives the order (OrderService.confirmPayment), and a student watching the order
+       they just paid for is exactly who needs to see that happen. Leaving it out was an
+       inconsistency between two changes made an hour apart. */
+    if (['COMPLETED', 'CANCELLED'].includes(rendered)) return;
 
     const POLL_MS = 10000;
 
@@ -855,13 +860,20 @@ function initOrderStatusWatch() {
             .then((r) => (r.ok ? r.json() : null))
             .then((data) => {
                 if (!data || data.status === rendered) return;
+                const previous = rendered;
                 rendered = data.status;
                 clearInterval(timer);
                 // Announce before reloading: a page that changes under someone with no
                 // explanation is worse than one that changes slightly later.
-                showToast(data.status === 'READY_FOR_PICKUP'
-                    ? 'Your order is ready — show your code at the counter'
-                    : 'Order updated');
+                if (data.status === 'READY_FOR_PICKUP') {
+                    showToast('Your order is ready — show your code at the counter');
+                } else if (rendered === 'PAID' && previous === 'EXPIRED') {
+                    /* The late-capture case. Being told "order updated" after watching an
+                       order expire is not an explanation. */
+                    showToast('Your payment came through — the order is back on');
+                } else {
+                    showToast('Order updated');
+                }
                 setTimeout(() => window.location.reload(), 900);
             })
             .catch(() => { /* Offline: keep what is on screen and try again next tick. */ });
@@ -873,4 +885,52 @@ function initOrderStatusWatch() {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check();
     });
+}
+
+/**
+ * Offline state.
+ *
+ * The service worker serves a cached page for navigations when the network is gone, which
+ * makes the app look offline-capable — but a POST is network-only, always was, and always
+ * will be: you cannot queue a checkout and replay it later without risking charging
+ * someone twice. So the honest behaviour is to say so before the tap, not after the
+ * failure. A bar at the top, and the buttons that need the network go inert.
+ */
+function initOfflineState() {
+    const NETWORK_BUTTON_SELECTOR = '#pay-btn, [data-needs-network]';
+
+    let bar = null;
+    function ensureBar() {
+        if (bar) return bar;
+        bar = document.createElement('div');
+        bar.className = 'offline-bar';
+        bar.setAttribute('role', 'status');
+        bar.setAttribute('aria-live', 'polite');
+        bar.textContent = 'You are offline. You can look around, but ordering needs a connection.';
+        document.body.prepend(bar);
+        return bar;
+    }
+
+    function apply() {
+        const offline = !navigator.onLine;
+        ensureBar().classList.toggle('is-visible', offline);
+        document.querySelectorAll(NETWORK_BUTTON_SELECTOR).forEach((el) => {
+            /* Only ever re-enable what this function disabled. The pay button disables
+               itself while a payment is confirming, and coming back online must not undo
+               that and let someone pay twice. */
+            if (offline) {
+                if (!el.disabled) {
+                    el.disabled = true;
+                    el.dataset.offlineDisabled = '1';
+                }
+            } else if (el.dataset.offlineDisabled === '1') {
+                el.disabled = false;
+                delete el.dataset.offlineDisabled;
+            }
+        });
+    }
+
+    window.addEventListener('online', apply);
+    window.addEventListener('offline', apply);
+    if (!navigator.onLine) apply();
 }

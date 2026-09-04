@@ -655,3 +655,28 @@ hr {
 hr.rule-strong {
     border-top-color: var(--rule-color-strong);
 }
+
+
+/* ============================================================
+   OFFLINE BAR
+
+   The service worker serves cached pages when the network drops, so the app keeps
+   looking usable — and then a checkout POST fails, because a POST is network-only and
+   queueing one would risk charging someone twice. This says so before the tap rather
+   than after the failure.
+   ============================================================ */
+.offline-bar {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 1080;
+    padding: 0.55rem 1rem;
+    background: var(--color-ink);
+    color: var(--color-bg);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.offline-bar.is-visible {
+    display: block;
+}

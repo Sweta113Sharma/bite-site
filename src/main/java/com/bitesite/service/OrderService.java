@@ -286,6 +286,49 @@ public class OrderService {
         return true;
     }
 
+    /**
+     * Puts a failed order back on the pay screen with a fresh gateway order.
+     *
+     * <p>A declined card left the order at PAYMENT_FAILED with nothing offering a second
+     * attempt: the pay button only ever rendered for AWAITING_PAYMENT, so the student's
+     * only route was to abandon the order and rebuild the cart. The model always allowed
+     * PAYMENT_FAILED -> AWAITING_PAYMENT; only the UI was missing.
+     *
+     * <p>A new gateway order rather than a reused one, deliberately. The old one may have
+     * a failed attempt against it at Razorpay's end, and reusing it risks confirming this
+     * order against that attempt. A fresh order id keeps the two apart.
+     */
+    @Transactional
+    public GatewayOrder retryPayment(Long orderId, Long userId, Long tenantId) {
+        Order order = getForUser(orderId, userId, tenantId);
+        if (order.getStatus() != OrderStatus.PAYMENT_FAILED) {
+            throw new InvalidOrderStateException("That order is not waiting on a retry.");
+        }
+
+        GatewayOrder gatewayOrder = paymentGateway.createOrder(order.getTotalAmount(), order.getTokenNo());
+        Payment payment = Payment.builder()
+                .tenantId(tenantId)
+                .orderId(order.getId())
+                .razorpayOrderId(gatewayOrder.gatewayOrderId())
+                .amount(order.getTotalAmount())
+                .status(PaymentStatus.CREATED)
+                .build();
+        try {
+            paymentDao.save(payment);
+        } catch (RuntimeException e) {
+            // Same window checkout guards: a payable gateway order with no local row is
+            // money that can be taken against nothing. Leave the order failed.
+            log.error("Retry payment row could not be saved for order {} after gateway order {}",
+                    order.getId(), gatewayOrder.gatewayOrderId(), e);
+            throw e;
+        }
+
+        orderDao.updateStatus(order.getId(), tenantId, OrderStatus.AWAITING_PAYMENT);
+        auditService.record(userId, tenantId, "Order", order.getId(), "RETRY_PAYMENT",
+                OrderStatus.PAYMENT_FAILED, OrderStatus.AWAITING_PAYMENT);
+        return gatewayOrder;
+    }
+
     public void advanceStatus(Long orderId, Long tenantId, OrderStatus newStatus, Long actorUserId) {
         Order order = getForTenant(orderId, tenantId);
         if (!order.getStatus().canTransitionTo(newStatus)) {

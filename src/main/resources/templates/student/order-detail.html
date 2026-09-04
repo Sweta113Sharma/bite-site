@@ -134,8 +134,24 @@
         </div>
     </div>
 
+    <div class="alert alert-danger" th:if="${paymentError}" th:text="${paymentError}"></div>
+
     <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2"
        th:href="@{/student/checkout/{id}(id=${order.id})}"><span class="material-symbols-outlined">credit_card</span> Complete payment</a>
+
+    <!-- A declined card used to be the end of the road: the button above only renders for
+         AWAITING_PAYMENT, so the only way forward was to abandon the order and rebuild the
+         cart. The transition was always legal; nothing offered it. -->
+    <div th:if="${order.status.name() == 'PAYMENT_FAILED'}">
+        <p class="text-muted small mb-2">
+            That payment did not go through and nothing was charged. Your order is still here.
+        </p>
+        <form method="post" th:action="@{/student/checkout/{id}/retry(id=${order.id})}">
+            <button type="submit" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2">
+                <span class="material-symbols-outlined">credit_card</span> Try payment again
+            </button>
+        </form>
+    </div>
 </div>
 </body>
 </html>

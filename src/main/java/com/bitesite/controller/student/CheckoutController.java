@@ -2,6 +2,7 @@ package com.bitesite.controller.student;
 
 import com.bitesite.config.AppUserPrincipal;
 import com.bitesite.config.RateLimiter;
+import com.bitesite.exception.BusinessException;
 import com.bitesite.config.RazorpayProperties;
 import com.bitesite.dto.CheckoutResult;
 import com.bitesite.exception.InvalidOrderStateException;
@@ -10,6 +11,7 @@ import com.bitesite.model.OrderStatus;
 import com.bitesite.model.Payment;
 import com.bitesite.model.User;
 import com.bitesite.service.Cart;
+import com.bitesite.service.CartPersistence;
 import com.bitesite.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -38,6 +40,7 @@ public class CheckoutController {
     private final OrderService orderService;
     private final RazorpayProperties razorpayProperties;
     private final RateLimiter rateLimiter;
+    private final CartPersistence cartPersistence;
 
     @PostMapping
     public String checkout(@AuthenticationPrincipal AppUserPrincipal principal, RedirectAttributes redirectAttributes) {
@@ -53,11 +56,36 @@ public class CheckoutController {
             CheckoutResult result = orderService.checkout(
                     user.getTenantId(), cart.getOutletId(), user.getId(), cart.getQuantities());
             cart.clear();
+            // The saved copy goes with it, or the next session restores a cart the student
+            // has already ordered and paid for.
+            cartPersistence.persist(user, cart);
             return "redirect:/student/checkout/" + result.order().getId();
         } catch (InvalidOrderStateException e) {
             redirectAttributes.addFlashAttribute("cartError", e.getMessage());
             return "redirect:/student/cart";
         }
+    }
+
+    /**
+     * Second attempt at a payment that was declined. Rate limited with checkout's own
+     * budget: each retry mints a gateway order, so this is the same cost as checking out.
+     */
+    @PostMapping("/{orderId}/retry")
+    public String retry(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long orderId,
+            RedirectAttributes redirectAttributes) {
+        User user = principal.getUser();
+        if (!rateLimiter.tryConsume("checkout:" + user.getId(), MAX_CHECKOUTS_PER_WINDOW, CHECKOUT_WINDOW)) {
+            redirectAttributes.addFlashAttribute("paymentError",
+                    "Too many attempts — please wait a moment and try again.");
+            return "redirect:/student/orders/" + orderId;
+        }
+        try {
+            orderService.retryPayment(orderId, user.getId(), user.getTenantId());
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("paymentError", e.getMessage());
+            return "redirect:/student/orders/" + orderId;
+        }
+        return "redirect:/student/checkout/" + orderId;
     }
 
     @GetMapping("/{orderId}")
