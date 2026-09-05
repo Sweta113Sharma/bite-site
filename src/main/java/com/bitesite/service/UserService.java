@@ -1,6 +1,7 @@
 package com.bitesite.service;
 
 import com.bitesite.config.RateLimiter;
+import com.bitesite.dao.FcmTokenDao;
 import com.bitesite.dao.UserDao;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
@@ -38,6 +39,7 @@ public class UserService {
     private final OtpService otpService;
     private final SmsService smsService;
     private final PushNotificationService pushNotificationService;
+    private final FcmTokenDao fcmTokenDao;
 
     public User registerStudent(Long tenantId, String name, String rawEmail, String rawPassword,
             String phone, String rollNo) {
@@ -398,6 +400,10 @@ public class UserService {
         // hanging off it stays valid and the person's phone carries on receiving
         // notifications for an account they were told was deleted.
         pushNotificationService.unsubscribeAll(userId);
+        // The same reasoning for the native apps. Erasure that left these rows behind would
+        // keep the person's phone ringing for an account they were told was deleted, which
+        // is the exact failure the line above exists to prevent.
+        fcmTokenDao.deleteByUserId(userId);
         auditService.record(userId, tenantId, "User", userId, "SELF_DELETE_ACCOUNT", null, null);
     }
 }

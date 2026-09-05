@@ -24,6 +24,7 @@
         <sentry.version>8.16.0</sentry.version>
         <twilio.version>10.9.2</twilio.version>
         <web-push.version>5.1.2</web-push.version>
+        <firebase-admin.version>9.9.0</firebase-admin.version>
     </properties>
 
     <dependencies>
@@ -124,6 +125,17 @@
             <groupId>org.bitbucket.b_c</groupId>
             <artifactId>jose4j</artifactId>
             <version>0.7.9</version>
+        </dependency>
+
+        <!-- FCM (order-ready alerts to the Android apps). The WebView in those apps does
+             not implement the Push API, so the web-push path above cannot reach them at
+             all and this is the only channel that can. Optional in the same way every
+             other integration here is: with no credentials configured FcmSender reports
+             isConfigured() false and OrderNotifier simply skips the channel. -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>${firebase-admin.version}</version>
         </dependency>
 
         <!-- Cloud logo storage (optional — active only when app.uploads.storage-type=cloudinary) -->

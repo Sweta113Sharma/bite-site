@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BiteSite Outlet</title>
+<style>
+    :root {
+        --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+        --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: calc(24px + var(--safe-top)) 24px calc(24px + var(--safe-bottom));
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background: #F9F9F9;
+        color: #14100D;
+        font-family: Archivo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 10px; }
+    p { margin: 0 0 24px; color: #6B625B; line-height: 1.5; max-width: 32ch; }
+    button {
+        font: inherit;
+        font-weight: 600;
+        color: #F9F9F9;
+        background: #C4552D;
+        border: none;
+        border-radius: 10px;
+        padding: 14px 32px;
+        min-height: 48px;
+        cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+</style>
+</head>
+<body>
+    <!-- Capacitor routes both onReceivedError and onReceivedHttpError here, so this page
+         stands in for a dropped connection and for a server error alike. The wording has
+         to be true of both; "Try again" is the right move either way. -->
+    <h1>Can't reach BiteSite</h1>
+    <p>The outlet console didn't load. Check your connection and try again.</p>
+    <button type="button" id="retry">Try again</button>
+<script>
+    // This page is the only thing standing between a dropped connection and the raw
+    // WebView error page, so it must not depend on anything that can fail. The splash
+    // is configured not to auto-hide; hiding it here is what guarantees it can never
+    // stay up forever when the remote server is unreachable.
+    try { window.Capacitor?.Plugins?.SplashScreen?.hide(); } catch (e) {}
+
+    document.getElementById('retry').addEventListener('click', function () {
+        window.location.href = 'https://bitesite-app.azurewebsites.net/canteen';
+    });
+</script>
+</body>
+</html>

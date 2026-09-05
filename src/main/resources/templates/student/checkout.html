@@ -66,11 +66,27 @@
             '<div id="pay-notice" class="alert alert-' + tone + ' mt-3 mb-0">' + message + '</div>');
     }
 
-    function openCheckout() {
-        const notice = document.getElementById('pay-notice');
-        if (notice) notice.remove();
+    /* Both checkouts end here. The signature is verified server-side before anything is
+       marked paid — see CheckoutController.confirm. Nothing here is trusted. */
+    function confirmPayment(response) {
+        document.getElementById('f-order-id').value = response.razorpay_order_id;
+        document.getElementById('f-payment-id').value = response.razorpay_payment_id;
+        document.getElementById('f-signature').value = response.razorpay_signature;
+        if (typeof haptic === 'function') haptic('success');
+        payBtn.disabled = true;
+        payBtn.textContent = 'Confirming payment…';
+        document.getElementById('confirm-form').submit();
+    }
 
-        const rzp = new Razorpay({
+    function paymentFailed(reason) {
+        payBtn.disabled = false;
+        if (typeof haptic === 'function') haptic('error');
+        showNotice((reason || 'Your payment could not be completed.') +
+            ' Nothing was charged — you can try again.', 'danger');
+    }
+
+    function checkoutOptions() {
+        return {
             key: razorpayKeyId,
             amount: amountPaise,
             currency: 'INR',
@@ -86,18 +102,60 @@
                 name: payerName,
                 email: payerEmail,
                 contact: payerPhone
-            },
-            handler: function (response) {
-                /* The signature is verified server-side before anything is marked paid —
-                   see CheckoutController.confirm. Nothing here is trusted. */
-                document.getElementById('f-order-id').value = response.razorpay_order_id;
-                document.getElementById('f-payment-id').value = response.razorpay_payment_id;
-                document.getElementById('f-signature').value = response.razorpay_signature;
-                if (typeof haptic === 'function') haptic('success');
-                payBtn.disabled = true;
-                payBtn.textContent = 'Confirming payment…';
-                document.getElementById('confirm-form').submit();
-            },
+            }
+        };
+    }
+
+    /* The Android shell runs this same page in a WebView, and the web checkout does not
+       survive there. Capacitor sends every navigation whose host is not ours out to the
+       system browser, iframes included, and Razorpay's flow moves through its own domains
+       and then the bank's 3-D Secure page — hosts that cannot be allow-listed ahead of
+       time. The native SDK keeps the whole payment outside the WebView and hands back the
+       same three fields, so nothing downstream changes. */
+    function openNativeCheckout() {
+        window.Capacitor.Plugins.Checkout.open(checkoutOptions())
+            .then((result) => {
+                /* The plugin puts Razorpay's payload under `response`. Its own typings call
+                   that a string while the Android side resolves an object, so accept both
+                   rather than trust either. */
+                let data = result && result.response;
+                if (typeof data === 'string') {
+                    try { data = JSON.parse(data); } catch (e) { data = null; }
+                }
+                if (data && data.razorpay_payment_id) {
+                    confirmPayment(data);
+                } else {
+                    paymentFailed('We could not read the payment confirmation.');
+                }
+            })
+            .catch((err) => {
+                /* Rejection carries Razorpay's error object as the message, and a user who
+                   simply backed out of the sheet arrives here too. Both leave the order held. */
+                let reason = '';
+                try {
+                    reason = JSON.parse(err && err.message).description || '';
+                } catch (e) {
+                    reason = (err && err.message) || '';
+                }
+                payBtn.disabled = false;
+                if (typeof haptic === 'function') haptic('warning');
+                showNotice((reason || 'Payment cancelled.') +
+                    ' Your order is still held — tap Pay to try again.', 'warning');
+            });
+    }
+
+    function openCheckout() {
+        const notice = document.getElementById('pay-notice');
+        if (notice) notice.remove();
+
+        if (window.Capacitor?.isNativePlatform?.() && window.Capacitor.Plugins?.Checkout) {
+            openNativeCheckout();
+            return;
+        }
+
+        const rzp = new Razorpay({
+            ...checkoutOptions(),
+            handler: confirmPayment,
             modal: {
                 ondismiss: function () {
                     /* Closing the modal is not an error — the order is still awaiting
@@ -113,12 +171,7 @@
            these through this event rather than the handler, so without it a failed
            payment looked identical to nothing happening. */
         rzp.on('payment.failed', function (response) {
-            payBtn.disabled = false;
-            const reason = (response && response.error && response.error.description)
-                ? response.error.description
-                : 'Your payment could not be completed.';
-            if (typeof haptic === 'function') haptic('error');
-            showNotice(reason + ' Nothing was charged — you can try again.', 'danger');
+            paymentFailed(response && response.error && response.error.description);
         });
 
         rzp.open();

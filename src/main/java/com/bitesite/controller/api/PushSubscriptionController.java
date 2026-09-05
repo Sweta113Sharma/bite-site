@@ -2,6 +2,7 @@ package com.bitesite.controller.api;
 
 import com.bitesite.config.AppUserPrincipal;
 import com.bitesite.model.User;
+import com.bitesite.service.FcmSender;
 import com.bitesite.service.PushNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,11 +21,39 @@ import java.util.Map;
 public class PushSubscriptionController {
 
     private final PushNotificationService pushNotificationService;
+    private final FcmSender fcmSender;
 
     @GetMapping("/public-key")
     public Map<String, Object> publicKey() {
         return Map.of("configured", pushNotificationService.isConfigured(),
                 "publicKey", pushNotificationService.isConfigured() ? pushNotificationService.getPublicKey() : "");
+    }
+
+    /**
+     * Registers an FCM token from a native app.
+     *
+     * <p>Separate from {@code /subscribe} because the two channels identify a device
+     * differently: Web Push by an endpoint URL and a key pair, FCM by one opaque token.
+     * The apps call this instead of {@code /subscribe} because Android's WebView has no
+     * Push API for {@code /subscribe} to have produced a subscription with.
+     */
+    @PostMapping("/fcm-token")
+    @ResponseBody
+    public Map<String, Boolean> registerFcmToken(@AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam String token, @RequestParam(required = false) String platform) {
+        User user = principal.getUser();
+        fcmSender.registerToken(user.getId(), token, platform);
+        return Map.of("ok", true);
+    }
+
+    /** Drops one of the caller's own device tokens; scoped to them, as unsubscribe is. */
+    @PostMapping("/fcm-token/remove")
+    @ResponseBody
+    public Map<String, Boolean> removeFcmToken(@AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam String token) {
+        User user = principal.getUser();
+        boolean removed = fcmSender.unregisterToken(user.getId(), token);
+        return Map.of("ok", true, "removed", removed);
     }
 
     @PostMapping("/subscribe")

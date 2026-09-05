@@ -32,6 +32,7 @@ public class OrderNotifier {
 
     private final UserDao userDao;
     private final PushNotificationService pushNotificationService;
+    private final FcmSender fcmSender;
 
     public void notifyOrderUpdate(Long userId, String subject, String body) {
         User user = userDao.findById(userId).orElse(null);
@@ -51,5 +52,12 @@ public class OrderNotifier {
         // handling — including dropping subscriptions the browser has discarded — stays in
         // one place. It re-checks the preference, harmlessly.
         pushNotificationService.notifyUser(userId, subject, body);
+
+        // The second channel this class was written to expect. Not an alternative to the
+        // line above but a complement: Web Push cannot reach the Android apps at all,
+        // because their WebView has no Push API, and FCM cannot reach a desktop browser.
+        // Someone signed in on both holds a row in each table and should hear about the
+        // order in both places, so both are sent and neither is a duplicate of the other.
+        fcmSender.notifyUser(userId, subject, body);
     }
 }

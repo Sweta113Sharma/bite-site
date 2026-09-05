@@ -35,6 +35,7 @@ class UserServiceTest {
     @Mock private SmsService smsService;
     @Mock private PushNotificationService pushNotificationService;
     @Mock private OtpService otpService;
+    @Mock private com.bitesite.dao.FcmTokenDao fcmTokenDao;
 
     // A real encoder, not a mock — this is exactly the kind of "does the password actually
     // verify afterward" property a mock would silently paper over.
@@ -45,7 +46,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         userService = new UserService(userDao, rateLimiter, passwordEncoder, auditService, emailService, otpService,
-                smsService, pushNotificationService);
+                smsService, pushNotificationService, fcmTokenDao);
     }
 
     @Test
@@ -187,6 +188,16 @@ class UserServiceTest {
         userService.deleteOwnAccount(42L, 1L);
 
         verify(pushNotificationService).unsubscribeAll(42L);
+    }
+
+    @Test
+    void deleteOwnAccountAlsoDropsEveryFcmToken() {
+        // Same reasoning as the subscription case above, for the native apps. Erasure that
+        // cleaned up only one of the two channels would leave the person's phone ringing
+        // for an account they were told was deleted.
+        userService.deleteOwnAccount(42L, 1L);
+
+        verify(fcmTokenDao).deleteByUserId(42L);
     }
 
     @Test

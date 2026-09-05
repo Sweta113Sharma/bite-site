@@ -16,3 +16,26 @@ sj.txt
 orders2.html
 uploads/*
 !uploads/.gitkeep
+
+# Capacitor / Android apps (android-student, android-outlet)
+# Gradle build output, local.properties and the generated capacitor.config.json
+# are already covered by each app's own android/.gitignore, which Capacitor
+# generates and we commit. Only what those files miss belongs here.
+node_modules/
+# Capacitor ships these two commented out; signing keys must never be committed.
+*.keystore
+*.jks
+keystore.properties
+
+# The Firebase *service account* key, which FcmSender reads to send FCM messages. This is
+# a real secret: it can send notifications as this project.
+firebase-service-account*.json
+serviceAccountKey*.json
+*-firebase-adminsdk-*.json
+
+# Firebase client config. Not a secret in Google's sense — it ships inside every APK, so
+# anyone with the app already has it — but this repository is public and no workflow here
+# builds the Android apps, so publishing the project id and API key to scrapers buys
+# nothing and invites quota abuse. Each developer drops their own copy in locally; see
+# docs/android-apps.md.
+google-services.json

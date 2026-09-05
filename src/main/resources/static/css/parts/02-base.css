@@ -215,6 +215,15 @@ html, body { overflow-x: clip; }
     }
 }
 
+/* The status bar draws over the page in the Android shells: targetSdk 36 forces
+   edge-to-edge and there is no opting out. The chrome carries the inset rather than
+   body, so the page background continues up behind the clock instead of the top bar
+   starting underneath it. The navbar sets no background of its own, so what shows
+   through is body's --color-bg, which is what theme-color already matches. */
+.app-chrome {
+    padding-top: var(--safe-area-top);
+}
+
 /* Terracotta wordmark on cream — the brand carries the top of the page now that
    there's no dark slab doing it. Matches the reference, whose own wordmark is the
    one strongly orange element on the screen. */
@@ -576,6 +585,10 @@ html, body { overflow-x: clip; }
     transform: translateX(100%);
     transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
     overscroll-behavior: contain;
+    /* Fixed to top:0/bottom:0, so it escapes the padding .app-chrome carries and has
+       to clear the status bar and the gesture bar itself. */
+    padding-top: var(--safe-area-top);
+    padding-bottom: var(--safe-area-bottom);
 }
 .nav-drawer.is-open { transform: translateX(0); }
 

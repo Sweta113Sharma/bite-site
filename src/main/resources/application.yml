@@ -151,6 +151,15 @@ vapid:
   private-key: ${VAPID_PRIVATE_KEY:}
   subject: ${VAPID_SUBJECT:mailto:no-reply@bitesite.local}
 
+# FCM (order alerts to the native Android apps). Needed because those apps are WebView
+# shells and Android's WebView has no Push API, so the vapid channel above cannot reach
+# them at all. Set exactly one of these to the Firebase service-account JSON: the -json
+# form for Azure, which has no convenient secret file, or the -path form locally. Blank by
+# default; FcmSender.isConfigured() gates every send, mirroring the block above.
+firebase:
+  credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
+
 # Error tracking: the Sentry SDK checks its own DSN and simply doesn't initialize when
 # it's blank (logs a debug line, sends nothing) — no conditional wiring needed on our side.
 sentry:

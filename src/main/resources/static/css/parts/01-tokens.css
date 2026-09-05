@@ -132,7 +132,15 @@
     --hit-area: 48px;
 
     --bottom-nav-height: 64px;
-    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    /* Two sources on purpose. Android WebView only passes real insets through to
+       env() from WebView 140 onward; below that Capacitor's SystemBars plugin instead
+       sets --safe-area-inset-* as inline custom properties on the root element, which
+       env() never sees. Reading only env() meant every rule below computed a zero on
+       older WebViews and the tab bar sat under the gesture bar. max() takes whichever
+       source is actually live. On the desktop web neither resolves, both fall back to
+       0px, and nothing moves. */
+    --safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+    --safe-area-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
 }
 
 

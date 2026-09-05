@@ -28,12 +28,13 @@ class OrderNotifierTest {
 
     @Mock private UserDao userDao;
     @Mock private PushNotificationService pushNotificationService;
+    @Mock private FcmSender fcmSender;
 
     private OrderNotifier notifier;
 
     @BeforeEach
     void setUp() {
-        notifier = new OrderNotifier(userDao, pushNotificationService);
+        notifier = new OrderNotifier(userDao, pushNotificationService, fcmSender);
     }
 
     private User student(boolean notify) {
@@ -41,22 +42,29 @@ class OrderNotifierTest {
                 .notifyOrderUpdates(notify).build();
     }
 
+    /**
+     * Both channels, not one or the other. Web Push cannot reach the Android apps — their
+     * WebView has no Push API — and FCM cannot reach a desktop browser, so someone signed
+     * in on both devices needs both sends to hear about the order in both places.
+     */
     @Test
-    void anUpdateIsPushed() {
+    void anUpdateGoesToEveryChannel() {
         when(userDao.findById(7L)).thenReturn(Optional.of(student(true)));
 
         notifier.notifyOrderUpdate(7L, "Order ready for pickup", "Show code 1234.");
 
         verify(pushNotificationService).notifyUser(7L, "Order ready for pickup", "Show code 1234.");
+        verify(fcmSender).notifyUser(7L, "Order ready for pickup", "Show code 1234.");
     }
 
     @Test
-    void turningOrderNotificationsOffStopsTheUpdate() {
+    void turningOrderNotificationsOffStopsEveryChannel() {
         when(userDao.findById(7L)).thenReturn(Optional.of(student(false)));
 
         notifier.notifyOrderUpdate(7L, "Order ready for pickup", "Show code 1234.");
 
         verifyNoInteractions(pushNotificationService);
+        verifyNoInteractions(fcmSender);
     }
 
     @Test
@@ -66,5 +74,6 @@ class OrderNotifierTest {
         notifier.notifyOrderUpdate(7L, "Order ready", "body");
 
         verifyNoInteractions(pushNotificationService);
+        verifyNoInteractions(fcmSender);
     }
 }

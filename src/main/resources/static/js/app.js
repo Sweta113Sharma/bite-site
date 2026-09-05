@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initPushInvite();
     initOrderStatusWatch();
     initOfflineState();
+    initNativeShell();
 });
 
 /* ============================================================
@@ -41,6 +42,153 @@ function registerServiceWorker() {
             // user-visible — the app works identically without a service worker, just
             // without the offline fallback / install prompt.
         });
+    });
+}
+
+/* ============================================================
+   NATIVE SHELL (Capacitor) — the Android apps load these same
+   server-rendered pages in a WebView, so this is the one place
+   that talks to native plugins. Every call is optional-chained
+   and the whole function returns early in a browser, which is
+   what keeps the web build from touching any of it.
+   ============================================================ */
+
+function initNativeShell() {
+    const cap = window.Capacitor;
+    if (!cap?.isNativePlatform?.()) return;
+    const plugins = cap.Plugins || {};
+
+    /* The splash is configured launchAutoHide:false, because a remote-URL shell on a
+       slow campus connection otherwise shows a blank WebView for the whole round trip.
+       That makes dismissing it our job. This runs on every page, and the bundled
+       offline.html hides it too, so the splash outlives the load only if neither the
+       server nor the error page ever renders. */
+    plugins.SplashScreen?.hide?.();
+
+    /* Coming back to a backgrounded order screen otherwise waits out the rest of the
+       poll interval before it admits the order is ready — the one moment the student
+       actually has the phone in their hand. */
+    plugins.App?.addListener?.('resume', () => {
+        if (document.querySelector('[data-order-id][data-order-status]')) {
+            window.location.reload();
+        }
+    });
+
+    /* Drives the existing offline bar rather than a second one of its own; see the
+       override that apply() reads in initOfflineState. */
+    plugins.Network?.addListener?.('networkStatusChange', (status) => {
+        window.__bitesiteNativeOnline = !!status?.connected;
+        window.dispatchEvent(new Event(status?.connected ? 'online' : 'offline'));
+    });
+    plugins.Network?.getStatus?.().then((status) => {
+        window.__bitesiteNativeOnline = !!status?.connected;
+        if (!status?.connected) window.dispatchEvent(new Event('offline'));
+    }).catch(() => {});
+
+    initNativePush(plugins);
+}
+
+/** True inside the Android shells, false in every browser. */
+function isNativeShell() {
+    return !!window.Capacitor?.isNativePlatform?.();
+}
+
+/* ============================================================
+   NATIVE PUSH (FCM)
+
+   Android's WebView does not implement the Push API, so the
+   VAPID path above is not merely degraded in the apps — it can
+   never register a subscription at all. FCM is the only channel
+   that reaches a phone running the app, and the token it issues
+   goes to /api/push/fcm-token rather than /api/push/subscribe.
+   ============================================================ */
+
+const FCM_TOKEN_KEY = 'bitesite.fcmToken';
+
+function initNativePush(plugins) {
+    const push = plugins.PushNotifications;
+    if (!push) return;
+
+    /* FCM reissues tokens on its own schedule, so this listener is registered on every
+       page rather than only during opt-in: whenever a token arrives, the server gets the
+       current one. The upsert on the server keys by token, so re-sending is cheap. */
+    push.addListener('registration', (info) => {
+        const token = info && info.value;
+        if (!token) return;
+        try { localStorage.setItem(FCM_TOKEN_KEY, token); } catch (e) {}
+        const body = csrfParams();
+        body.set('token', token);
+        body.set('platform', 'android');
+        fetch('/api/push/fcm-token', { method: 'POST', body }).catch(() => {});
+    });
+
+    push.addListener('registrationError', () => {
+        /* Most often this is a build with no google-services.json behind it. Silent by
+           design: the toggle already reports failure, and every other page would
+           otherwise show an error about a feature the user did not just ask for. */
+    });
+
+    /* Tapping "your order is ready" should land on the order, not just open the app. */
+    push.addListener('pushNotificationActionPerformed', (action) => {
+        const link = action?.notification?.data?.link;
+        window.location.href = link || '/student/orders';
+    });
+
+    /* Refresh the token for someone who already opted in, without ever prompting:
+       register() only raises a dialog when permission has not been decided, and this
+       returns early unless it was already granted. */
+    push.checkPermissions()
+        .then((status) => { if (status?.receive === 'granted') push.register(); })
+        .catch(() => {});
+}
+
+function enableNativePush(toggle) {
+    const push = window.Capacitor?.Plugins?.PushNotifications;
+    if (!push) {
+        toggle.checked = false;
+        showToast('Notifications are not available in this app build');
+        return;
+    }
+    push.requestPermissions()
+        .then((status) => {
+            if (status?.receive !== 'granted') {
+                toggle.checked = false;
+                showToast('Notifications need permission in Android settings');
+                return;
+            }
+            /* The token itself arrives asynchronously on the 'registration' listener set
+               up in initNativePush, which is also what posts it to the server. */
+            return push.register().then(() => {
+                showToast('Notifications enabled');
+                haptic('success');
+            });
+        })
+        .catch(() => {
+            toggle.checked = false;
+            showToast('Could not enable notifications');
+        });
+}
+
+function disableNativePush(toggle) {
+    const push = window.Capacitor?.Plugins?.PushNotifications;
+    let token = null;
+    try { token = localStorage.getItem(FCM_TOKEN_KEY); } catch (e) {}
+
+    /* Android has no API to revoke the permission from inside the app, so "off" means the
+       server stops sending: the token row is deleted. Dropping it server-side is what
+       actually stops the notifications, so that is what the toggle reports on. */
+    const body = csrfParams();
+    body.set('token', token || '');
+    const done = token
+        ? fetch('/api/push/fcm-token/remove', { method: 'POST', body })
+        : Promise.resolve();
+
+    done.then(() => {
+        try { localStorage.removeItem(FCM_TOKEN_KEY); } catch (e) {}
+        push?.unregister?.().catch(() => {});
+        showToast('Notifications turned off');
+    }).catch(() => {
+        toggle.checked = true;
     });
 }
 
@@ -67,7 +215,28 @@ function urlBase64ToUint8Array(base64String) {
 
 function initPushToggle() {
     const toggle = document.getElementById('push-toggle');
-    if (!toggle || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!toggle) return;
+
+    /* The apps take the FCM path. Checked before the PushManager guard below, which they
+       would always fail — that guard is what left this toggle inert in the app, present
+       on the page and wired to nothing. */
+    if (isNativeShell()) {
+        const push = window.Capacitor?.Plugins?.PushNotifications;
+        if (!push) return;
+        push.checkPermissions()
+            .then((status) => { toggle.checked = status?.receive === 'granted'; })
+            .catch(() => {});
+        toggle.addEventListener('change', () => {
+            if (toggle.checked) {
+                enableNativePush(toggle);
+            } else {
+                disableNativePush(toggle);
+            }
+        });
+        return;
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
     navigator.serviceWorker.ready.then((registration) =>
         registration.pushManager.getSubscription().then((sub) => {
@@ -977,32 +1146,53 @@ function initCategoryChips() {
 function initPushInvite() {
     const invite = document.getElementById('push-invite');
     if (!invite) return;
-    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+    const native = isNativeShell();
+    if (!native && (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window))) return;
     // Asking again after an explicit browser-level refusal cannot succeed, and dismissal
     // is remembered so this is an offer rather than a recurring interruption.
-    if (Notification.permission === 'denied') return;
+    if (!native && Notification.permission === 'denied') return;
     if (localStorage.getItem('pushInviteDismissed') === '1') return;
 
-    fetch('/api/push/public-key')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((config) => {
-            if (!config || !config.configured) return;
-            return navigator.serviceWorker.ready
-                .then((registration) => registration.pushManager.getSubscription())
-                .then((sub) => {
-                    if (sub) return;
-                    invite.classList.remove('d-none');
-                    invite.classList.add('d-flex');
-                });
-        })
-        .catch(() => { /* Offline or blocked: stay hidden rather than offer a dead button. */ });
+    const reveal = () => {
+        invite.classList.remove('d-none');
+        invite.classList.add('d-flex');
+    };
+
+    if (native) {
+        /* The app's equivalent of the two checks above: offer only while the Android
+           permission is still undecided, so someone who already agreed — or who refused
+           Android itself — is not asked again on every page. */
+        window.Capacitor?.Plugins?.PushNotifications?.checkPermissions()
+            .then((status) => {
+                const state = status?.receive;
+                if (state === 'prompt' || state === 'prompt-with-rationale') reveal();
+            })
+            .catch(() => {});
+    } else {
+        fetch('/api/push/public-key')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((config) => {
+                if (!config || !config.configured) return;
+                return navigator.serviceWorker.ready
+                    .then((registration) => registration.pushManager.getSubscription())
+                    .then((sub) => {
+                        if (sub) return;
+                        reveal();
+                    });
+            })
+            .catch(() => { /* Offline or blocked: stay hidden rather than offer a dead button. */ });
+    }
 
     document.getElementById('push-invite-yes').addEventListener('click', () => {
         // Reuses the same subscribe path as the account toggle, so there is one
-        // implementation of enabling push and one place for it to go wrong.
+        // implementation of enabling push per channel and one place for it to go wrong.
         const proxy = { checked: true };
         haptic('tap');
-        enablePush(proxy);
+        if (native) {
+            enableNativePush(proxy);
+        } else {
+            enablePush(proxy);
+        }
         invite.classList.add('d-none');
     });
 
@@ -1098,7 +1288,11 @@ function initOfflineState() {
     }
 
     function apply() {
-        const offline = !navigator.onLine;
+        /* navigator.onLine in an Android WebView reports whether a network interface
+           exists, not whether it carries traffic, so the native shell overrides it from
+           Capacitor's Network plugin when there is one. Undefined in every browser. */
+        const nativeOnline = window.__bitesiteNativeOnline;
+        const offline = typeof nativeOnline === 'boolean' ? !nativeOnline : !navigator.onLine;
         ensureBar().classList.toggle('is-visible', offline);
         document.querySelectorAll(NETWORK_BUTTON_SELECTOR).forEach((el) => {
             /* Only ever re-enable what this function disabled. The pay button disables
