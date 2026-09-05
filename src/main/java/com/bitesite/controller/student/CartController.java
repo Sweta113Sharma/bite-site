@@ -196,9 +196,22 @@ public class CartController {
     }
 
     @PostMapping("/remove")
-    public String remove(@AuthenticationPrincipal AppUserPrincipal principal, @RequestParam Long menuItemId) {
+    public String remove(@AuthenticationPrincipal AppUserPrincipal principal, @RequestParam Long menuItemId,
+            @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String accept,
+            HttpServletResponse response) throws IOException {
         cart.remove(menuItemId);
         cartPersistence.persist(principal.getUser(), cart);
+
+        if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
+            // The undo toast on the menu page and the remove buttons on the cart page both
+            // post here via fetch() asking for JSON so the badge can update without a reload.
+            int count = cart.getQuantities().values().stream().mapToInt(Integer::intValue).sum();
+            Map<String, Object> body = new HashMap<>();
+            body.put("count", count);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            objectMapper.writeValue(response.getWriter(), body);
+            return null;
+        }
         return "redirect:/student/cart";
     }
 }

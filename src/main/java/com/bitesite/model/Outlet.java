@@ -1,5 +1,7 @@
 package com.bitesite.model;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -36,6 +38,12 @@ public class Outlet {
     private LocalTime closesAt;
 
     private String contactPhone;
+
+    /** Latitude for geolocation-based outlet selection */
+    private BigDecimal latitude;
+
+    /** Longitude for geolocation-based outlet selection */
+    private BigDecimal longitude;
 
     /** A short free-text line students see on the menu — "closed for the festival", that
      * kind of thing. Distinct from pausing orders, which actually blocks checkout. */

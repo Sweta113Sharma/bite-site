@@ -64,7 +64,7 @@
                  It used to be first — between the brand and the user's own name — which
                  put a bordered menu box in the middle of the header pointing at nothing
                  in particular. A menu control belongs at an edge. -->
-            <button sec:authorize="isAuthenticated()" type="button"
+            <button sec:authorize="isAuthenticated() and not hasRole('USER')" type="button"
                     class="nav-drawer-btn" id="nav-drawer-btn"
                     aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
                 <span class="material-symbols-outlined">menu</span>

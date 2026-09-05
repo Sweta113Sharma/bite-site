@@ -10,20 +10,113 @@
     <div class="text-center mb-4">
         <div th:replace="~{fragments/state :: medallion('storefront','neutral')}"></div>
         <p class="page-header-label" style="text-align:center;">Welcome back</p>
-        <h3 class="page-header-title" style="text-align:center;">Which canteen today?</h3>
+        <h3 class="page-header-title" style="text-align:center;">Finding nearest canteen...</h3>
     </div>
 
-    <div class="d-flex flex-column gap-3">
-        <a class="outlet-card" th:each="outlet : ${outlets}"
-           th:href="@{/student/menu(outletId=${outlet.id})}">
-            <div class="outlet-card-icon"><span class="material-symbols-outlined">storefront</span></div>
-            <div>
-                <p class="outlet-card-name" th:text="${outlet.name}">Outlet</p>
-                <p class="outlet-card-hint">Tap to see today's menu</p>
-            </div>
-            <span class="material-symbols-outlined outlet-card-chevron">chevron_right</span>
-        </a>
+    <div class="d-flex flex-column gap-3" id="outlet-list">
+        <!-- Outlet cards will be populated here by JavaScript -->
     </div>
 </div>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+    // Convert outlets to JavaScript array
+    const outlets = /*[[${outlets}]]*/ [];
+
+    // Haversine formula to calculate distance between two coordinates
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth's radius in kilometers
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c; // Distance in kilometers
+    }
+
+    // Get user's geolocation and find nearest outlet
+    function findNearestOutlet() {
+        if (!navigator.geolocation) {
+            showOutletList();
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+
+                let nearestOutlet = null;
+                let minDistance = Infinity;
+
+                outlets.forEach(outlet => {
+                    // Skip outlets without coordinates
+                    if (outlet.latitude === null || outlet.longitude === null) {
+                        return;
+                    }
+
+                    const distance = calculateDistance(
+                        userLat, userLng,
+                        parseFloat(outlet.latitude),
+                        parseFloat(outlet.longitude)
+                    );
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestOutlet = outlet;
+                    }
+                });
+
+                // If we found a nearest outlet within reasonable distance (50km), use it
+                if (nearestOutlet && minDistance <= 50) {
+                    window.location.href = `/student/menu?outletId=${nearestOutlet.id}`;
+                } else {
+                    // Either no outlet with coordinates or too far, show list
+                    showOutletList();
+                }
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                showOutletList();
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            }
+        );
+    }
+
+    // Display the outlet list for manual selection
+    function showOutletList() {
+        document.querySelector('.page-header-title').textContent = 'Which canteen today?';
+
+        const container = document.getElementById('outlet-list');
+        container.innerHTML = '';
+
+        outlets.forEach(outlet => {
+            const link = document.createElement('a');
+            link.className = 'outlet-card';
+            link.href = `/student/menu?outletId=${outlet.id}`;
+
+            link.innerHTML = `
+                <div class="outlet-card-icon"><span class="material-symbols-outlined">storefront</span></div>
+                <div>
+                    <p class="outlet-card-name">${outlet.name}</p>
+                    <p class="outlet-card-hint">Tap to see today's menu</p>
+                </div>
+                <span class="material-symbols-outlined outlet-card-chevron">chevron_right</span>
+            `;
+
+            container.appendChild(link);
+        });
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', findNearestOutlet);
+/*]]>*/
+</script>
 </body>
 </html>

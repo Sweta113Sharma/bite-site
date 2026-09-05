@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initBodyClass();
     initAddToCartForms();
     initCartControls();
+    initSwipeToAdd(); // Add swipe-to-add initialization
     initCartPageControls();
     initNavbarScroll();
     initNavDrawer();
@@ -444,6 +445,191 @@ function initCartControls() {
             ?.addEventListener('click', (e) => { e.preventDefault(); change(1); });
     });
 }
+
+/* ============================================================
+   SWIPE TO ADD — left/right swipe on menu cards adds to cart
+   with undo toast. Works in conjunction with existing add-to-cart
+   forms and cart controls.
+   ============================================================ */
+function initSwipeToAdd() {
+    // Only initialize on touch-capable devices
+    if (!('ontouchstart' in window)) return;
+
+    const cards = document.querySelectorAll('.menu-card');
+    cards.forEach(card => {
+        let startX = 0;
+        let startY = 0;
+        let isSwiping = false;
+
+        card.addEventListener('touchstart', (e) => {
+            // Ignore if touching inside interactive elements
+            const touchedEl = e.target;
+            if (touchedEl.closest('button, input, select, textarea, a') ||
+                touchedEl.closest('.cart-control') ||
+                touchedEl.closest('.menu-card-photo')) {
+                return;
+            }
+
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            isSwiping = true;
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+            if (!isSwiping) return;
+
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const diffX = startX - currentX;
+            const diffY = startY - currentY;
+
+            // Only trigger on horizontal swipe with sufficient distance
+            if (Math.abs(diffX) > Math.abs(diffY) * 2 && Math.abs(diffX) > 50) {
+                isSwiping = false; // Prevent multiple triggers
+                e.preventDefault();
+
+                // Determine swipe direction
+                const swipeLeft = diffX > 0;
+
+                // Trigger add-to-cart action
+                const addForm = card.querySelector('.add-to-cart-form');
+                if (addForm) {
+                    // Create a clone of the form data to submit via fetch
+                    const body = new URLSearchParams(new FormData(addForm));
+
+                    fetch(addForm.action, {
+                        method: 'POST',
+                        headers: { Accept: 'application/json' },
+                        body
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error('add-to-cart failed');
+                            return response.json();
+                        })
+                        .then(data => {
+                            updateCartCount(data.count);
+                            if (data.blocked) {
+                                showToast(data.message || 'That item can\'t be added right now.', 'warning');
+                                haptic('warning');
+                                return;
+                            }
+
+                            // Show undo toast
+                            showUndoToast(card, addForm, data);
+                            haptic('success');
+                        })
+                        .catch(() => {
+                            // Fallback to normal form submit
+                            addForm.submit();
+                        });
+                }
+            }
+        }, { passive: true });
+
+        card.addEventListener('touchend', () => {
+            isSwiping = false;
+        }, { passive: true });
+
+        card.addEventListener('touchcancel', () => {
+            isSwiping = false;
+        }, { passive: true });
+    });
+}
+
+function showUndoToast(card, form, cartData) {
+    // Create undo toast container if it doesn't exist
+    let undoContainer = document.querySelector('.undo-toast-container');
+    if (!undoContainer) {
+        undoContainer = document.createElement('div');
+        undoContainer.className = 'undo-toast-container';
+        document.body.appendChild(undoContainer);
+    }
+
+    // Remove any existing undo toast for this card
+    const existingToast = undoContainer.querySelector(`.undo-toast[data-item-id="${form.menuItemId.value}"]`);
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    // Create the undo toast
+    const toast = document.createElement('div');
+    toast.className = 'undo-toast';
+    toast.dataset.itemId = form.menuItemId.value;
+
+    const glyph = document.createElement('span');
+    glyph.className = 'material-symbols-outlined is-filled';
+    glyph.style.color = 'var(--color-primary-soft)';
+    glyph.style.fontSize = '1.15rem';
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.textContent = 'check_circle';
+
+    const label = document.createElement('span');
+    label.textContent = 'Added to cart';
+
+    const undoButton = document.createElement('button');
+    undoButton.className = 'undo-button';
+    undoButton.textContent = 'Undo';
+    undoButton.setAttribute('aria-label', 'Undo add to cart');
+
+    // Handle undo action
+    undoButton.addEventListener('click', () => {
+        const itemId = form.menuItemId.value;
+        const outletId = form.outletId.value;
+
+        // Send request to remove item from cart
+        const body = new URLSearchParams();
+        body.set('menuItemId', itemId);
+        body.set('outletId', outletId);
+
+        // Add CSRF token if available
+        const csrfToken = form.querySelector('input[name="_csrf"]');
+        if (csrfToken) {
+            body.set('_csrf', csrfToken.value);
+        }
+
+        fetch('/student/cart/remove', {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            body
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('cart remove failed');
+                return response.json();
+            })
+            .then(data => {
+                updateCartCount(data.count);
+                // Update the cart control if it exists
+                const control = card.closest('.menu-card-actions')?.querySelector('.cart-control');
+                if (control) {
+                    setControlQuantity(control, 0);
+                }
+                showToast('Removed from cart');
+                haptic('tap');
+            })
+            .catch(() => {
+                showToast("Couldn't remove item from cart", 'error');
+                haptic('error');
+            })
+            .finally(() => {
+                // Remove the undo toast
+                toast.remove();
+            });
+    });
+
+    // Add elements to toast
+    toast.append(glyph, ' ', label, undoButton);
+    undoContainer.appendChild(toast);
+
+    // Auto-remove after 5 seconds if not undone
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+// Call the new initialization function - replace the existing DOMContentLoaded listener
+// Find and replace the existing DOMContentLoaded listener at the top of the file
 
 /* ============================================================
    CART PAGE CONTROLS — quantity steppers and remove buttons on the

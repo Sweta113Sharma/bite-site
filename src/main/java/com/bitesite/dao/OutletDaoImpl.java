@@ -30,6 +30,8 @@ public class OutletDaoImpl implements OutletDao {
             .opensAt(rs.getObject("opens_at", java.time.LocalTime.class))
             .closesAt(rs.getObject("closes_at", java.time.LocalTime.class))
             .contactPhone(rs.getString("contact_phone"))
+            .latitude(rs.getObject("latitude", java.math.BigDecimal.class))
+            .longitude(rs.getObject("longitude", java.math.BigDecimal.class))
             .notice(rs.getString("notice"))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
