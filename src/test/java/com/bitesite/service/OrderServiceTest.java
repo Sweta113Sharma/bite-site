@@ -22,11 +22,14 @@ import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -233,6 +236,36 @@ class OrderServiceTest {
 
         verify(orderDao).updateStatus(42L, TENANT_ID, OrderStatus.PREPARING);
         verify(auditService).record(eq(USER_ID), eq(TENANT_ID), eq("Order"), eq(42L), eq("STATUS_PREPARING"), any(), any());
+    }
+
+    @Test
+    void markingAnOrderReadyIssuesAPickupCodeAndPushesTheStudent() {
+        Order preparing = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
+                .tokenNo("BITE-1234").totalAmount(BigDecimal.TEN).status(OrderStatus.PREPARING).build();
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(preparing));
+        when(orderDao.findActivePickupCodes(TENANT_ID, OUTLET_ID)).thenReturn(java.util.List.of("1111", "2222"));
+
+        orderService.advanceStatus(42L, TENANT_ID, OrderStatus.READY_FOR_PICKUP, USER_ID);
+
+        verify(orderDao).updateStatus(42L, TENANT_ID, OrderStatus.READY_FOR_PICKUP);
+        verify(orderDao).setPickupCode(eq(42L), eq(TENANT_ID), anyString());
+        ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);
+        verify(orderDao).setPickupCode(eq(42L), eq(TENANT_ID), codeCaptor.capture());
+        assertThat(codeCaptor.getValue()).matches("\\d{4}").isNotIn("1111", "2222");
+        verify(orderNotifier).notifyOrderUpdate(eq(USER_ID), eq("Order ready for pickup"),
+                contains(codeCaptor.getValue()));
+    }
+
+    @Test
+    void aNonReadyTransitionDoesNotPush() {
+        Order paid = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
+                .tokenNo("BITE-1234").totalAmount(BigDecimal.TEN).status(OrderStatus.PAID).build();
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paid));
+
+        orderService.advanceStatus(42L, TENANT_ID, OrderStatus.PREPARING, USER_ID);
+
+        verify(orderNotifier, never()).notifyOrderUpdate(anyLong(), anyString(), anyString());
+        verify(orderDao, never()).setPickupCode(anyLong(), anyLong(), anyString());
     }
 
     @Test

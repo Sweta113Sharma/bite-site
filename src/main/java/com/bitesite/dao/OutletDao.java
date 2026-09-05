@@ -27,11 +27,12 @@ public interface OutletDao {
 
     void updateAcceptingOrders(Long id, Long tenantId, boolean acceptingOrders);
 
-    /** Opening hours, contact and notice. Deliberately separate from {@link #save}, which
-     * carries the two status flags — a manager editing hours must not be able to
-     * accidentally reactivate a canteen an admin disabled. */
+    /** Opening hours, contact, notice and location. Deliberately separate from
+     * {@link #save}, which carries the two status flags — a manager editing hours must
+     * not be able to accidentally reactivate a canteen an admin disabled. */
     void updateSettings(Long id, Long tenantId, java.time.LocalTime opensAt,
-            java.time.LocalTime closesAt, String contactPhone, String notice);
+            java.time.LocalTime closesAt, String contactPhone, String notice,
+            java.math.BigDecimal latitude, java.math.BigDecimal longitude);
 
     /** Orders ever placed at this outlet. Deleting one with history would orphan financial
      * records, so callers check this first and offer deactivation instead. */

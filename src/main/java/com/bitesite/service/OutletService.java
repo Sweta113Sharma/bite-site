@@ -79,10 +79,11 @@ public class OutletService {
      * canteen the platform admin disabled, which a full-object save would happily do.
      */
     public void updateSettings(Long id, Long tenantId, java.time.LocalTime opensAt,
-            java.time.LocalTime closesAt, String contactPhone, String notice, Long actorUserId) {
+            java.time.LocalTime closesAt, String contactPhone, String notice,
+            java.math.BigDecimal latitude, java.math.BigDecimal longitude, Long actorUserId) {
         Outlet before = get(id, tenantId);
         outletDao.updateSettings(id, tenantId, opensAt, closesAt,
-                blankToNull(contactPhone), blankToNull(notice));
+                blankToNull(contactPhone), blankToNull(notice), latitude, longitude);
         auditService.record(actorUserId, tenantId, "Outlet", id, "UPDATE_SETTINGS", before, get(id, tenantId));
     }
 

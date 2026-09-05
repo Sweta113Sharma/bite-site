@@ -42,7 +42,40 @@
             <div class="form-text">A short line shown on your menu.</div>
         </div>
 
+        <div class="mb-3">
+            <label class="form-label">Location</label>
+            <div class="row g-2">
+                <div class="col">
+                    <input type="number" step="any" id="latitude" name="latitude" class="form-control"
+                           th:value="${outlet.latitude}" placeholder="Latitude" inputmode="decimal"/>
+                </div>
+                <div class="col">
+                    <input type="number" step="any" id="longitude" name="longitude" class="form-control"
+                           th:value="${outlet.longitude}" placeholder="Longitude" inputmode="decimal"/>
+                </div>
+            </div>
+            <div class="form-text d-flex justify-content-between align-items-center">
+                <span>Students pick the nearest canteen using these coordinates.</span>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="useMyLocation">
+                    Use my location
+                </button>
+            </div>
+        </div>
+
         <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">check</span>Save settings</button>
+    </form>
+
+    <script>
+        document.getElementById('useMyLocation').addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                return;
+            }
+            navigator.geolocation.getCurrentPosition((position) => {
+                document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+                document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+            });
+        });
+    </script>
     </form>
 </div>
 </body>

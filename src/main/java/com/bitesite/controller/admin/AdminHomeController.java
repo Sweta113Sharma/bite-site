@@ -32,6 +32,7 @@ public class AdminHomeController {
     public String home(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OPS_SCOPE);
         model.addAttribute("snapshot", dashboardDao.platformSnapshot());
+        model.addAttribute("insights", dashboardDao.insights());
         model.addAttribute("pageTitle", "Overview");
         return "admin/home";
     }

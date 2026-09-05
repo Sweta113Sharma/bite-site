@@ -11,5 +11,8 @@ application-local.yml
 *.log
 .flattened-pom.xml
 HELP.md
+# Local scratch / session files
+sj.txt
+orders2.html
 uploads/*
 !uploads/.gitkeep

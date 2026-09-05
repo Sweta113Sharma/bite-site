@@ -23,6 +23,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -125,11 +126,13 @@ public class OutletAdminController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime closesAt,
             @RequestParam(required = false) String contactPhone,
             @RequestParam(required = false) String notice,
+            @RequestParam(required = false) BigDecimal latitude,
+            @RequestParam(required = false) BigDecimal longitude,
             RedirectAttributes redirectAttributes) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
         User user = principal.getUser();
         outletService.updateSettings(user.getOutletId(), user.getTenantId(),
-                opensAt, closesAt, contactPhone, notice, user.getId());
+                opensAt, closesAt, contactPhone, notice, latitude, longitude, user.getId());
         redirectAttributes.addFlashAttribute("settingsNotice", "Settings saved.");
         return "redirect:/canteen/settings";
     }

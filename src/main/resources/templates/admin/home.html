@@ -58,6 +58,48 @@
         </a>
     </div>
 
+    <h6 class="mt-4 mb-2">Today's insights</h6>
+
+    <!-- Sell-outs: items that hit their daily_limit today. Quiet when nothing has. -->
+    <div class="mb-3" th:if="${!insights.sellOuts().isEmpty()}">
+        <div class="alert alert-warning py-2 mb-2">Sold out today</div>
+        <ul class="mb-0">
+            <li th:each="s : ${insights.sellOuts()}">
+                <strong th:text="${s.name()}">Item</strong>
+                <span th:text="'(' + ${s.outletName()} + ')'">(Canteen)</span>
+                — <span th:text="${s.soldToday()} + ' sold'">10 sold</span>
+                <span th:text="${s.dailyLimit()} ? ' / limit ' + ${s.dailyLimit()} : ''"></span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Most ordered items today. -->
+    <div class="mb-3" th:if="${!insights.popularItems().isEmpty()}">
+        <div class="alert alert-info py-2 mb-2">Most ordered today</div>
+        <ol class="mb-0">
+            <li th:each="p : ${insights.popularItems()}">
+                <strong th:text="${p.name()}">Item</strong>
+                <span th:text="'(' + ${p.outletName()} + ')'">(Canteen)</span>
+                — <span th:text="${p.soldToday()} + ' sold'">10 sold</span>
+                <span th:text="'₹' + ${#numbers.formatDecimal(p.revenue(), 1, 2)}">₹0.00</span>
+            </li>
+        </ol>
+    </div>
+
+    <!-- Peak hours: order count per hour, as a compact bar. -->
+    <div class="mb-3" th:if="${!insights.peakHours().isEmpty()}">
+        <div class="alert alert-light py-2 mb-2">Orders by hour</div>
+        <div class="d-flex align-items-end gap-2" style="height: 90px;">
+            <div th:each="h : ${insights.peakHours()}" class="d-flex flex-column align-items-center"
+                 style="flex: 1;">
+                <div th:title="${h.orderCount()} + ' orders'"
+                     th:style="'height:' + ${#numbers.formatInteger(h.orderCount() * 8, 1)} + 'px;'"
+                     class="bg-primary rounded" style="width: 60%;"></div>
+                <span class="small text-muted" th:text="${h.hour()} + ':00'">12:00</span>
+            </div>
+        </div>
+    </div>
+
     <h6 class="mt-4 mb-2">Estate</h6>
     <div class="stat-row">
         <a class="stat stat--action" th:href="@{/admin/tenants}">

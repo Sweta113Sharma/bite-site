@@ -93,11 +93,12 @@ public class OutletDaoImpl implements OutletDao {
 
     @Override
     public void updateSettings(Long id, Long tenantId, java.time.LocalTime opensAt,
-            java.time.LocalTime closesAt, String contactPhone, String notice) {
+            java.time.LocalTime closesAt, String contactPhone, String notice,
+            java.math.BigDecimal latitude, java.math.BigDecimal longitude) {
         jdbcTemplate.update(
-                "UPDATE outlets SET opens_at = ?, closes_at = ?, contact_phone = ?, notice = ? "
-                        + "WHERE id = ? AND tenant_id = ?",
-                opensAt, closesAt, contactPhone, notice, id, tenantId);
+                "UPDATE outlets SET opens_at = ?, closes_at = ?, contact_phone = ?, notice = ?, "
+                        + "latitude = ?, longitude = ? WHERE id = ? AND tenant_id = ?",
+                opensAt, closesAt, contactPhone, notice, latitude, longitude, id, tenantId);
     }
 
     @Override
