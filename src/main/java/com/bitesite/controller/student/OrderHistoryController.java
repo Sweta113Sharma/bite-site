@@ -1,6 +1,7 @@
 package com.bitesite.controller.student;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.exception.InvalidOrderStateException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderItem;
@@ -54,6 +55,9 @@ public class OrderHistoryController {
         // cancelled order, and it lives on the payment, not the order. Absent for an order
         // that never reached the gateway, so the page has to cope with null either way.
         model.addAttribute("payment", orderService.findPaymentForOrder(orderId, user.getTenantId()).orElse(null));
+        // Drives the countdown on the cancel button. Zero for anything past the window or
+        // never paid, which is exactly when the button should not be offered.
+        model.addAttribute("cancelSecondsLeft", orderService.selfCancelSecondsLeft(orderId, user.getTenantId()));
         model.addAttribute("pageTitle", "Order " + order.getTokenNo());
         return "student/order-detail";
     }
@@ -105,5 +109,30 @@ public class OrderHistoryController {
                     "Added what we could. Not available today: " + String.join(", ", unavailable) + ".");
         }
         return "redirect:/student/cart";
+    }
+
+    /**
+     * Cancels the caller's own order inside the short post-payment window.
+     *
+     * <p>The window is enforced in the service against the database clock, not here and not
+     * in the browser: the countdown on the page is a courtesy, and a request arriving after
+     * it has run out must be refused on the server whatever the client believes. A closed
+     * window is reported as an ordinary message rather than an error page, because losing a
+     * race by a second is a normal thing to happen, not a fault.
+     */
+    @PostMapping("/{orderId}/cancel")
+    public String cancel(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long orderId,
+            RedirectAttributes redirectAttributes) {
+        User user = principal.getUser();
+        try {
+            orderService.cancelOwnOrder(orderId, user.getId(), user.getTenantId());
+            redirectAttributes.addFlashAttribute("orderMessage",
+                    "Order cancelled. Your refund is on its way back to you.");
+        } catch (InvalidOrderStateException e) {
+            redirectAttributes.addFlashAttribute("orderError",
+                    "Too late to cancel — the canteen has already started this order. "
+                            + "Talk to the counter if something is wrong.");
+        }
+        return "redirect:/student/orders/" + orderId;
     }
 }

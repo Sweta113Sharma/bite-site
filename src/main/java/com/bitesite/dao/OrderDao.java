@@ -14,8 +14,33 @@ public interface OrderDao {
 
     Optional<Order> findByIdAndTenantId(Long id, Long tenantId);
 
-    /** Orders visible to the canteen kitchen: PAID, PREPARING, READY_FOR_PICKUP, oldest first. */
-    List<Order> findKitchenQueue(Long tenantId, Long outletId);
+    /**
+     * Orders visible to the canteen kitchen: PAID, PREPARING, READY_FOR_PICKUP, oldest first.
+     *
+     * <p>A just-paid order is withheld for {@code selfCancelWindowSeconds} so the kitchen
+     * never sees something the student can still take back. Without that, staff could start
+     * cooking an order that vanishes from under them.
+     */
+    List<Order> findKitchenQueue(Long tenantId, Long outletId, int selfCancelWindowSeconds);
+
+    /**
+     * Whether an order is still inside the student's own cancellation window.
+     *
+     * <p>Asked of the database rather than computed in Java on purpose: {@code paid_at} is
+     * written with the database's {@code CURRENT_TIMESTAMP}, so comparing it against the
+     * database's {@code NOW()} keeps one clock in play and removes any skew between the app
+     * server and MySQL from a decision about refunding money.
+     */
+    boolean isWithinSelfCancelWindow(Long orderId, Long tenantId, int windowSeconds);
+
+    /**
+     * Seconds left on that window, 0 once it has shut, for the countdown on the order
+     * screen. Read from the database clock for the same reason as the check above: doing
+     * the subtraction in Java would compare a MySQL {@code CURRENT_TIMESTAMP} against a JVM
+     * clock, and any timezone disagreement between the two would show a wildly wrong
+     * countdown, or none at all.
+     */
+    int selfCancelSecondsLeft(Long orderId, Long tenantId, int windowSeconds);
 
     List<Order> findByUserId(Long userId, Long tenantId);
 

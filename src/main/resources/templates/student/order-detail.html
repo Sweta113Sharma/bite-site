@@ -32,6 +32,17 @@
         <span>Payment successful. The canteen has your order.</span>
     </div>
 
+    <!-- Outcome of a self-cancel attempt. Losing the race by a second is an ordinary
+         thing to happen, so it is reported here as a message rather than an error page. -->
+    <div class="alert alert-success d-flex align-items-center gap-2" th:if="${orderMessage}">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span th:text="${orderMessage}">Cancelled</span>
+    </div>
+    <div class="alert alert-warning d-flex align-items-center gap-2" th:if="${orderError}">
+        <span class="material-symbols-outlined">hourglass_top</span>
+        <span th:text="${orderError}">Too late</span>
+    </div>
+
     <!-- Status illustration — icon + tone resolved in fragments/order-status
          alongside the badge, so the two never drift apart. -->
     <div th:replace="~{fragments/order-status :: statusMedallion(${order.status})}"></div>
@@ -54,6 +65,25 @@
         <div class="icon-circle bg-info text-white" style="background: var(--color-info) !important;"><span class="material-symbols-outlined">hourglass_empty</span></div>
         <div>Your order is with the canteen — we'll update this page once they start preparing it.</div>
     </div>
+
+    <!-- The misclick escape hatch, offered only while the window is genuinely open.
+         The kitchen is not shown this order until the same window shuts (see
+         OrderDao.findKitchenQueue), so cancelling here can never pull food off a grill.
+         The countdown below is a courtesy: the server re-checks the clock and refuses a
+         late request whatever the page believes. -->
+    <form th:if="${cancelSecondsLeft > 0}" method="post"
+          th:action="@{/student/orders/{id}/cancel(id=${order.id})}"
+          id="self-cancel" th:attr="data-seconds-left=${cancelSecondsLeft}"
+          class="alert alert-secondary d-flex align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <strong>Ordered by mistake?</strong>
+            <div class="small text-muted mb-0">Cancel now for a full refund. After that the
+                canteen has it and you'll need to ask at the counter.</div>
+        </div>
+        <button type="submit" class="btn btn-outline-danger flex-shrink-0" data-needs-network>
+            Cancel <span id="self-cancel-countdown">--</span>s
+        </button>
+    </form>
     <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'PREPARING'}">
         <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><span class="material-symbols-outlined">skillet</span></div>
         <div><strong>Preparing now!</strong> The kitchen is working on your food.</div>
@@ -157,5 +187,29 @@
         </form>
     </div>
 </div>
+
+<script>
+/* Ticks the cancel button down and removes it when the window shuts, so the option does
+   not sit there looking available after it has expired. Purely cosmetic: OrderService
+   re-checks the database clock and refuses a late request regardless of what this says. */
+(function () {
+    var form = document.getElementById('self-cancel');
+    if (!form) return;
+    var out = document.getElementById('self-cancel-countdown');
+    var left = parseInt(form.getAttribute('data-seconds-left'), 10);
+    if (!(left > 0)) { form.remove(); return; }
+
+    out.textContent = left;
+    var timer = setInterval(function () {
+        left -= 1;
+        if (left <= 0) {
+            clearInterval(timer);
+            form.remove();
+            return;
+        }
+        out.textContent = left;
+    }, 1000);
+})();
+</script>
 </body>
 </html>

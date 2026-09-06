@@ -96,13 +96,40 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
-    public List<Order> findKitchenQueue(Long tenantId, Long outletId) {
+    public List<Order> findKitchenQueue(Long tenantId, Long outletId, int selfCancelWindowSeconds) {
         List<Order> orders = jdbcTemplate.query(
                 "SELECT * FROM orders WHERE tenant_id = ? AND outlet_id = ? "
-                        + "AND status IN ('PAID','PREPARING','READY_FOR_PICKUP') ORDER BY created_at ASC",
-                ORDER_ROW_MAPPER, tenantId, outletId);
+                        + "AND status IN ('PAID','PREPARING','READY_FOR_PICKUP') "
+                        // Only PAID is held back, and only until the student's window shuts.
+                        // PREPARING and READY_FOR_PICKUP are past it by definition. A PAID row
+                        // with no paid_at should never exist, but if one does it is shown
+                        // rather than hidden forever — a visible order the kitchen can act on
+                        // beats one that silently never arrives.
+                        + "AND (status <> 'PAID' OR paid_at IS NULL "
+                        + "     OR TIMESTAMPDIFF(SECOND, paid_at, NOW()) >= ?) "
+                        + "ORDER BY created_at ASC",
+                ORDER_ROW_MAPPER, tenantId, outletId, selfCancelWindowSeconds);
         attachItems(orders);
         return orders;
+    }
+
+    @Override
+    public int selfCancelSecondsLeft(Long orderId, Long tenantId, int windowSeconds) {
+        List<Integer> left = jdbcTemplate.query(
+                "SELECT GREATEST(0, ? - TIMESTAMPDIFF(SECOND, paid_at, NOW())) FROM orders "
+                        + "WHERE id = ? AND tenant_id = ? AND status = 'PAID' AND paid_at IS NOT NULL",
+                (rs, n) -> rs.getInt(1), windowSeconds, orderId, tenantId);
+        // Empty for anything not currently a paid order, which is the same as no time left.
+        return left.isEmpty() ? 0 : left.get(0);
+    }
+
+    @Override
+    public boolean isWithinSelfCancelWindow(Long orderId, Long tenantId, int windowSeconds) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM orders WHERE id = ? AND tenant_id = ? AND status = 'PAID' "
+                        + "AND paid_at IS NOT NULL AND TIMESTAMPDIFF(SECOND, paid_at, NOW()) < ?",
+                Integer.class, orderId, tenantId, windowSeconds);
+        return count != null && count > 0;
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.bitesite.dao.PaymentDao;
 import com.bitesite.dto.CheckoutResult;
 import com.bitesite.dto.GatewayOrder;
 import com.bitesite.exception.InvalidOrderStateException;
+import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.MenuItem;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderStatus;
@@ -27,6 +28,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -312,6 +314,67 @@ class OrderServiceTest {
 
         verify(paymentDao, never()).updateStatus(anyLong(), eq(PaymentStatus.REFUNDED));
         verify(orderDao, never()).cancel(anyLong(), anyLong(), any());
+    }
+
+    /* ---- the student's own 20-second cancellation window ---------------------------- */
+
+    private Order paidOrderOwnedBy(long userId) {
+        return Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(userId)
+                .tokenNo("BITE-1234").totalAmount(new BigDecimal("60.00")).status(OrderStatus.PAID).build();
+    }
+
+    @Test
+    void aStudentCancellingInsideTheWindowIsRefunded() {
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paidOrderOwnedBy(USER_ID)));
+        when(orderDao.isWithinSelfCancelWindow(42L, TENANT_ID, OrderService.SELF_CANCEL_WINDOW_SECONDS))
+                .thenReturn(true);
+        Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
+                .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
+        when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
+
+        orderService.cancelOwnOrder(42L, USER_ID, TENANT_ID);
+
+        verify(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
+        verify(orderDao).cancel(eq(42L), eq(TENANT_ID), contains("student"));
+    }
+
+    /** The whole point of the window. Once shut, no refund call may be made at all. */
+    @Test
+    void aStudentCancellingAfterTheWindowIsRefusedAndNothingIsRefunded() {
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paidOrderOwnedBy(USER_ID)));
+        when(orderDao.isWithinSelfCancelWindow(42L, TENANT_ID, OrderService.SELF_CANCEL_WINDOW_SECONDS))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> orderService.cancelOwnOrder(42L, USER_ID, TENANT_ID))
+                .isInstanceOf(InvalidOrderStateException.class);
+
+        verifyNoInteractions(paymentGateway);
+        verify(orderDao, never()).cancel(anyLong(), anyLong(), any());
+    }
+
+    /** Possession of an order id is not ownership; someone else's order is simply absent. */
+    @Test
+    void aStudentCannotCancelSomebodyElsesOrder() {
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paidOrderOwnedBy(999L)));
+
+        assertThatThrownBy(() -> orderService.cancelOwnOrder(42L, USER_ID, TENANT_ID))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verifyNoInteractions(paymentGateway);
+        verify(orderDao, never()).cancel(anyLong(), anyLong(), any());
+        // Ownership is settled before the clock is even consulted.
+        verify(orderDao, never()).isWithinSelfCancelWindow(anyLong(), anyLong(), anyInt());
+    }
+
+    /**
+     * The other half of the feature: the kitchen must not be shown an order the student can
+     * still take back, so the queue is asked for the same window the cancel is judged against.
+     */
+    @Test
+    void theKitchenQueueWithholdsOrdersForExactlyTheCancelWindow() {
+        orderService.kitchenQueue(TENANT_ID, OUTLET_ID);
+
+        verify(orderDao).findKitchenQueue(TENANT_ID, OUTLET_ID, OrderService.SELF_CANCEL_WINDOW_SECONDS);
     }
 
     @Test

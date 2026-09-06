@@ -39,6 +39,14 @@ public class OrderService {
     private static final int MAX_REASON_LENGTH = 200;
     private static final int PICKUP_CODE_ATTEMPTS = 10;
 
+    /**
+     * How long a student may cancel their own order after paying, and equally how long the
+     * kitchen is kept from seeing it. One number governs both halves deliberately: if the
+     * two ever drifted apart there would be a stretch where an order is both cancellable
+     * and being cooked. Public because the order screen counts down against it.
+     */
+    public static final int SELF_CANCEL_WINDOW_SECONDS = 20;
+
     private final OrderDao orderDao;
     private final PaymentDao paymentDao;
     private final MenuService menuService;
@@ -212,7 +220,40 @@ public class OrderService {
     }
 
     public List<Order> kitchenQueue(Long tenantId, Long outletId) {
-        return orderDao.findKitchenQueue(tenantId, outletId);
+        return orderDao.findKitchenQueue(tenantId, outletId, SELF_CANCEL_WINDOW_SECONDS);
+    }
+
+    /**
+     * Cancels a student's own order, but only in the first
+     * {@value #SELF_CANCEL_WINDOW_SECONDS} seconds after payment.
+     *
+     * <p>The window is short on purpose. It exists for the misclick, not as a way to back
+     * out of a queue, and the kitchen does not see the order at all until it shuts (see
+     * {@link com.bitesite.dao.OrderDao#findKitchenQueue}), so nothing can be cancelled out
+     * from under someone already cooking it.
+     *
+     * <p>Two guards stack here rather than one. This method checks the clock, and the
+     * delegate re-checks the state machine, which permits PAID to CANCELLED but not
+     * PREPARING to CANCELLED. So in the race where staff press "Start preparing" in the same
+     * moment, whoever commits first wins and the student is told plainly that it is too
+     * late, instead of a refund being issued for food already on the grill.
+     */
+    /** Seconds left on the student's own cancellation window, 0 once it has shut. */
+    public int selfCancelSecondsLeft(Long orderId, Long tenantId) {
+        return orderDao.selfCancelSecondsLeft(orderId, tenantId, SELF_CANCEL_WINDOW_SECONDS);
+    }
+
+    @Transactional
+    public void cancelOwnOrder(Long orderId, Long userId, Long tenantId) {
+        // Ownership first: getForUser reports someone else's order as simply not found.
+        Order order = getForUser(orderId, userId, tenantId);
+        if (!orderDao.isWithinSelfCancelWindow(orderId, tenantId, SELF_CANCEL_WINDOW_SECONDS)) {
+            throw new InvalidOrderStateException(
+                    "The cancellation window for order " + order.getTokenNo() + " has closed.");
+        }
+        // Reuses the staff path, so the refund still happens before anything in our own
+        // database changes. The actor recorded in the audit log is the student.
+        cancelOrder(orderId, tenantId, userId, "Cancelled by the student");
     }
 
     public Payment getPaymentForOrder(Long orderId, Long tenantId) {
