@@ -142,8 +142,15 @@ push UI lives solely in the student templates and every `notifyOrderUpdate` call
 targets the order's own student, so there is no staff notification path for it to
 use yet.
 
-Everything is wired. It stays dormant until two credentials exist, and both the
-app build and the server run normally without them.
+**This is already set up in production.** The Firebase project is `bitesite-113`
+(project number 69524657250) and the Android app is registered as
+`1:69524657250:android:8ef93da1b44c119b736d3b` against package `in.bitesite.app`.
+`FIREBASE_CREDENTIALS_JSON` is set on the `bitesite-app` web app, and the server
+logs `FCM initialised` at startup. The steps below are what a new developer, or a
+fresh environment, needs.
+
+The channel stays dormant without credentials, and both the app build and the
+server run normally in that state, so neither step blocks local work.
 
 **1. The app.** In the Firebase console create a project, add an Android app with
 package `in.bitesite.app`, and download `google-services.json` to:
@@ -198,3 +205,34 @@ stops delivery, since Android has no in-app way to revoke the permission.
 The Razorpay SDK adds `NFC` (`com.razorpay:standard-core`) and
 `READ_BASIC_PHONE_STATE` (`com.razorpay:core`) to the merged manifest. They will
 appear on the Play listing, so they are worth knowing about before submission.
+
+## Verification status
+
+Recorded honestly, because "it builds" and "it works" are different claims and
+the gap between them is where this will bite.
+
+**Confirmed on a real device** (Pixel 9a, Android 17 / API 37, WebView 151):
+both APKs install; the student app launches, loads the remote site and renders
+the login screen correctly with the status bar area clear; `Capacitor/AppPlugin`
+and `Capacitor/KeyboardPlugin` emit real events, so the bridge and plugin
+registration work; no entries in the crash buffer.
+
+**Confirmed in production:** Flyway reached v26, `FCM initialised` at startup,
+and both the `max()` safe-area tokens and the native-shell functions are served
+live from `/css/parts/01-tokens.css` and `/js/app.js`.
+
+**Not yet verified, in rough risk order:**
+
+1. A UPI payment end to end through the native Razorpay sheet, including the
+   app-switch back. This is the largest behavioural change and nothing has
+   exercised it.
+2. An FCM notification actually arriving on a handset. The server half is
+   proven; the delivery half is not.
+3. The `.app-chrome` top inset on a signed-in page. The login screen has no
+   navbar, so it does not exercise that rule.
+4. The outlet app beyond installing: no launch, and no `CANTEEN_MANAGER` sign-in
+   against `/canteen`.
+5. **The WebView < 140 safe-area fallback.** The test device runs WebView 151 and
+   therefore takes the native `env()` path. The custom-property fallback, which is
+   the branch that matters for the budget handsets most students carry, has never
+   run. Testing it needs a device with an older WebView.

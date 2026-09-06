@@ -7,6 +7,17 @@ on:
   push:
     branches:
     - master
+    # None of these can change the deployed JAR, and every deploy restarts the app:
+    # a ~2.5 minute cold start, and one more chance to hit the intermittent MySQL
+    # "Communications link failure" that has already cost several boots. The Android
+    # projects are separate Capacitor builds that ship as APKs, not through this
+    # pipeline, so they have no business restarting production either.
+    paths-ignore:
+    - '**.md'
+    - 'docs/**'
+    - '.gitignore'
+    - 'android-student/**'
+    - 'android-outlet/**'
   workflow_dispatch:
 
 jobs:
