@@ -59,6 +59,24 @@ npx cap sync android
 
 ## Regenerating launcher icons / splash
 
+> **Regenerating costs about 1.3 MB unless you re-optimise afterwards.** The
+> generated splash PNGs are re-encoded as 16-colour palette images, which is
+> visually lossless on this flat art (mean error 0.63/255, under 1% of pixels
+> shifted) and cuts them by 82%. `capacitor-assets` writes full-colour PNGs and
+> will silently undo that. After regenerating, re-run:
+>
+> ```bash
+> python3 - <<'EOF'
+> from PIL import Image
+> import glob
+> for f in glob.glob("android-*/android/app/src/main/res/drawable-*/splash.png"):
+>     Image.open(f).convert("RGB").quantize(colors=16).save(f, optimize=True)
+> EOF
+> ```
+>
+> AAPT crunches PNGs at build time but does not quantise colour, so this is not
+> redundant with the build.
+
 Source images live in `resources/` (`icon-only.png`, `icon-foreground.png`,
 `splash.png`). Regenerate the Android assets with:
 
