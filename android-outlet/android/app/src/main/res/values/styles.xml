@@ -15,8 +15,23 @@
         <item name="android:background">@null</item>
     </style>
 
+    <!-- Launch splash.
 
+         The SplashScreen plugin calls androidx.core.splashscreen's
+         installSplashScreen(), so what is drawn on launch comes from these theme
+         attributes and NOTHING else. Capacitor's generated template set
+         `android:background="@drawable/splash"` here, which the splash system never
+         reads: the illustrated splash.png in the 26 drawable-* folders was therefore
+         never shown on any launch, and every device fell through to the platform
+         default — the launcher icon on the theme's background, which in night mode
+         came out dark against the app's bone canvas.
+
+         Android 12+ does not allow a full-bleed splash image; the system draws a
+         masked, centred icon on a solid colour. That is what these two attributes
+         set. postSplashScreenTheme is not needed: BridgeActivity.onCreate calls
+         setTheme(AppTheme_NoActionBar) itself. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splashBackground</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
     </style>
 </resources>

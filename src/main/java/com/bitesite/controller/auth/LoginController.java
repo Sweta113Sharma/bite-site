@@ -18,11 +18,15 @@ public class LoginController {
     }
 
     @GetMapping("/")
-    public String home() {
+    public String home(Model model) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof AppUserPrincipal principal) {
             return "redirect:" + RoleLandingPages.forActiveRole(principal.getUser().getActiveRole());
         }
-        return "redirect:/login";
+        // Anonymous visitors get the welcome screen rather than being dropped straight
+        // into the sign-in form, so the first thing a new user sees offers registering
+        // as plainly as signing in.
+        model.addAttribute("pageTitle", "Welcome");
+        return "auth/welcome";
     }
 }

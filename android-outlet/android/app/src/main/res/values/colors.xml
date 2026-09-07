@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app canvas: the "bone" background token in 01-tokens.css. The splash uses
+         the same value so the handover to the WebView is invisible rather than a flash
+         of a different colour. Deliberately not given a values-night variant, because
+         the web app is light-only: a dark splash would flash and then jump to bone. -->
+    <color name="splashBackground">#f2ead9</color>
+</resources>

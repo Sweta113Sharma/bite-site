@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div class="auth-shell">
+<div th:replace="~{fragments/auth-brand :: panel('Order ahead,<br/>skip the queue.','Pick your canteen, pay once, and collect the moment it is ready.')}"></div>
+<main class="auth-main">
+    <div class="auth-card welcome">
+
+        <div class="welcome-hero">
+            <div class="welcome-hero__copy">
+                <span class="welcome-hero__mark">BiteSite</span>
+                <h1 class="welcome-hero__title">Order ahead.<br/>Skip the queue.</h1>
+                <p class="welcome-hero__sub">Your campus canteen, ready when you get there.</p>
+            </div>
+            <img class="welcome-hero__mascot" th:src="@{/img/mascot/bito-hero.png}"
+                 width="600" height="623" alt=""/>
+        </div>
+
+        <div class="welcome-actions">
+            <a th:href="@{/login}" class="btn btn-auth">Sign in</a>
+            <a th:href="@{/register/student}" class="btn btn-auth btn-auth--ghost">Create account</a>
+        </div>
+
+        <h2 class="welcome-section">Canteen favourites</h2>
+        <ul class="welcome-tiles">
+            <li class="welcome-tile">
+                <img th:src="@{/img/food/food_burger.png}" width="311" height="320" alt="" loading="lazy"/>
+                <span>Burgers</span>
+            </li>
+            <li class="welcome-tile">
+                <img th:src="@{/img/food/food_dosa.png}" width="320" height="215" alt="" loading="lazy"/>
+                <span>Dosa</span>
+            </li>
+            <li class="welcome-tile">
+                <img th:src="@{/img/food/food_maggi.png}" width="320" height="307" alt="" loading="lazy"/>
+                <span>Maggi</span>
+            </li>
+            <li class="welcome-tile">
+                <img th:src="@{/img/food/food_wrap.png}" width="320" height="292" alt="" loading="lazy"/>
+                <span>Wraps</span>
+            </li>
+            <li class="welcome-tile">
+                <img th:src="@{/img/food/food_shake.png}" width="158" height="320" alt="" loading="lazy"/>
+                <span>Shakes</span>
+            </li>
+            <li class="welcome-tile">
+                <img th:src="@{/img/food/food_puff.png}" width="320" height="193" alt="" loading="lazy"/>
+                <span>Snacks</span>
+            </li>
+        </ul>
+
+        <h2 class="welcome-section">How it works</h2>
+        <ol class="welcome-steps">
+            <li class="welcome-steps__item">
+                <span class="welcome-steps__icon"><span class="material-symbols-outlined">storefront</span></span>
+                <span class="welcome-steps__text"><strong>Pick your canteen</strong>Browse today's menu and prices
+                    before you walk over.</span>
+            </li>
+            <li class="welcome-steps__item">
+                <span class="welcome-steps__icon"><span class="material-symbols-outlined">credit_card</span></span>
+                <span class="welcome-steps__text"><strong>Pay by UPI, card or netbanking</strong>Your order reaches
+                    the kitchen once payment clears.</span>
+            </li>
+            <li class="welcome-steps__item">
+                <span class="welcome-steps__icon"><span class="material-symbols-outlined">hourglass_top</span></span>
+                <span class="welcome-steps__text"><strong>Watch it being made</strong>Live status from paid, to
+                    preparing, to ready.</span>
+            </li>
+            <li class="welcome-steps__item">
+                <span class="welcome-steps__icon"><span class="material-symbols-outlined">notifications_active</span></span>
+                <span class="welcome-steps__text"><strong>Get a ping when it's ready</strong>Walk up and collect.
+                    Misclicked? Cancel in the first few seconds for a refund.</span>
+            </li>
+        </ol>
+
+        <p class="auth-foot">Available at colleges using BiteSite. You'll need an account at a participating campus.</p>
+        <p class="auth-legal text-muted mb-0">
+            <a th:href="@{/privacy-policy}" class="text-muted">Privacy policy</a> ·
+            <a th:href="@{/terms}" class="text-muted">Terms</a> ·
+            <a th:href="@{/refund-policy}" class="text-muted">Refund policy</a>
+        </p>
+    </div>
+</main>
+</div>
+</body>
+</html>

@@ -3,7 +3,7 @@
   "appName": "BiteSite Outlet",
   "webDir": "www",
   "server": {
-    "url": "https://bitesite-app.azurewebsites.net/canteen",
+    "url": "https://outlet.bitesite.in/canteen",
     "androidScheme": "https",
     "cleartext": false,
     "errorPath": "offline.html"
@@ -15,7 +15,7 @@
     "SplashScreen": {
       "launchAutoHide": false,
       "launchFadeOutDuration": 200,
-      "backgroundColor": "#F9F9F9"
+      "backgroundColor": "#f2ead9"
     },
     "Keyboard": {
       "resize": "native"

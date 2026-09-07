@@ -573,6 +573,180 @@
 .btn-auth:hover  { background: var(--color-primary-dark); color: #fff; }
 .btn-auth:active { transform: scale(0.98); }
 
+/* The welcome screen uses anchors rather than submit buttons for these, so the shape
+   has to be stated rather than inherited from <button>'s defaults. Harmless on the
+   real buttons, which were already full-width and centred. */
+.btn-auth {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+}
+
+/* Secondary action on the welcome screen. Outlined rather than filled so "Sign in"
+   stays the single obvious primary, and it inverts on hover so it never reads as
+   disabled. */
+.btn-auth--ghost {
+    background: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+}
+.btn-auth--ghost:hover,
+.btn-auth--ghost:focus { background: var(--color-primary); color: #fff; }
+
+/* ============================================================
+   WELCOME SCREEN
+
+   The landing card for signed-out visitors. Built to read like a product page
+   rather than a form: a hero band, a grid of what the canteens actually serve,
+   then how the thing works. Uses the existing food and mascot art so it carries
+   the same illustration style as the rest of the app.
+   ============================================================ */
+
+.welcome { padding-top: 0; }
+
+/* Full-bleed to the card's edges, so the band reads as a header rather than a
+   panel floating inside padding. The negative margin has to track the card's own
+   horizontal padding, which changes at the desktop breakpoint. */
+.welcome-hero {
+    margin: 0 calc(var(--margin-mobile) * -1) var(--stack-md);
+    padding: var(--stack-md) var(--margin-mobile);
+    background: var(--color-accent-tint);
+    border-bottom: 2px solid var(--color-border);
+    display: flex;
+    align-items: flex-end;
+    gap: var(--stack-sm);
+}
+
+.welcome-hero__copy { flex: 1 1 auto; min-width: 0; }
+
+.welcome-hero__mark {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 24px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--color-primary);
+    margin-bottom: var(--stack-xs);
+}
+
+.welcome-hero__title {
+    font-family: var(--font-display);
+    font-size: 21px;
+    line-height: 23px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+    margin: 0 0 var(--stack-xs);
+}
+
+.welcome-hero__sub {
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+    color: var(--color-ink);
+    margin: 0;
+}
+
+/* Sits on the band's baseline so it reads as standing on the border. */
+.welcome-hero__mascot {
+    flex: none;
+    width: 30%;
+    max-width: 112px;
+    height: auto;
+    margin-bottom: calc(var(--stack-md) * -1);
+    align-self: flex-end;
+}
+
+/* The two actions sit directly under the hero, not after the supporting content:
+   someone arriving to sign in should not have to scroll past an explanation aimed
+   at people who have never heard of this. The first button carries no top margin
+   because the hero already provides the gap. */
+.welcome-actions { margin-bottom: var(--stack-lg); }
+.welcome-actions .btn-auth:first-child { margin-top: 0; }
+
+.welcome-section {
+    font-family: var(--font-display);
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    margin: 0 0 var(--stack-sm);
+}
+
+.welcome-tiles {
+    list-style: none;
+    margin: 0 0 var(--stack-md);
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--stack-sm);
+}
+
+.welcome-tile {
+    background: var(--color-field);
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    padding: var(--stack-sm) 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--stack-xs);
+    text-align: center;
+}
+
+/* Fixed box with contain, because the source art has wildly different aspect
+   ratios (a shake is portrait, a dosa is landscape) and a free-flowing height
+   would make the grid rows ragged. */
+.welcome-tile img {
+    width: 100%;
+    max-width: 68px;
+    height: 52px;
+    object-fit: contain;
+}
+
+.welcome-tile span {
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    font-weight: 700;
+    color: var(--color-ink);
+}
+
+.welcome-steps {
+    list-style: none;
+    margin: 0 0 var(--stack-md);
+    padding: 0;
+    display: grid;
+    gap: var(--stack-sm);
+}
+.welcome-steps__item { display: flex; gap: var(--stack-sm); align-items: flex-start; }
+
+/* Yellow chip with the same hard border as the kickers elsewhere, so the list
+   reads as part of the same system rather than a stack of loose icons. */
+.welcome-steps__icon {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    background: var(--color-accent-tint);
+    border: 2px solid var(--color-border);
+    color: var(--color-ink);
+}
+.welcome-steps__icon .material-symbols-outlined { font-size: 19px; }
+
+.welcome-steps__text {
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+    color: var(--color-ink-muted);
+}
+.welcome-steps__text strong {
+    display: block;
+    color: var(--color-ink);
+    font-weight: 700;
+}
+
 .auth-foot {
     margin-top: var(--stack-md);
     font-size: var(--text-body-md);
@@ -585,6 +759,18 @@
    re-tones to the new palette rather than the old peach. */
 @media (min-width: 992px) {
     .auth-card { padding: var(--stack-lg); }
+
+    /* The hero's bleed has to track the card's padding, which widens here. */
+    .welcome-hero {
+        margin-left: calc(var(--stack-lg) * -1);
+        margin-right: calc(var(--stack-lg) * -1);
+        padding-left: var(--stack-lg);
+        padding-right: var(--stack-lg);
+    }
+    /* The brand panel already carries the identity at this width, so the hero's
+       own wordmark would be the second one on screen — same reason the lockup is
+       hidden just below. */
+    .welcome-hero__mark { display: none; }
 
     /* The panel carries the identity at this width, so the card's own lockup would be
        the second one on screen. The pre-redesign layout hid it here for that reason;

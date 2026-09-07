@@ -3,7 +3,7 @@
   "appName": "BiteSite",
   "webDir": "www",
   "server": {
-    "url": "https://bitesite-app.azurewebsites.net",
+    "url": "https://app.bitesite.in",
     "androidScheme": "https",
     "cleartext": false,
     "errorPath": "offline.html"
@@ -13,9 +13,10 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchAutoHide": false,
+      "launchAutoHide": true,
       "launchFadeOutDuration": 200,
-      "backgroundColor": "#F9F9F9"
+      "backgroundColor": "#f2ead9",
+      "launchShowDuration": 0
     },
     "Keyboard": {
       "resize": "native"
