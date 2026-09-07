@@ -496,6 +496,27 @@
     flex: 0 1 auto;
 }
 
+/* text-overflow only acts on a block container's own inline content, and .navbar-brand
+   is a flex row, so the ellipsis never applied: a long college name was cut mid-word
+   with no indication it had been ("NIET GREATER N"). The truncation belongs on the
+   element holding the text, not on the flex parent. */
+.navbar-brand > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    /* The top links and sign-out are both hidden at this width, so the only thing to the
+       brand's right is the drawer button. 55vw was sized for a fuller bar and was
+       clipping names that now have room to sit. */
+    .navbar .navbar-brand {
+        max-width: calc(100vw - 6.5rem);
+        font-size: 0.98rem;
+    }
+}
+
 .navbar-right {
     margin-left: auto;
     min-width: 0;

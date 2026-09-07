@@ -9,6 +9,8 @@
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container">
+    <div th:replace="~{fragments/navbar :: pushInvite('Get a ping the moment your order is ready. Turn on notifications.')}"></div>
+
     <div th:if="${#lists.isEmpty(outlets)}" class="state-panel">
         <div th:replace="~{fragments/state :: medallion('storefront','neutral')}"></div>
         <h4>No canteens yet</h4>

@@ -18,13 +18,8 @@
          is supported, configured, and not already on — so it never nags someone who has
          already said yes, and never appears where it cannot work. Dismissal is
          remembered. -->
-    <div id="push-invite" class="alert alert-warning d-none align-items-center gap-2 flex-wrap"
-         th:if="${order.status.isLive()}">
-        <span class="material-symbols-outlined">notifications_active</span>
-        <span class="flex-grow-1">Want to know the moment this is ready? Turn on notifications.</span>
-        <button type="button" id="push-invite-yes" class="btn btn-sm btn-primary">Turn on</button>
-        <button type="button" id="push-invite-no" class="btn btn-sm btn-link text-muted">Not now</button>
-    </div>
+    <div th:if="${order.status.isLive()}"
+         th:replace="~{fragments/navbar :: pushInvite('Want to know the moment this is ready? Turn on notifications.')}"></div>
 
 
     <div class="alert alert-success d-flex align-items-center gap-2" th:if="${paymentSucceeded}">

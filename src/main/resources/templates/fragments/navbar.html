@@ -63,8 +63,15 @@
             <!-- Last in the cluster, so it sits against the right edge of the bar.
                  It used to be first — between the brand and the user's own name — which
                  put a bordered menu box in the middle of the header pointing at nothing
-                 in particular. A menu control belongs at an edge. -->
-            <button sec:authorize="isAuthenticated() and not hasRole('USER')" type="button"
+                 in particular. A menu control belongs at an edge.
+
+                 Students get it too. They were excluded on the grounds that the bottom
+                 tab bar covers them, but that bar holds five destinations and the drawer
+                 holds eleven: changing canteen, privacy and data, profile, password and
+                 every legal page exist only in here. On a phone their sign-out is hidden
+                 as well (see 08-customer-final.css), whose comment already assumed this
+                 button was present — so the header offered a student nothing at all. -->
+            <button sec:authorize="isAuthenticated()" type="button"
                     class="nav-drawer-btn" id="nav-drawer-btn"
                     aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
                 <span class="material-symbols-outlined">menu</span>
@@ -280,6 +287,23 @@
             </button>
         </form>
     </aside>
+</div>
+
+<!-- ============================================================
+     PUSH INVITE
+
+     Rendered hidden; app.js reveals it only when push is supported, the server has keys,
+     permission has not already been refused, and there is no subscription yet. It lived
+     only on the order detail page, which meant nobody was ever asked until after they
+     had already placed an order and gone looking for it — by which point the one
+     notification that matters, "your food is ready", is the one they miss.
+     ============================================================ -->
+<div th:fragment="pushInvite(message)"
+     id="push-invite" class="alert alert-warning d-none align-items-center gap-2 flex-wrap">
+    <span class="material-symbols-outlined">notifications_active</span>
+    <span class="flex-grow-1" th:text="${message}">Turn on notifications.</span>
+    <button type="button" id="push-invite-yes" class="btn btn-sm btn-primary">Turn on</button>
+    <button type="button" id="push-invite-no" class="btn btn-sm btn-link text-muted">Not now</button>
 </div>
 
 <!-- ============================================================
