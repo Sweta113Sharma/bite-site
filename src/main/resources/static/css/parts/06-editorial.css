@@ -602,19 +602,38 @@
    the same illustration style as the rest of the app.
    ============================================================ */
 
-.welcome { padding-top: 0; }
+/* Welcome is a full-bleed page, not a card. At this length a bordered box that
+   scrolls for three screens reads as a boxed document rather than an app screen,
+   so the border and shadow the brutalist layer gives .auth-card are dropped here
+   and the sections carry the page margin themselves. */
+.welcome {
+    border: none;
+    box-shadow: none;
+    padding: 0 0 var(--stack-lg);
+    max-width: 520px;
+}
 
-/* Full-bleed to the card's edges, so the band reads as a header rather than a
-   panel floating inside padding. The negative margin has to track the card's own
-   horizontal padding, which changes at the desktop breakpoint. */
+/* Runs to the screen edges and carries the status-bar inset itself, so the yellow
+   continues up behind the clock instead of starting underneath it. */
 .welcome-hero {
-    margin: 0 calc(var(--margin-mobile) * -1) var(--stack-md);
-    padding: var(--stack-md) var(--margin-mobile);
+    margin: 0 0 var(--stack-md);
+    padding: calc(var(--stack-md) + var(--safe-area-top)) var(--margin-mobile) var(--stack-md);
     background: var(--color-accent-tint);
     border-bottom: 2px solid var(--color-border);
     display: flex;
     align-items: flex-end;
     gap: var(--stack-sm);
+}
+
+/* Everything below the hero gets the horizontal margin the card used to provide. */
+.welcome-actions,
+.welcome-tiles,
+.welcome-steps,
+.welcome .welcome-section,
+.welcome .auth-foot,
+.welcome .auth-legal {
+    padding-left: var(--margin-mobile);
+    padding-right: var(--margin-mobile);
 }
 
 .welcome-hero__copy { flex: 1 1 auto; min-width: 0; }
@@ -659,9 +678,8 @@
 
 /* The two actions sit directly under the hero, not after the supporting content:
    someone arriving to sign in should not have to scroll past an explanation aimed
-   at people who have never heard of this. The first button carries no top margin
-   because the hero already provides the gap. */
-.welcome-actions { margin-bottom: var(--stack-lg); }
+   at people who have never heard of this. */
+.welcome-actions { margin-bottom: var(--stack-md); }
 .welcome-actions .btn-auth:first-child { margin-top: 0; }
 
 .welcome-section {
@@ -678,7 +696,9 @@
 .welcome-tiles {
     list-style: none;
     margin: 0 0 var(--stack-md);
-    padding: 0;
+    /* padding-block, not the shorthand: the shared rule above supplies the inline
+       page margin and `padding: 0` here would silently wipe it. */
+    padding-block: 0;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--stack-sm);
@@ -716,7 +736,7 @@
 .welcome-steps {
     list-style: none;
     margin: 0 0 var(--stack-md);
-    padding: 0;
+    padding-block: 0;
     display: grid;
     gap: var(--stack-sm);
 }
@@ -760,10 +780,14 @@
 @media (min-width: 992px) {
     .auth-card { padding: var(--stack-lg); }
 
-    /* The hero's bleed has to track the card's padding, which widens here. */
-    .welcome-hero {
-        margin-left: calc(var(--stack-lg) * -1);
-        margin-right: calc(var(--stack-lg) * -1);
+    /* The page has room to breathe here, so the sections take the wider margin. */
+    .welcome-hero,
+    .welcome-actions,
+    .welcome-tiles,
+    .welcome-steps,
+    .welcome .welcome-section,
+    .welcome .auth-foot,
+    .welcome .auth-legal {
         padding-left: var(--stack-lg);
         padding-right: var(--stack-lg);
     }

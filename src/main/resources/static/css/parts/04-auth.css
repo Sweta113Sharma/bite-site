@@ -27,11 +27,28 @@
     background: var(--color-bg);
 }
 
+/* align-items:center looks right until the content is taller than the viewport, at
+   which point centring pushes the top of the card above the scroll origin and it
+   cannot be reached. Auto margins centre the same way when there is room and
+   collapse to zero when there is not, so nothing is ever stranded off-screen.
+
+   The top padding carries the status-bar inset because these pages have no
+   .app-chrome, which is what applies it everywhere else. Without it the first
+   thing on the page draws under the clock in the Android shells, where
+   targetSdk 36 forces edge-to-edge. */
 .auth-main {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 2.5rem 1.25rem 3rem;
+    padding: calc(2.5rem + var(--safe-area-top)) 1.25rem 3rem;
+}
+.auth-main > .auth-card { margin-block: auto; }
+
+/* The welcome screen runs its own hero to the screen edges and carries the inset
+   itself, so it opts out of the page padding entirely. */
+.auth-main--flush {
+    padding: 0;
+    align-items: stretch;
 }
 
 .auth-card {
