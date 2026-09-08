@@ -680,3 +680,148 @@ hr.rule-strong {
 .offline-bar.is-visible {
     display: block;
 }
+
+/* ============================================================
+   SELECT — the in-house dropdown that replaces the platform one.
+
+   A native <select> draws its open list in the OS, not the page, so every
+   picker in this app fell out of its own design language the moment it was
+   tapped: Material on Android, a wheel on iOS. This is the same control drawn
+   in bone, ink and a 2px rule like everything else.
+
+   The native element is still in the DOM doing the actual work. It is clipped
+   rather than display:none because Chrome will not surface a validation
+   message for a required field it cannot focus. See initSelects in app.js.
+   ============================================================ */
+
+.select {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+/* Kept rendered, so constraint validation can still focus and report on it, but
+   given no size, no paint and no pointer events. */
+.select__native {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+}
+
+.select__trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--stack-xs);
+    text-align: left;
+    background: var(--color-field);
+    color: var(--color-ink);
+    border: 2px solid var(--color-field-border);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+    font-family: var(--font-body);
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+}
+
+/* Chevron drawn with borders rather than an SVG or an icon-font glyph: the icon
+   font is subset per-glyph, and a shape this small is two lines. */
+.select__trigger::after {
+    content: '';
+    position: absolute;
+    right: 0.85rem;
+    top: 50%;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 2px solid var(--color-ink);
+    border-bottom: 2px solid var(--color-ink);
+    transform: translateY(-70%) rotate(45deg);
+    transition: transform 120ms ease;
+}
+
+.select.is-open .select__trigger::after { transform: translateY(-20%) rotate(-135deg); }
+
+.select__trigger:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.select__trigger:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* The "choose one" row should read as unfilled, the way a placeholder does,
+   rather than as a real choice already made. */
+.select--placeholder .select__value { color: var(--color-ink-muted); font-weight: 500; }
+
+.select__value {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.select__list {
+    position: absolute;
+    z-index: 60;
+    top: calc(100% - 2px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 15rem;
+    overflow-y: auto;
+    background: var(--color-field);
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Flipped when there is no room below — a filter at the bottom of a phone screen
+   would otherwise open into nothing. */
+.select--up .select__list {
+    top: auto;
+    bottom: calc(100% - 2px);
+}
+
+.select__option {
+    padding: 0.55rem 0.75rem;
+    font-size: var(--text-body-md);
+    line-height: var(--lh-body-md);
+    cursor: pointer;
+    border-bottom: 1px solid rgba(20, 16, 13, 0.12);
+}
+
+.select__option:last-child { border-bottom: 0; }
+.select__option:hover { background: var(--color-bg); }
+
+.select__option[aria-selected="true"] {
+    background: var(--color-ink);
+    color: var(--color-field);
+    font-weight: 700;
+}
+
+.select__option[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Matches .form-select-sm, which several filter bars use. */
+.select--sm .select__trigger {
+    padding: 0.3rem 2rem 0.3rem 0.55rem;
+    font-size: var(--text-label-sm, 12px);
+}
+.select--sm .select__option { padding: 0.4rem 0.55rem; }

@@ -1,9 +1,12 @@
 package com.bitesite.controller.auth;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.config.PortalResolver;
 import com.bitesite.config.RoleLandingPages;
+import com.bitesite.model.PortalTarget;
 import com.bitesite.web.MobileClient;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -11,7 +14,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
+@RequiredArgsConstructor
 public class LoginController {
+
+    private final PortalResolver portalResolver;
 
     @GetMapping("/login")
     public String login(Model model) {
@@ -29,12 +35,16 @@ public class LoginController {
         // into the sign-in form, so the first thing a new user sees offers registering
         // as plainly as signing in.
         //
-        // Phones only. It is an app screen — full-bleed hero, tap targets, a scrolling
-        // stack — and a desktop window renders it as a narrow column marooned in empty
-        // space next to a brand panel repeating its own headline. Desktop visitors get
-        // the sign-in form, which is what that width is designed for and what someone
-        // who already has an account came for anyway.
-        if (!MobileClient.isMobile(request)) {
+        // Customer portal only. The screen sells ordering lunch and its second button is
+        // "Create account", which on the outlet or admin host was inviting a canteen
+        // manager to register themselves as a student — an account their portal then
+        // refuses to admit. Staff arrive knowing what this is and already holding an
+        // account someone else made for them, so they get the form.
+        //
+        // And phones only. It is an app screen — full-bleed hero, tap targets, a
+        // scrolling stack — and a desktop window renders it as a narrow column marooned
+        // in empty space next to a brand panel repeating its own headline.
+        if (portalResolver.resolve(request) != PortalTarget.APP || !MobileClient.isMobile(request)) {
             return "redirect:/login";
         }
         model.addAttribute("pageTitle", "Welcome");

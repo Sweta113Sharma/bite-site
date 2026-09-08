@@ -24,6 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class WelcomeRoutingTest {
 
     private static final String APP_HOST = "app.localhost";
+    private static final String OUTLET_HOST = "outlet.localhost";
+    private static final String ADMIN_HOST = "admin.localhost";
     private static final String ANDROID =
             "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) "
                     + "Chrome/120.0.0.0 Mobile Safari/537.36";
@@ -44,6 +46,16 @@ class WelcomeRoutingTest {
     void desktopIsSentToSignIn() throws Exception {
         mockMvc.perform(get("/").header("Host", APP_HOST).header("User-Agent", DESKTOP))
                 .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    void staffPortalsNeverGetTheCustomerWelcome() throws Exception {
+        // Even on a phone. Its second button is "Create account", which on these hosts
+        // would invite a canteen manager to register as a student.
+        mockMvc.perform(get("/").header("Host", OUTLET_HOST).header("User-Agent", ANDROID))
+                .andExpect(redirectedUrl("/login"));
+        mockMvc.perform(get("/").header("Host", ADMIN_HOST).header("User-Agent", ANDROID))
                 .andExpect(redirectedUrl("/login"));
     }
 

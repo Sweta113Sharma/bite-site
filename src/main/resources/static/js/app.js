@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initOrderStatusWatch();
     initOfflineState();
     initNativeShell();
+    initSelects();
 });
 
 /* ============================================================
@@ -1314,3 +1315,181 @@ function initOfflineState() {
     window.addEventListener('offline', apply);
     if (!navigator.onLine) apply();
 }
+
+/* ============================================================
+   SELECT — replaces the platform dropdown with one of ours.
+
+   A native <select> is the one control a browser refuses to let you style: the
+   open list is drawn by the OS, so on Android every filter and picker in this
+   app dropped out of its own design language into Material, and on iOS into a
+   wheel. Everything else here is bone, ink and a 2px rule; the dropdowns were
+   not.
+
+   Progressive enhancement rather than 21 rewritten templates. The real <select>
+   stays in the DOM and keeps doing its job — name, value, th:field binding,
+   and the inline onchange="this.form.submit()" the filter bars rely on, which
+   still fires because selecting dispatches a real bubbling change event. Markup
+   authors write a plain <select>; new ones are upgraded automatically.
+
+   Deliberately NOT display:none on the native control. Chrome refuses to report
+   a validation message for a required field it cannot focus ("An invalid form
+   control is not focusable"), which would break the one required select in the
+   app. It is kept rendered and clipped instead.
+
+   Opt out with data-native on the element.
+   ============================================================ */
+
+function initSelects() {
+    document.querySelectorAll('select:not([data-native])').forEach(upgradeSelect);
+}
+
+function upgradeSelect(native) {
+    // multiple/size selects are list boxes, not dropdowns — leave them alone.
+    if (native.multiple || native.size > 1 || native.dataset.upgraded) return;
+    native.dataset.upgraded = 'true';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'select';
+    if (native.classList.contains('form-select-sm')) wrap.classList.add('select--sm');
+    // Width is set inline at several call sites (style="width:auto"). Move it to the
+    // wrapper, which is now the thing occupying the layout.
+    const inline = native.getAttribute('style');
+    if (inline) {
+        wrap.setAttribute('style', inline);
+        native.removeAttribute('style');
+    }
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'select__trigger';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.disabled = native.disabled;
+
+    // The <label for> still points at the native control, which is now invisible, so
+    // carry the accessible name over to the thing that actually takes the focus.
+    const label = native.id ? document.querySelector('label[for="' + CSS.escape(native.id) + '"]') : null;
+    const name = native.getAttribute('aria-label') || (label && label.textContent.trim());
+    if (name) trigger.setAttribute('aria-label', name);
+
+    const value = document.createElement('span');
+    value.className = 'select__value';
+    trigger.appendChild(value);
+
+    const list = document.createElement('ul');
+    list.className = 'select__list';
+    list.setAttribute('role', 'listbox');
+    list.hidden = true;
+
+    native.parentNode.insertBefore(wrap, native);
+    wrap.appendChild(trigger);
+    wrap.appendChild(list);
+    wrap.appendChild(native);
+    native.classList.add('select__native');
+    native.setAttribute('tabindex', '-1');
+    native.setAttribute('aria-hidden', 'true');
+
+    let items = [];
+
+    function build() {
+        list.textContent = '';
+        items = Array.from(native.options).map((opt, i) => {
+            const li = document.createElement('li');
+            li.className = 'select__option';
+            li.setAttribute('role', 'option');
+            li.textContent = opt.textContent;
+            li.dataset.index = String(i);
+            if (opt.disabled) li.setAttribute('aria-disabled', 'true');
+            li.addEventListener('click', () => { if (!opt.disabled) choose(i); });
+            list.appendChild(li);
+            return li;
+        });
+        sync();
+    }
+
+    function sync() {
+        const opt = native.options[native.selectedIndex];
+        value.textContent = opt ? opt.textContent.trim() : '';
+        // An empty value is a "choose one" placeholder, not a choice — read as unfilled.
+        wrap.classList.toggle('select--placeholder', !opt || opt.value === '');
+        items.forEach((li, i) => li.setAttribute('aria-selected', String(i === native.selectedIndex)));
+    }
+
+    function choose(i) {
+        if (native.selectedIndex !== i) {
+            native.selectedIndex = i;
+            sync();
+            // Bubbles, so inline onchange="this.form.submit()" and any delegated
+            // listener behave exactly as they did with the native control.
+            native.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        close();
+        trigger.focus();
+    }
+
+    function open() {
+        if (trigger.disabled || !list.hidden) return;
+        closeOpenSelect();
+        list.hidden = false;
+        wrap.classList.add('is-open');
+        trigger.setAttribute('aria-expanded', 'true');
+        // Flip above the trigger when there is not room below it, so the list is never
+        // stranded off the bottom of a phone screen.
+        const room = window.innerHeight - trigger.getBoundingClientRect().bottom;
+        wrap.classList.toggle('select--up', room < Math.min(240, list.scrollHeight + 16));
+        const active = items[native.selectedIndex] || items[0];
+        if (active) active.scrollIntoView({ block: 'nearest' });
+        openSelect = { close };
+    }
+
+    function close() {
+        if (list.hidden) return;
+        list.hidden = true;
+        wrap.classList.remove('is-open', 'select--up');
+        trigger.setAttribute('aria-expanded', 'false');
+        if (openSelect && openSelect.close === close) openSelect = null;
+    }
+
+    function move(delta) {
+        if (list.hidden) { open(); return; }
+        const total = native.options.length;
+        let i = native.selectedIndex;
+        for (let step = 0; step < total; step++) {
+            i = (i + delta + total) % total;
+            if (!native.options[i].disabled) break;
+        }
+        choose(i);
+        open();
+    }
+
+    trigger.addEventListener('click', () => (list.hidden ? open() : close()));
+    trigger.addEventListener('keydown', (e) => {
+        switch (e.key) {
+            case 'ArrowDown': e.preventDefault(); move(1); break;
+            case 'ArrowUp': e.preventDefault(); move(-1); break;
+            case 'Home': e.preventDefault(); choose(0); break;
+            case 'End': e.preventDefault(); choose(native.options.length - 1); break;
+            case 'Enter':
+            case ' ': e.preventDefault(); list.hidden ? open() : close(); break;
+            case 'Escape': close(); break;
+        }
+    });
+    // Clicking the label should reach the control that is actually visible.
+    if (label) label.addEventListener('click', (e) => { e.preventDefault(); trigger.focus(); open(); });
+    // Anything that sets the value in code (a reset, a restored form) must show through.
+    native.addEventListener('change', sync);
+
+    build();
+}
+
+/** Only one list open at a time, and any outside click or Escape shuts it. */
+let openSelect = null;
+function closeOpenSelect() {
+    if (openSelect) openSelect.close();
+}
+document.addEventListener('click', (e) => {
+    if (openSelect && !e.target.closest('.select')) closeOpenSelect();
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeOpenSelect();
+});
