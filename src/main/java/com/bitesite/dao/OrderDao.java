@@ -111,6 +111,16 @@ public interface OrderDao {
      */
     Map<Long, Integer> sumQuantitiesByMenuItemToday(Long tenantId, Long outletId);
 
+    /**
+     * Menu item ids this student orders most often at one outlet, most-ordered first,
+     * ties broken by whichever they had most recently.
+     *
+     * <p>Aggregated in SQL rather than by walking {@link #findByUserId}: that loads every
+     * order this student has ever placed and attaches every line to it, which is a lot of
+     * rows to read on a page that wants at most ten ids.
+     */
+    List<Long> findFrequentMenuItemIds(Long userId, Long tenantId, Long outletId, int limit);
+
     /** Whether this tenant has already issued this token <em>today</em>. Scoped to the day
      * because that is the only window in which a token has to be unambiguous — see
      * V13__daily_order_tokens.sql for why lifetime uniqueness could not hold. */

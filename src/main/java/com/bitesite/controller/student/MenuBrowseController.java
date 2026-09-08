@@ -7,6 +7,7 @@ import com.bitesite.model.Outlet;
 import com.bitesite.model.User;
 import com.bitesite.service.Cart;
 import com.bitesite.service.MenuService;
+import com.bitesite.service.OrderService;
 import com.bitesite.service.OutletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +22,7 @@ import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -37,7 +39,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MenuBrowseController {
 
+    /** Enough to cover a usual order without turning the rail into a second menu. */
+    private static final int REORDER_RAIL_SIZE = 10;
+
     private final MenuService menuService;
+    private final OrderService orderService;
     private final OutletService outletService;
     private final Cart cart;
 
@@ -82,6 +88,7 @@ public class MenuBrowseController {
         model.addAttribute("ordersOpen", selected.isAcceptingOrders());
         model.addAttribute("itemsByCategory", byCategory);
         model.addAttribute("dealItems", dealItems);
+        model.addAttribute("reorderItems", reorderRail(user, selected, items));
         // Drives the Add-vs-stepper swap on each card: a card only shows a quantity
         // once that item is actually in the cart, so a stepper reading "1" always
         // means one is in there rather than "one is what you'd add".
@@ -90,6 +97,28 @@ public class MenuBrowseController {
         model.addAttribute("firstName", user.getName() == null ? null : user.getName().split(" ")[0]);
         model.addAttribute("pageTitle", "Menu");
         return "student/menu";
+    }
+
+    /**
+     * The "Order again" rail: this student's usual order at this canteen, ready to add
+     * in one tap.
+     *
+     * <p>Ranked by the database, then filtered against today's menu here, so anything the
+     * canteen has since removed, turned off or sold out for the day drops out silently
+     * instead of being offered and then refused at the cart. The ranking order survives
+     * the filter, which a plain {@code items.stream().filter(ids::contains)} would have
+     * thrown away by falling back to menu order.
+     */
+    private List<MenuItem> reorderRail(User user, Outlet outlet, List<MenuItem> todaysItems) {
+        List<Long> ranked = orderService.frequentMenuItemIds(
+                user.getId(), user.getTenantId(), outlet.getId(), REORDER_RAIL_SIZE);
+        if (ranked.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, MenuItem> orderable = todaysItems.stream()
+                .filter(MenuItem::orderable)
+                .collect(Collectors.toMap(MenuItem::getId, i -> i, (a, b) -> a));
+        return ranked.stream().map(orderable::get).filter(Objects::nonNull).toList();
     }
 
     /**

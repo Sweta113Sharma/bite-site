@@ -97,6 +97,40 @@
         </div>
 
 
+        <!-- Order again — this student's usual, one tap away.
+
+             Above the specials on purpose: a discount is the canteen's priority, but the
+             thing someone opening the app at 1pm most likely wants is what they had last
+             time. Empty for a first-time student, and for anyone whose past favourites
+             are all off today's menu, in which case nothing renders at all. -->
+        <div th:if="${!#lists.isEmpty(reorderItems)}" class="mb-4">
+            <h5 class="mb-3 d-flex align-items-center gap-2" style="font-family: var(--font-display); font-weight: 800; font-size: 1.25rem;">
+                <span class="material-symbols-outlined">history</span>
+                <span>Order again</span>
+            </h5>
+            <div class="featured-scroll">
+                <div class="deal-card" th:each="item : ${reorderItems}">
+                    <div class="deal-card-photo">
+                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                        <div th:if="${item.usesIllustration()}" class="photo-placeholder">
+                            <span class="material-symbols-outlined">restaurant</span>
+                        </div>
+                    </div>
+                    <div class="deal-card-body">
+                        <p class="deal-card-name" th:text="${item.name}">Item</p>
+                        <div class="deal-card-price" th:text="'₹' + ${item.effectivePrice()}">₹0</div>
+                        <form method="post" th:action="@{/student/cart/add}" class="deal-card-add-form add-to-cart-form"
+                              th:if="${ordersOpen}">
+                            <input type="hidden" name="menuItemId" th:value="${item.id}"/>
+                            <input type="hidden" name="outletId" th:value="${selectedOutlet.id}"/>
+                            <input type="hidden" name="quantity" value="1"/>
+                            <button type="submit" class="btn-add deal-card-add" aria-label="Add to cart">Add</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Today's Deals (Foochi-style Specials carousel) -->
         <div th:if="${!#lists.isEmpty(dealItems)}" class="mb-4">
             <h5 class="mb-3 d-flex align-items-center gap-2" style="font-family: var(--font-display); font-weight: 800; font-size: 1.25rem;">

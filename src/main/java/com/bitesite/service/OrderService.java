@@ -209,6 +209,16 @@ public class OrderService {
     }
 
     /**
+     * The menu items this student orders most often at one outlet, ranked, for the
+     * "Order again" rail. Returns ids only; the caller decides which are still on today's
+     * menu, so a favourite the canteen has since removed or sold out simply does not
+     * appear rather than being offered and then refused at the cart.
+     */
+    public List<Long> frequentMenuItemIds(Long userId, Long tenantId, Long outletId, int limit) {
+        return orderDao.findFrequentMenuItemIds(userId, tenantId, outletId, limit);
+    }
+
+    /**
      * Unfinished orders, most urgent first — see {@link OrderStatus#attentionRank()}.
      * Drives the active-order strip and the orders screen's "Active now" group.
      */

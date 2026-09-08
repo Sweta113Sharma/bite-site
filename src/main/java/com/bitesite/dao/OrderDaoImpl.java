@@ -259,6 +259,22 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    public List<Long> findFrequentMenuItemIds(Long userId, Long tenantId, Long outletId, int limit) {
+        // AWAITING_PAYMENT is excluded alongside the failure states: an order nobody paid
+        // for is not evidence anybody wanted the food, and offering it back as a
+        // favourite would be a suggestion built out of an abandoned checkout.
+        return jdbcTemplate.queryForList(
+                "SELECT oi.menu_item_id FROM order_items oi "
+                        + "JOIN orders o ON o.id = oi.order_id "
+                        + "WHERE o.user_id = ? AND o.tenant_id = ? AND o.outlet_id = ? "
+                        + "AND o.status NOT IN ('CANCELLED','EXPIRED','PAYMENT_FAILED','AWAITING_PAYMENT') "
+                        + "GROUP BY oi.menu_item_id "
+                        + "ORDER BY COUNT(*) DESC, MAX(o.created_at) DESC "
+                        + "LIMIT ?",
+                Long.class, userId, tenantId, outletId, limit);
+    }
+
+    @Override
     public List<Order> searchByTokenAcrossTenants(String token) {
         // Suffix match so a student can hand over the tail of a token ("1984") rather
         // than the whole thing; anchored on the right so it still uses a scan of one
