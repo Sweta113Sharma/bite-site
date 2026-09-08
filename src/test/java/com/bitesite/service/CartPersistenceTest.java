@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.LinkedHashMap;
@@ -34,7 +35,10 @@ class CartPersistenceTest {
     @BeforeEach
     void setUp() {
         persistence = new CartPersistence(savedCartDao);
-        cart = new Cart();
+        // Cart now keeps its state in the session rather than being a session-scoped
+        // bean, so it needs a request to read and write through. MockHttpServletRequest
+        // supplies a real working session, which is exactly what these tests exercise.
+        cart = new Cart(new MockHttpServletRequest());
     }
 
     @Test
