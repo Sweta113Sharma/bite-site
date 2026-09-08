@@ -13,9 +13,10 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchAutoHide": false,
+      "launchAutoHide": true,
       "launchFadeOutDuration": 200,
-      "backgroundColor": "#f2ead9"
+      "backgroundColor": "#f2ead9",
+      "launchShowDuration": 0
     },
     "Keyboard": {
       "resize": "native"

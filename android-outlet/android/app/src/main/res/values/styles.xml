@@ -27,11 +27,14 @@
          came out dark against the app's bone canvas.
 
          Android 12+ does not allow a full-bleed splash image; the system draws a
-         masked, centred icon on a solid colour. That is what these two attributes
-         set. postSplashScreenTheme is not needed: BridgeActivity.onCreate calls
-         setTheme(AppTheme_NoActionBar) itself. -->
+         masked, centred icon on a solid colour, so the illustrated splash could never
+         appear here. The icon is deliberately transparent: this first frame is only
+         the bone field that SplashOverlay then animates the artwork onto, and a
+         visible launcher icon here would pop once and then pop again the moment the
+         overlay's own logo arrived. postSplashScreenTheme is not needed:
+         BridgeActivity.onCreate calls setTheme(AppTheme_NoActionBar) itself. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splashBackground</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_none</item>
     </style>
 </resources>

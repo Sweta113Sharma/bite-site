@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The system splash always draws an icon and falls back to the launcher icon when
+     none is named. This transparent one keeps that first frame a blank bone field, so
+     the animated elements in SplashOverlay are the first thing that appears. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+</shape>
