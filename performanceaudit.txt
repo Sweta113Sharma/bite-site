@@ -1,0 +1,341 @@
+BITESITE — PERFORMANCE AUDIT
+2026-09-08
+
+================================================================================
+0. HOW THIS WAS MEASURED, AND WHAT THAT IS WORTH
+================================================================================
+
+Environment      Local instance, identical code to production, MySQL 9.7.1 on the
+                 same machine. Seed data: 1 tenant, 1 outlet, 6 menu items, ~8 orders.
+
+Tools            ApacheBench for throughput and latency. MySQL general_log for exact
+                 statement counts per request. curl for page weight.
+
+WHAT THIS DOES NOT TELL YOU
+  - Production is Azure MySQL Flexible Server, Burstable tier, over a network. Every
+    statement counted here costs a network round trip there that it does not cost
+    locally. Statement counts therefore UNDERSTATE production latency, probably by a
+    lot. Ratios hold; absolute milliseconds do not.
+  - The dataset is tiny. Nothing here exercises a table large enough to expose a bad
+    index. Query plans were checked separately against synthetic volume (section 2.5).
+  - Production was deliberately NOT load tested. It has a live college onboarded and a
+    database whose first connection already consumes 6.4s of a 10s budget. Generating
+    load against that is how you cause an outage, not how you find one.
+
+================================================================================
+1. WHAT IS RIGHT
+================================================================================
+
+Worth stating plainly, because most of this codebase is in good shape and the
+findings below are specific defects rather than a general condemnation.
+
+1.1  QUERIES ARE INDEXED AND TENANT-SCOPED
+     Every hot query carries an explicit tenant_id and hits an index. The reorder
+     rail was checked against 10,000 orders across 300 users: MySQL chooses
+     idx_orders_user and examines 34 rows, not a scan. No N+1 loops were found on
+     any page measured. The DAO layer aggregates in SQL rather than in Java —
+     sumQuantitiesByMenuItemToday and findFrequentMenuItemIds both do work in the
+     database that a naive implementation would do by loading entities.
+
+1.2  THE CONNECTION POOL IS DELIBERATE
+     HikariCP is configured explicitly rather than left on defaults, with
+     leak-detection-threshold set. The comment records why: an instance was once
+     found holding 135 connections against a server allowing 151. That is the right
+     lesson learned in the right place.
+
+1.3  STATIC ASSETS ARE FINGERPRINTED AND CACHED PROPERLY
+     /css and /js are content-hashed, so they are immutable and cache forever. They
+     are also excluded from the security filter chain entirely, which means an image
+     request cannot start a session. That exclusion turned out to matter (section 3.1).
+
+1.4  THE ICON FONT IS SUBSET
+     ~3,000 glyphs reduced to 62, 3.98MB to 377KB, with a test asserting the subset
+     and the templates agree. This is the single largest asset win in the app and it
+     is already done.
+
+1.5  POLLING IS CONSERVATIVE ABOUT PAYLOAD
+     Both pollers request JSON, not HTML fragments, and the client leaves the DOM
+     alone when nothing changed.
+
+================================================================================
+2. WHAT IS WRONG
+================================================================================
+
+All figures are measured, per request, from MySQL's general log.
+
+2.1  THE SESSION COSTS MORE THAN THE PAGE               [severity: HIGH]
+
+     Student menu page, before today's fixes: 23 statements, of which 16 were
+     session and transaction machinery and 7 were actual data.
+
+     Current state after fixes, per student menu render:
+
+         12.0   BEGIN / COMMIT / end-txn      (four separate transactions)
+          6.3   business queries
+          2.0   session READ                  (the same session, read twice)
+          1.0   tenant lookup
+          1.0   cart attribute write
+         ----
+         22.3   statements per page view
+
+     Roughly 70% of the database work on a page render is session bookkeeping.
+
+2.2  THE POLLING ENDPOINTS ARE 80% OVERHEAD             [severity: HIGH]
+
+     /api/orders/queue   polls every  5s   (outlet console, all day)
+     /api/orders/active  polls every 15s   (every open student page)
+
+     Measured per poll: 13.1 statements, of which
+         7.5  transaction overhead
+         3.0  session
+         2.6  actual business query
+
+     One outlet console open for a 12-hour shift:
+         12 polls/min x 720 min x 13.1  =  ~113,000 statements
+         of which                        =  ~90,000 are session overhead
+
+     This is the largest sustained load in the system and it is almost entirely
+     bookkeeping. It scales linearly with the number of canteens you onboard.
+
+2.3  THE SESSION IS COMMITTED TWICE PER REQUEST         [severity: MEDIUM]
+
+     Traced in order on one student request:
+
+         [txn 1]  SESSION READ
+                  ...6 business queries...
+         [txn 2]  UPDATE SPRING_SESSION            <- commit #1
+         [txn 3]  SESSION READ (again)             <- cache cleared, re-read
+         [txn 4]  CART WRITE                       <- commit #2
+
+     Cause: the page is far larger than Tomcat's 8KB output buffer, so the response
+     commits mid-render. Spring Session's onResponseCommitted fires commit #1 and
+     clears its cache; the session-scoped bean writeback at request end then
+     re-reads and commits again.
+
+     This is the same double-commit path behind the DuplicateKeyException that was
+     returning 500s on the access-denied page earlier today. It is a correctness bug
+     and a performance bug wearing the same hat.
+
+2.4  PAGES SHIPPED THEIR OWN SOURCE COMMENTS            [severity: MEDIUM — FIXED]
+
+     Thymeleaf renders <!-- --> into output. 27% of the student menu (14,850 of
+     54,640 bytes) was commentary intended for developers, sent to every user on
+     every page load. See 4.2.
+
+2.5  RESPONSES WERE NOT COMPRESSED AT ALL               [severity: HIGH — FIXED]
+
+     Spring Boot leaves server.compression off by default and nothing had turned it
+     on, so every page went out uncompressed. Server-rendered HTML is enormously
+     compressible and these users are on campus mobile data. See 3.3.
+
+2.6  PAGES ARE STILL LARGE ON THE SERVER                [severity: MEDIUM]
+
+     After the comment fix:
+         /student/menu     39,852 bytes
+         /student/orders   22,929
+         /student/cart     13,491
+         /login             6,039
+
+     39KB of HTML for a six-item menu is heavy for a campus 4G connection, and it is
+     still ~5x Tomcat's 8KB output buffer, which is what keeps 2.3 alive. Note that
+     compression (3.3) fixes the bytes on the wire but NOT this: the buffer counts
+     characters written before compression, so 2.3 survives regardless.
+
+2.7  A TENANT LOOKUP ON EVERY AUTHENTICATED REQUEST     [severity: LOW]
+
+     TenantResolutionInterceptor issues SELECT * FROM tenants WHERE id = ? per
+     request. A primary-key hit on a tiny table, so cheap locally — but it is a
+     network round trip in production, on every request, for data that changes
+     approximately never.
+
+================================================================================
+3. WHAT WAS FIXED TODAY
+================================================================================
+
+3.1  THE CART BLOB WRITE ON EVERY PAGE OF EVERY PORTAL       commit e5f5ca1
+
+     GlobalModelAttributes.cartItemCount() read the session-scoped Cart on every
+     render, unguarded. Merely READING a session-scoped bean makes Spring
+     re-setAttribute it at request end (ServletRequestAttributes
+     .updateAccessedSessionAttributes, which exists so mutations reach a distributed
+     store). That marks it dirty, and Spring Session JDBC writes a Java-serialized
+     object to MySQL.
+
+     An anonymous GET of /login therefore issued four writes, including
+     x'aced...com.bitesite.service.Cart', for a visitor with no account and no cart.
+     Anonymous traffic is bots, link previews and probes. Writes are the expensive
+     operation on Burstable.
+
+     activeOrders() immediately below it was already role-guarded, with a comment
+     saying staff renders must never run its query. The guard simply never reached
+     the cart.
+
+     THE INTERESTING PART: guarding it alone broke 23 tests. That read was
+     accidentally load-bearing — it created the session early, and fragments/head
+     reads _csrf?.token during rendering. Spring Security 6 defers token generation
+     until something reads it, so with the cart read gone the token was created
+     mid-render against an already-committed response:
+     "Cannot create a session after the response has been committed".
+
+     CsrfTokenEagerFilter now resolves the token immediately after CsrfFilter,
+     making the ordering explicit rather than incidental. This is the remedy in
+     Spring Security's own documentation.
+
+     MEASURED:
+         anonymous page   11.3 -> 5.3 statements per request   (-53%)
+         /login p50       43ms -> 17ms                         (-60%)
+         student pages    unchanged (they legitimately use the cart)
+
+3.2  27% OF PAGE WEIGHT WAS COMMENTS                          commit 631e638
+
+     All 126 template comments converted to Thymeleaf's parser-level form
+     <!--/* */-->, which is stripped at render. Not one word removed from source.
+     Comments inside <script>/<style> were skipped, where <!-- can be script syntax.
+
+     MEASURED:
+         /student/menu   54,640 -> 39,852 bytes   (-27%)
+         HTML comments in output of any page: 0
+
+     Verified by content, not just size: menu cards, order-again rail, search,
+     category chips, sticky cart, csrf meta and the stylesheet set all still render,
+     54 menu-card nodes as before. 358 tests pass.
+
+3.3  NOTHING WAS COMPRESSED                                   commit pending
+
+     server.compression was never enabled. One config block, measured live:
+
+         /student/menu     39,852 -> 4,525 bytes on the wire   (-89%)
+         /student/orders   22,889 -> 3,207                     (-86%)
+         /login             6,039 -> 2,146                     (-64%)
+
+     This is the largest single win in the audit and it cost one config block.
+     min-response-size is set to 1024 so small responses are not made worse by the
+     gzip header and the CPU to produce it.
+
+     It does NOT help section 2.3: Tomcat's output buffer counts characters written
+     before compression, so the response still commits mid-render.
+
+================================================================================
+4. WHAT CAN BE OPTIMISED, IN ORDER
+================================================================================
+
+Ranked by payoff divided by risk. Do them in this order; each makes the next
+smaller.
+
+--------------------------------------------------------------------------------
+4.1  TAKE THE CART OFF @SessionScope                  payoff HIGH   risk MEDIUM
+--------------------------------------------------------------------------------
+     This is the single fix for 2.1, 2.3 and half of 2.2 at once.
+
+     Storing the cart explicitly and writing it only when it actually changes
+     removes the writeback, which removes the second commit, which removes the
+     second session read. Student page: ~22 statements -> ~13.
+
+     Blast radius: 6 files (CartController, CheckoutController, MenuBrowseController,
+     OrderHistoryController, CartPersistence, GlobalModelAttributes).
+     Needs real tests around add / remove / outlet-switch / checkout, because
+     getting this wrong loses somebody's cart at the till.
+
+--------------------------------------------------------------------------------
+4.2  STOP THE POLLERS PAYING FULL SESSION COST        payoff HIGH   risk MEDIUM
+--------------------------------------------------------------------------------
+     Section 2.2 is the largest sustained load in the system and it grows with every
+     canteen onboarded. Three options, cheapest first:
+
+       a) Lengthen the outlet poll from 5s to 10s. Halves the load for a delay no
+          human notices at a counter. One constant in queue-poll.js. Do this first
+          regardless of the others.
+       b) Have the JSON endpoints skip the session write when nothing changed. The
+          session touch keeps sessions alive; the transaction wrapper is what costs.
+       c) Replace polling with Server-Sent Events on the queue. Correct answer,
+          largest change, do not attempt before launch settles.
+
+--------------------------------------------------------------------------------
+4.3  COLLAPSE THE FOUR SESSION TRANSACTIONS           payoff MEDIUM risk MEDIUM
+--------------------------------------------------------------------------------
+     12 of 22 statements per request are BEGIN/COMMIT/end-txn from Spring Session
+     wrapping each operation in its own transaction.
+     TransactionOperations.withoutTransaction() removes them.
+
+     TRADE-OFF: drops atomicity on multi-statement session saves. Session data is
+     ephemeral and self-healing, so this is defensible, but it is a real trade and
+     should be a deliberate decision, not a silent one.
+
+     Do this AFTER 4.1, which removes two of the four transactions by itself.
+
+--------------------------------------------------------------------------------
+4.4  REDUCE PAGE WEIGHT FURTHER                       payoff MEDIUM risk LOW
+--------------------------------------------------------------------------------
+     39KB for a six-item menu. Worth investigating where the rest goes before
+     changing anything — likely repeated per-card markup. Every KB helps a campus
+     4G connection and pushes toward the 8KB buffer that keeps 2.3 alive.
+
+     Compression is now on (3.3), so the wire cost is already 89% lower. What
+     remains is server-side render time and the 8KB buffer interaction in 2.3,
+     neither of which compression touches.
+
+--------------------------------------------------------------------------------
+4.5  CACHE THE TENANT LOOKUP                          payoff LOW    risk MEDIUM
+--------------------------------------------------------------------------------
+     One round trip per authenticated request. Small, and it needs invalidation
+     design so that suspending a college takes effect promptly rather than after a
+     TTL. No cache dependency exists in the project today; adding one for a single
+     primary-key lookup is not obviously worth it. Do last, or not at all.
+
+================================================================================
+5. PRODUCTION-SPECIFIC, AND NOT FIXABLE IN CODE
+================================================================================
+
+5.1  THE DATABASE IS BURSTABLE TIER                          [severity: HIGH]
+     bitesite-db-01, MySQL 8.0.21, Burstable. This caused the outages on 2026-09-05
+     and 2026-09-07: a slow first connection killed startup outright, because
+     Flyway's connect-retries default is 0.
+
+     Retries were added and are sized to App Service's 230s startup budget, but they
+     are a safety net, not a fix. On the HEALTHY boot of 2026-09-08 the first
+     connection still took 6.4 seconds against a 10 second Hikari timeout. That is
+     two thirds of the budget consumed on a good day.
+
+     Everything in section 4 reduces the number of round trips crossing that link,
+     which is the only leverage code has here. The actual fix is a tier that is not
+     Burstable.
+
+5.2  healthCheckPath IS UNSET                                [severity: MEDIUM]
+     Azure cannot distinguish a wedged instance from a healthy one and will keep
+     routing to it. /actuator/health already exists and returns UP. This is one
+     setting and should be done before the first real lunch rush.
+
+5.3  GEO-REDUNDANT BACKUP IS DISABLED, RETENTION IS 7 DAYS   [severity: LOW]
+     Point-in-time restore only, and it builds a NEW server, so recovery means
+     repointing the app rather than a quick undo. Fine for now; know it before you
+     need it.
+
+================================================================================
+6. DELIBERATELY NOT DONE
+================================================================================
+
+6.1  Production was not load tested. Reason in section 0.
+
+6.2  The response buffer was not raised to fit the page. Raising Tomcat's output
+     buffer to 64KB would stop the mid-render commit and make 2.3 disappear, but it
+     costs memory per concurrent request and treats the symptom. 4.1 removes the
+     cause.
+
+6.3  Comment content was not shortened. The 27% page-weight problem is solved
+     entirely by 3.2 at zero information cost. Compressing the comments themselves
+     would remove less weight AND lose the reasoning — and that reasoning has
+     concrete value: the verbose comment on activeOrders() is what made the missing
+     guard on cartItemCount() visible, which is the biggest finding in this document.
+
+================================================================================
+7. ONE-LINE SUMMARY
+================================================================================
+
+The queries are fine. Two things were not:
+
+  - Nothing was compressed. Now fixed, and it took 89% off every page.
+  - The session machinery costs more than the pages do — roughly 70% of the database
+    work on a render and 80% on a poll.
+
+The single highest-value change remaining is to stop the shopping cart living in a
+database-backed HTTP session, which fixes three separate findings at once.
