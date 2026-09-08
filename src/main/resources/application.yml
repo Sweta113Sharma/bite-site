@@ -37,6 +37,20 @@ spring:
     # application-test.yml so test behavior is unchanged.
     locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
     baseline-on-migrate: true
+    # Flyway opens the first connection of the whole boot, and its default here is 0
+    # retries — so one transient "Communications link failure" from Azure's MySQL took
+    # the site down rather than delaying it. That is what happened on 2026-09-05 and
+    # 2026-09-07: the context failed, the JVM exited, App Service cancelled startup, and
+    # the site only came back when Azure retried the container ~2.5 minutes later.
+    #
+    # Sized against App Service's startup budget, not picked round. The limit is 230s
+    # (WEBSITES_CONTAINER_START_TIME_LIMIT is unset, so the default applies); the failed
+    # boot used 129s of it, of which the doomed connection attempt was 22s. Two retries
+    # at 5s cost at most ~54s more, which still lands inside the budget. Going higher
+    # would overrun it and be killed anyway, which is the outcome retrying is meant to
+    # avoid — raise the App Service limit first if this ever needs to be more patient.
+    connect-retries: ${FLYWAY_CONNECT_RETRIES:2}
+    connect-retries-interval: 5s
 
   thymeleaf:
     cache: ${THYMELEAF_CACHE:false}
