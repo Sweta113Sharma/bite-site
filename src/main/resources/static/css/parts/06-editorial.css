@@ -780,21 +780,35 @@
 @media (min-width: 992px) {
     .auth-card { padding: var(--stack-lg); }
 
-    /* The page has room to breathe here, so the sections take the wider margin. */
-    .welcome-hero,
+    /* The brand panel sits immediately to the left at this width carrying the wordmark,
+       this same headline and the same sub, in much larger type. Only the hero's wordmark
+       was hidden for that reason, which left the identical sentence on screen twice, side
+       by side in two different treatments. The whole band goes and the column opens on
+       the two actions, which is what a visitor is here to press. */
+    .welcome-hero { display: none; }
+
+    /* The card supplies the margin at this width (padding above), so the sections must not
+       add their own on top of it. Two lots of --stack-lg squeezed the tiles and the steps
+       into the middle of a column that was already too narrow. */
     .welcome-actions,
     .welcome-tiles,
     .welcome-steps,
     .welcome .welcome-section,
     .welcome .auth-foot,
     .welcome .auth-legal {
-        padding-left: var(--stack-lg);
-        padding-right: var(--stack-lg);
+        padding-left: 0;
+        padding-right: 0;
     }
-    /* The brand panel already carries the identity at this width, so the hero's
-       own wordmark would be the second one on screen — same reason the lockup is
-       hidden just below. */
-    .welcome-hero__mark { display: none; }
+
+    /* 520px is a phone column, and it stayed 520px inside a half-screen desktop pane:
+       the content sat marooned with dead gutters either side of it. */
+    .welcome { max-width: 640px; }
+
+    /* Four stacked steps ran the page long while width went spare beside them. */
+    .welcome-steps {
+        grid-template-columns: 1fr 1fr;
+        column-gap: var(--stack-md);
+    }
 
     /* The panel carries the identity at this width, so the card's own lockup would be
        the second one on screen. The pre-redesign layout hid it here for that reason;
