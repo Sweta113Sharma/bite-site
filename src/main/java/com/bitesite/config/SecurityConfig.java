@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
@@ -52,6 +53,7 @@ public class SecurityConfig {
     private final RoleBasedAuthenticationSuccessHandler successHandler;
     private final LoginFailureHandler failureHandler;
     private final PortalGateFilter portalGateFilter;
+    private final CsrfTokenEagerFilter csrfTokenEagerFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -108,6 +110,9 @@ public class SecurityConfig {
                     // token. It is write-only, stores nothing, and is rate limited.
                     new AntPathRequestMatcher("/api/csp-report")))
             // Portal gate filter runs after authentication but before authorization
+            // Before anything renders, so token generation never races a committed
+            // response. See CsrfTokenEagerFilter for why this used to work by accident.
+            .addFilterAfter(csrfTokenEagerFilter, CsrfFilter.class)
             .addFilterAfter(portalGateFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/", "/login", "/tenant-unavailable",

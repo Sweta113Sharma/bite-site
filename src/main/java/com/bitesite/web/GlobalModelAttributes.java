@@ -31,9 +31,29 @@ public class GlobalModelAttributes {
 
     /** Total item count in the student's session cart, for the bottom-nav badge and
      * sticky cart bar — rendered on every page so it's already correct on first paint,
-     * with no post-load flash while JS catches up. */
+     * with no post-load flash while JS catches up.
+     *
+     * <p>Guarded by role for the same reason {@link #activeOrders()} is, except the cost
+     * here is a write, not a read. Merely <em>reading</em> a session-scoped bean makes
+     * Spring re-{@code setAttribute} it when the request ends — {@code
+     * ServletRequestAttributes.updateAccessedSessionAttributes()} does that so mutations
+     * reach a distributed store — which marks the attribute dirty and has Spring Session
+     * JDBC write the serialized Cart back to MySQL.
+     *
+     * <p>Unguarded, that meant a serialized-object write on every page render of every
+     * portal. An anonymous GET of /login wrote the Cart blob before the visitor had an
+     * account, let alone a cart. Writes are the expensive operation on the Burstable
+     * database tier this runs on.
+     *
+     * <p>Removing this read is what exposed the CSRF ordering problem the token filter now
+     * handles deliberately — see {@link com.bitesite.config.CsrfTokenEagerFilter}. */
     @ModelAttribute("cartItemCount")
     public int cartItemCount() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof AppUserPrincipal principal)
+                || principal.getUser().getActiveRole() != Role.USER) {
+            return 0;
+        }
         return cart.getQuantities().values().stream().mapToInt(Integer::intValue).sum();
     }
 
