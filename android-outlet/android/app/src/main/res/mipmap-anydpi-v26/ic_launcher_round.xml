@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- No <inset> on either layer, deliberately.
+
+     Capacitor's template shipped inset="16.7%", which maps each drawable onto the
+     centre 66.6% of the 108dp canvas — precisely the 72dp the launcher's mask
+     reveals. That silently changes the contract: artwork then has to be sized as a
+     fraction of the *visible* area rather than of the canvas, so a mark filling its
+     own bitmap comes out filling the entire mask edge to edge with no breathing
+     room. That is exactly how the icon ended up looking zoomed in.
+
+     Without the insets the normal rules apply again: 108dp canvas, 72dp visible,
+     66dp keyline, and the artwork is sized against the canvas. The background also
+     has to reach the canvas edge, or a launcher using a slightly larger mask than
+     72dp shows a bare rim around the plate. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background>
-        <inset android:drawable="@mipmap/ic_launcher_background" android:inset="16.7%" />
-    </background>
-    <foreground>
-        <inset android:drawable="@mipmap/ic_launcher_foreground" android:inset="16.7%" />
-    </foreground>
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
 </adaptive-icon>
