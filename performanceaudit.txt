@@ -63,22 +63,24 @@ findings below are specific defects rather than a general condemnation.
 
 All figures are measured, per request, from MySQL's general log.
 
-2.1  THE SESSION COSTS MORE THAN THE PAGE               [severity: HIGH]
+2.1  THE SESSION COSTS MORE THAN THE PAGE      [severity: HIGH — PARTLY FIXED]
 
      Student menu page, before today's fixes: 23 statements, of which 16 were
      session and transaction machinery and 7 were actual data.
 
-     Current state after fixes, per student menu render:
+     Per student menu render, tracked across today's fixes:
 
-         12.0   BEGIN / COMMIT / end-txn      (four separate transactions)
-          6.3   business queries
-          2.0   session READ                  (the same session, read twice)
-          1.0   tenant lookup
-          1.0   cart attribute write
-         ----
-         22.3   statements per page view
+                          start   after 3.1   after 3.4
+         txn overhead      12.0      12.0        9.0
+         business           7.0       6.3        7.25
+         session READ       2.0       2.0        2.0
+         session touch      1.0       1.0          0
+         cart write         1.0       1.0          0
+                          -----     -----      -----
+         total             23.0      22.3       18.3
 
-     Roughly 70% of the database work on a page render is session bookkeeping.
+     Still roughly half the database work on a render is session bookkeeping. What
+     remains is the transaction-per-operation churn (4.3) and the double read (2.3).
 
 2.2  THE POLLING ENDPOINTS ARE 80% OVERHEAD             [severity: HIGH]
 
@@ -96,6 +98,12 @@ All figures are measured, per request, from MySQL's general log.
 
      This is the largest sustained load in the system and it is almost entirely
      bookkeeping. It scales linearly with the number of canteens you onboard.
+
+     RE-MEASURED after 3.4: the queue poll alone is 14.2 statements — 9.0 txn
+     overhead, 3.1 session, 2.1 business. Unchanged, and expected to be: outlet
+     users never had a cart, so they never paid the cost 3.4 removed. The poll's
+     dominant cost is 4.3, which is still open. The earlier 13.1 figure averaged
+     both pollers and is not directly comparable to this one.
 
 2.3  THE SESSION IS COMMITTED TWICE PER REQUEST         [severity: MEDIUM]
 
@@ -215,6 +223,23 @@ All figures are measured, per request, from MySQL's general log.
      It does NOT help section 2.3: Tomcat's output buffer counts characters written
      before compression, so the response still commits mid-render.
 
+3.4  THE CART LIVED IN A SESSION-SCOPED BEAN                  commit 85859f3
+
+     Audit item 4.1, done. State moved into the session under one key, written only
+     on change; reads never write. Public API unchanged, so no call site moved.
+
+     MEASURED, student menu render:  22.3 -> 18.3 statements
+     The cart write and the session touch are both gone, taking one of the four
+     session transactions with them.
+
+     Carts held in sessions from before the deploy are invalidated, since they were
+     stored under Spring's scoped-bean key. Already covered: CartPersistence
+     .hydrateOnce restores from saved_carts.
+
+     Verified beyond unit tests — signed in, added two items through the real
+     endpoint, read them back off the cart page with the right total — because
+     losing cart state costs a customer an order.
+
 ================================================================================
 4. WHAT CAN BE OPTIMISED, IN ORDER
 ================================================================================
@@ -223,7 +248,7 @@ Ranked by payoff divided by risk. Do them in this order; each makes the next
 smaller.
 
 --------------------------------------------------------------------------------
-4.1  TAKE THE CART OFF @SessionScope                  payoff HIGH   risk MEDIUM
+4.1  TAKE THE CART OFF @SessionScope        [DONE — see 3.4]
 --------------------------------------------------------------------------------
      This is the single fix for 2.1, 2.3 and half of 2.2 at once.
 
@@ -251,11 +276,19 @@ smaller.
           largest change, do not attempt before launch settles.
 
 --------------------------------------------------------------------------------
-4.3  COLLAPSE THE FOUR SESSION TRANSACTIONS           payoff MEDIUM risk MEDIUM
+4.3  COLLAPSE THE REMAINING SESSION TRANSACTIONS      payoff HIGH   risk MEDIUM
 --------------------------------------------------------------------------------
-     12 of 22 statements per request are BEGIN/COMMIT/end-txn from Spring Session
-     wrapping each operation in its own transaction.
-     TransactionOperations.withoutTransaction() removes them.
+     NOW THE LARGEST REMAINING ITEM, and the one holding up the pollers: 9 of the
+     14.2 statements in a queue poll, and 9 of the 18.3 in a page render.
+
+     Spring Session wraps each operation in its own transaction.
+     TransactionOperations.withoutTransaction() removes the churn, BUT it is a
+     CONSTRUCTOR argument of JdbcIndexedSessionRepository, not a setter — the
+     existing SessionRepositoryCustomizer cannot reach it. It has to be supplied to
+     JdbcHttpSessionConfiguration before the repository is built, which means
+     overriding how Spring Boot autoconfigures the session repository. That is why
+     it was not done today: the change is small but the wiring is not, and getting
+     it wrong silently breaks session persistence for everyone.
 
      TRADE-OFF: drops atomicity on multi-statement session saves. Session data is
      ephemeral and self-healing, so this is defensible, but it is a real trade and
