@@ -62,8 +62,8 @@
                 </li>
             </ul>
 
-            <!-- Payment block. Absent for orders abandoned before checkout, which is a
-                 normal state and not an error worth dressing up as one. -->
+            <!--/* Payment block. Absent for orders abandoned before checkout, which is a
+                 normal state and not an error worth dressing up as one. */-->
             <div th:if="${row.payment() == null}" class="text-muted small mb-3">
                 <span class="material-symbols-outlined">info</span> No payment was ever started for this order.
             </div>
@@ -88,9 +88,9 @@
                 <span>Already refunded. Nothing further to do here.</span>
             </div>
 
-            <!-- Refund is SUPER_ADMIN only; a tech manager sees the evidence but not the
+            <!--/* Refund is SUPER_ADMIN only; a tech manager sees the evidence but not the
                  button, matching the @PreAuthorize on the controller. Hiding it here is
-                 presentation only — the server check is what actually enforces it. -->
+                 presentation only — the server check is what actually enforces it. */-->
             <form th:if="${row.refundable()}" sec:authorize="hasRole('SUPER_ADMIN')"
                   method="post" th:action="@{/admin/support/orders/{id}/refund(id=${row.order().id})}"
                   onsubmit="return confirm('Refund this payment in full? This cannot be undone.');">

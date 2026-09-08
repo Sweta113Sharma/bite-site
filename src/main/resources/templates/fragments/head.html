@@ -2,32 +2,32 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:fragment="head">
     <meta charset="UTF-8"/>
-    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to anything other
+    <!--/* viewport-fit=cover is what makes env(safe-area-inset-*) resolve to anything other
          than zero on a notched iPhone. Sixteen rules across seven stylesheets already read
          --safe-area-bottom to keep the tab bar, the sticky cart bar and the toasts clear of
          the home indicator; without this attribute every one of them was computing with a
-         zero and the bar sat under the indicator on every iPhone X and later. -->
+         zero and the bar sat under the indicator on every iPhone X and later. */-->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
     <title th:text="${pageTitle != null ? pageTitle + ' - BiteSite' : 'BiteSite'}">BiteSite</title>
     <link rel="icon" type="image/png" th:href="@{/img/logo-mark.png}"/>
     <link rel="manifest" th:href="@{/manifest.webmanifest}"/>
     <link rel="apple-touch-icon" th:href="@{/img/icons/apple-touch-icon.png}"/>
-    <!-- Matches the app canvas so the Android status bar continues the page instead of
+    <!--/* Matches the app canvas so the Android status bar continues the page instead of
          capping it with a band of another colour. The home-screen icon below keeps the
-         vivid brand terracotta — that one wants to stand out in an app grid. -->
+         vivid brand terracotta — that one wants to stand out in an app grid. */-->
     <meta name="theme-color" content="#F9F9F9"/>
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
     <meta name="apple-mobile-web-app-title" content="BiteSite"/>
-    <!-- Bootstrap still comes from jsDelivr and is render-blocking, so the browser cannot
+    <!--/* Bootstrap still comes from jsDelivr and is render-blocking, so the browser cannot
          paint until it has done a DNS lookup, a TCP connect and a TLS handshake with a
          host it has not spoken to yet. Warming that connection in parallel with parsing
-         the rest of the head takes that cost off the critical path. -->
+         the rest of the head takes that cost off the critical path. */-->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous"/>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
-    <!-- Archivo Black + Archivo: the BIG BEEF reference language. Archivo Black carries
-         display/headings/buttons; Archivo carries body copy. -->
+    <!--/* Archivo Black + Archivo: the BIG BEEF reference language. Archivo Black carries
+         display/headings/buttons; Archivo carries body copy. */-->
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&amp;family=Archivo:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
     <style>
         /* Self-hosted Material Symbols — no CDN dependency, icons always render. */
@@ -39,12 +39,12 @@
             src: url('/fonts/material-symbols-outlined.woff2?v=2') format('woff2');
         }
     </style>
-    <!-- Phosphor is gone: the outlet and admin portals were the last users of it, and they
+    <!--/* Phosphor is gone: the outlet and admin portals were the last users of it, and they
          now draw from the same self-hosted Material Symbols set as the customer app. That
          removes two render-blocking CDN stylesheets from every page in the product and
-         makes icons work offline, which a PWA needs. -->
+         makes icons work offline, which a PWA needs. */-->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-    <!-- Ordered stylesheet set. THIS ORDER IS THE CASCADE: each file may only override
+    <!--/* Ordered stylesheet set. THIS ORDER IS THE CASCADE: each file may only override
          the ones above it, so the links must not be reordered and a rule must not move
          between files without checking what it then stops overriding.
 
@@ -60,7 +60,7 @@
 
          Served with a content hash and a one-year immutable cache (see
          spring.web.resources.chain in application.yml), so the request count matters
-         only on a first visit and every file is then free. -->
+         only on a first visit and every file is then free. */-->
     <link rel="stylesheet" th:href="@{/css/parts/01-tokens.css}"/>
     <link rel="stylesheet" th:href="@{/css/parts/02-base.css}"/>
     <link rel="stylesheet" th:href="@{/css/parts/03-customer.css}"/>

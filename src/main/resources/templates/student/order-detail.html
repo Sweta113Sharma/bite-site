@@ -5,19 +5,19 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
-<!-- Mobile Bottom Nav -->
+<!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container" style="max-width: 560px;"
      th:attr="data-order-id=${order.id},data-order-status=${order.status.name()}">
 
-    <!-- Push is the only way this product reaches a student who is not looking at it, and
+    <!--/* Push is the only way this product reaches a student who is not looking at it, and
          the only place that ever asked was a toggle buried in the account screen. Asked
          here instead: on a live order, where "we will tell you when it is ready" is an
          offer rather than a setting. Hidden by default and revealed by JS only when push
          is supported, configured, and not already on — so it never nags someone who has
          already said yes, and never appears where it cannot work. Dismissal is
-         remembered. -->
+         remembered. */-->
     <div th:if="${order.status.isLive()}"
          th:replace="~{fragments/navbar :: pushInvite('Want to know the moment this is ready? Turn on notifications.')}"></div>
 
@@ -27,8 +27,8 @@
         <span>Payment successful. The canteen has your order.</span>
     </div>
 
-    <!-- Outcome of a self-cancel attempt. Losing the race by a second is an ordinary
-         thing to happen, so it is reported here as a message rather than an error page. -->
+    <!--/* Outcome of a self-cancel attempt. Losing the race by a second is an ordinary
+         thing to happen, so it is reported here as a message rather than an error page. */-->
     <div class="alert alert-success d-flex align-items-center gap-2" th:if="${orderMessage}">
         <span class="material-symbols-outlined">check_circle</span>
         <span th:text="${orderMessage}">Cancelled</span>
@@ -38,15 +38,15 @@
         <span th:text="${orderError}">Too late</span>
     </div>
 
-    <!-- Status illustration — icon + tone resolved in fragments/order-status
-         alongside the badge, so the two never drift apart. -->
+    <!--/* Status illustration — icon + tone resolved in fragments/order-status
+         alongside the badge, so the two never drift apart. */-->
     <div th:replace="~{fragments/order-status :: statusMedallion(${order.status})}"></div>
 
-    <!-- How far along, and what happens next — the question a student actually has while
-         waiting, answered without reading the badge and inferring the rest. -->
+    <!--/* How far along, and what happens next — the question a student actually has while
+         waiting, answered without reading the badge and inferring the rest. */-->
     <div th:replace="~{fragments/order-status :: progressRail(${order})}"></div>
 
-    <!-- Header Details -->
+    <!--/* Header Details */-->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <p class="text-muted small mb-1">ORDER TOKEN</p>
@@ -55,17 +55,17 @@
         <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
     </div>
 
-    <!-- Live Status Banner -->
+    <!--/* Live Status Banner */-->
     <div class="alert alert-info d-flex align-items-center gap-3 mb-4" th:if="${order.status.name() == 'PAID'}">
         <div class="icon-circle bg-info text-white" style="background: var(--color-info) !important;"><span class="material-symbols-outlined">hourglass_empty</span></div>
         <div>Your order is with the canteen — we'll update this page once they start preparing it.</div>
     </div>
 
-    <!-- The misclick escape hatch, offered only while the window is genuinely open.
+    <!--/* The misclick escape hatch, offered only while the window is genuinely open.
          The kitchen is not shown this order until the same window shuts (see
          OrderDao.findKitchenQueue), so cancelling here can never pull food off a grill.
          The countdown below is a courtesy: the server re-checks the clock and refuses a
-         late request whatever the page believes. -->
+         late request whatever the page believes. */-->
     <form th:if="${cancelSecondsLeft > 0}" method="post"
           th:action="@{/student/orders/{id}/cancel(id=${order.id})}"
           id="self-cancel" th:attr="data-seconds-left=${cancelSecondsLeft}"
@@ -88,8 +88,8 @@
         <div><strong>Ready!</strong> Show the code below at the counter.</div>
     </div>
 
-    <!-- The code, not the token, is what authenticates collection. Shown large because it
-         is read aloud or across a counter, and only while the order is actually waiting. -->
+    <!--/* The code, not the token, is what authenticates collection. Shown large because it
+         is read aloud or across a counter, and only while the order is actually waiting. */-->
     <div class="pickup-code-panel mb-4"
          th:if="${order.status.name() == 'READY_FOR_PICKUP' and order.pickupCode != null}">
         <p class="pickup-code-panel__label">Pickup code</p>
@@ -101,9 +101,9 @@
         <div><strong>Completed.</strong> Enjoy your meal!</div>
     </div>
 
-    <!-- Cancellation, with the reason the canteen gave. Before this, a cancelled order
+    <!--/* Cancellation, with the reason the canteen gave. Before this, a cancelled order
          showed a red badge reading CANCELLED and nothing else: no why, and no word on
-         whether the money was coming back. -->
+         whether the money was coming back. */-->
     <div class="alert alert-danger d-flex align-items-start gap-3 mb-4" th:if="${order.status.name() == 'CANCELLED'}">
         <div class="icon-circle bg-danger text-white" style="background: var(--color-danger) !important;"><span class="material-symbols-outlined">cancel</span></div>
         <div>
@@ -119,8 +119,8 @@
         <div><strong>This order expired.</strong> Payment wasn't completed in time, so nothing was charged.</div>
     </div>
 
-    <!-- Refund state comes off the payment, not the order: a completed order refunded
-         through support stays COMPLETED, so this cannot key off the order status. -->
+    <!--/* Refund state comes off the payment, not the order: a completed order refunded
+         through support stays COMPLETED, so this cannot key off the order status. */-->
     <div th:if="${payment != null}">
         <div class="alert alert-info d-flex align-items-start gap-3 mb-4"
              th:if="${payment.status.name() == 'REFUNDED'}">
@@ -130,8 +130,8 @@
                 <div class="small">It goes back to the method you paid with. Banks usually take 5-7 working days to show it.</div>
             </div>
         </div>
-        <!-- cancelOrder refunds before it cancels, so this pairing means something went
-             wrong rather than something is pending. Say so, and point at support. -->
+        <!--/* cancelOrder refunds before it cancels, so this pairing means something went
+             wrong rather than something is pending. Say so, and point at support. */-->
         <div class="alert alert-warning d-flex align-items-start gap-3 mb-4"
              th:if="${order.status.name() == 'CANCELLED' and payment.status.name() == 'CAPTURED'}">
             <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><span class="material-symbols-outlined">warning</span></div>
@@ -142,7 +142,7 @@
         </div>
     </div>
 
-    <!-- Order Items Card -->
+    <!--/* Order Items Card */-->
     <div class="card mb-4">
         <div class="card-body p-0">
             <h6 class="card-title p-3 mb-0 border-bottom text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.04em; color: var(--color-ink-muted);">Order Summary</h6>
@@ -168,9 +168,9 @@
     <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2"
        th:href="@{/student/checkout/{id}(id=${order.id})}"><span class="material-symbols-outlined">credit_card</span> Complete payment</a>
 
-    <!-- A declined card used to be the end of the road: the button above only renders for
+    <!--/* A declined card used to be the end of the road: the button above only renders for
          AWAITING_PAYMENT, so the only way forward was to abandon the order and rebuild the
-         cart. The transition was always legal; nothing offered it. -->
+         cart. The transition was always legal; nothing offered it. */-->
     <div th:if="${order.status.name() == 'PAYMENT_FAILED'}">
         <p class="text-muted small mb-2">
             That payment did not go through and nothing was charged. Your order is still here.

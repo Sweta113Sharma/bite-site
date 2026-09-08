@@ -2,12 +2,12 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!-- ============================================================
+<!--/* ============================================================
      AUTH BRAND PANEL — desktop only (hidden under 992px).
 
      Fills the half of the screen the centred card used to leave empty,
      and puts food on the very first screen of a food app.
-     ============================================================ -->
+     ============================================================ */-->
 <aside th:fragment="panel(headline, sub)" class="auth-brand">
     <div class="auth-brand__inner">
         <div class="auth-brand__lockup">
@@ -23,7 +23,7 @@
     </div>
 </aside>
 
-<!-- Compact lockup shown above the form on mobile, where the panel is hidden. -->
+<!--/* Compact lockup shown above the form on mobile, where the panel is hidden. */-->
 <div th:fragment="lockup" class="auth-lockup">
     <img th:src="@{/img/logo-mark.png}" alt=""/>
     <span>BiteSite</span>

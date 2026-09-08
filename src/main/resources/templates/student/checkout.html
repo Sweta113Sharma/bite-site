@@ -5,7 +5,7 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
-<!-- Mobile Bottom Nav -->
+<!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container text-center" style="max-width: 480px; margin-top: 4rem;">
@@ -27,8 +27,8 @@
     <button id="pay-btn" class="btn btn-primary btn-lg w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
         <span class="material-symbols-outlined">lock</span> Pay Securely via UPI
     </button>
-    <!-- Only for accounts with no number on file. Everyone else is prefilled and never
-         sees a form; telling them about a field they will not meet would be noise. -->
+    <!--/* Only for accounts with no number on file. Everyone else is prefilled and never
+         sees a form; telling them about a field they will not meet would be noise. */-->
     <p class="text-muted small mb-2" th:if="${#strings.isEmpty(payerPhone)}">
         Razorpay will ask for your mobile number.
         <a th:href="@{/account/profile}">Add it to your profile</a> to skip this next time.

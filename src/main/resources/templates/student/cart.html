@@ -5,7 +5,7 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
-<!-- Mobile Bottom Nav -->
+<!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container">
@@ -15,8 +15,8 @@
 
     <div class="alert alert-danger" th:if="${cartError}" th:text="${cartError}"></div>
 
-    <!-- A cart can sit open for a while, and in that time the canteen can sell out or
-         close. Saying so here beats letting the Pay button be the thing that finds out. -->
+    <!--/* A cart can sit open for a while, and in that time the canteen can sell out or
+         close. Saying so here beats letting the Pay button be the thing that finds out. */-->
     <div class="alert alert-warning" th:if="${cartWarnings != null and !#lists.isEmpty(cartWarnings)}">
         <strong>Some things changed while your cart was open</strong>
         <ul class="mb-0 mt-1">
@@ -31,7 +31,7 @@
         <a class="btn btn-primary" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Browse the menu</a>
     </div>
 
-    <div th:if="${!#lists.isEmpty(lines)}" class="cart-page-body"> <!-- clearance for the sticky pay bar lives in CSS, next to the bar itself -->
+    <div th:if="${!#lists.isEmpty(lines)}" class="cart-page-body"> <!--/* clearance for the sticky pay bar lives in CSS, next to the bar itself */-->
         <div th:if="${outlet != null}">
             <p class="section-label">Pickup location</p>
             <div class="pickup-card">
@@ -44,7 +44,7 @@
         </div>
 
         <p class="section-label">Items</p>
-        <!-- Cart Items (Card Layout) -->
+        <!--/* Cart Items (Card Layout) */-->
         <div class="cart-items mb-4">
             <div class="cart-item-card" th:each="line : ${lines}">
                 <div class="cart-item-photo" th:classappend="${line.item().usesIllustration()} ? 'is-illustration'">
@@ -61,8 +61,8 @@
                     <div class="cart-item-subtotal" th:text="'₹' + ${line.lineTotal()}"></div>
                     
                     <div class="d-flex align-items-center gap-2">
-                        <!-- Update Qty — uses the same fetch-based control as the
-                             menu page so the total updates live, no page reload. -->
+                        <!--/* Update Qty — uses the same fetch-based control as the
+                             menu page so the total updates live, no page reload. */-->
                         <form method="post" th:action="@{/student/cart/update}" class="m-0"
                               data-cart-update>
                             <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
@@ -74,7 +74,7 @@
                             </div>
                         </form>
 
-                        <!-- Remove -->
+                        <!--/* Remove */-->
                         <form method="post" th:action="@{/student/cart/remove}" class="m-0"
                               data-cart-remove>
                             <input type="hidden" name="menuItemId" th:value="${line.item().id}"/>
@@ -99,7 +99,7 @@
     </div>
 </div>
 
-<!-- Sticky Pay Bar -->
+<!--/* Sticky Pay Bar */-->
 <div class="sticky-pay-bar" th:if="${!#lists.isEmpty(lines)}">
     <div class="sticky-pay-inner">
         <div class="sticky-pay-total">

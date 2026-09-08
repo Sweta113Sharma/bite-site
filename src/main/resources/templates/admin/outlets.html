@@ -21,8 +21,8 @@
             <tbody>
             <tr th:each="o : ${outlets}">
                 <td class="fw-bold" th:text="${o.name}">Canteen</td>
-                <!-- Printed per row: an admin holds no tenant, so there is no ambient
-                     college name for the page to inherit. -->
+                <!--/* Printed per row: an admin holds no tenant, so there is no ambient
+                     college name for the page to inherit. */-->
                 <td class="small text-muted" th:text="${collegeNames.get(o.tenantId)} ?: '(unknown)'">College</td>
                 <td><span class="badge" th:classappend="${o.active} ? 'bg-success' : 'bg-secondary'"
                           th:text="${o.active} ? 'Active' : 'Disabled'">Active</span></td>

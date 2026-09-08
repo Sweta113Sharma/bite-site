@@ -21,8 +21,8 @@
                     <span>PNG, JPEG, or WebP — under 2MB</span>
                 </span>
             </label>
-            <!-- Only offered when there is a photo to remove. Falling back to the generated
-                 illustration is a real choice: a bad phone snap reads worse than the drawing. -->
+            <!--/* Only offered when there is a photo to remove. Falling back to the generated
+                 illustration is a real choice: a bad phone snap reads worse than the drawing. */-->
             <div class="form-check mt-2" th:if="${currentPhotoPath != null}">
                 <input class="form-check-input" type="checkbox" id="removePhoto" th:field="*{removePhoto}"/>
                 <label class="form-check-label small" for="removePhoto">Remove this photo and use the illustration instead</label>

@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!-- ============================================================
+<!--/* ============================================================
      STATE MEDALLION — replaces the Bito mascot everywhere.
 
      The pastel swirl mark sits behind a cream disc holding one icon,
@@ -12,7 +12,7 @@
      mark supplies the identity.
 
      tone: neutral (terracotta) | good (sage) | bad (danger)
-     ============================================================ -->
+     ============================================================ */-->
 <div th:fragment="medallion(icon, tone)"
      class="state-medallion" th:classappend="'state-medallion--' + ${tone}" aria-hidden="true">
     <span class="state-medallion__disc">

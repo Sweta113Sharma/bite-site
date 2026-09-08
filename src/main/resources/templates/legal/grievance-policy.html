@@ -31,10 +31,10 @@
     <p>A named grievance officer and a published response deadline are required under
        India's Digital Personal Data Protection Act, 2025.</p>
 
-    <!-- Publishes only when every required field is set (GrievanceOfficer.isComplete()).
+    <!--/* Publishes only when every required field is set (GrievanceOfficer.isComplete()).
          The alternative is a section that names a person but not how to reach them, or
          promises a deadline with nobody attached to it, which is the placeholder problem
-         wearing a different hat. Editable at /admin/grievance-officer by a super admin. -->
+         wearing a different hat. Editable at /admin/grievance-officer by a super admin. */-->
     <div th:if="${officer.isComplete()}">
         <p class="mb-1">
             <strong th:text="${officer.name()}">Name</strong>

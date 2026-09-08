@@ -29,7 +29,7 @@
         Signing in with <strong th:text="${currentEmail}">you@example.com</strong>.
     </p>
 
-    <!-- A change is staged: the only thing to do here is finish or abandon it. -->
+    <!--/* A change is staged: the only thing to do here is finish or abandon it. */-->
     <div th:if="${pendingEmail != null}">
         <div class="alert alert-warning">
             Waiting on confirmation for <strong th:text="${pendingEmail}">new@example.com</strong>.
@@ -54,7 +54,7 @@
         </form>
     </div>
 
-    <!-- No change staged: ask for the new address. -->
+    <!--/* No change staged: ask for the new address. */-->
     <form method="post" th:action="@{/account/email}" th:object="${form}" th:if="${pendingEmail == null}">
         <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
             <span th:each="e : ${#fields.globalErrors()}" th:text="${e}"></span>

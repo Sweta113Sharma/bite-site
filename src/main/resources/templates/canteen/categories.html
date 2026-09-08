@@ -33,9 +33,9 @@
                 <button type="submit" class="btn btn-sm btn-outline-secondary">Set order</button>
             </form>
 
-            <!-- Offered only when the section is empty. A category with items in it cannot
+            <!--/* Offered only when the section is empty. A category with items in it cannot
                  be deleted: the server refuses, and hiding the button here means the
-                 manager is not invited to try. -->
+                 manager is not invited to try. */-->
             <form method="post" th:if="${c.itemCount == 0}"
                   th:action="@{/canteen/categories/{id}/delete(id=${c.id})}"
                   onsubmit="return confirm('Delete this category?');">

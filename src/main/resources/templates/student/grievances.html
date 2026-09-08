@@ -5,7 +5,7 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
-<!-- Mobile Bottom Nav -->
+<!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container" style="max-width: 700px;">
@@ -23,9 +23,9 @@
                 You've submitted several issues recently — please wait a bit before sending another.
             </div>
             <form method="post" th:action="@{/student/grievances}" th:object="${form}">
-                <!-- Optional order picker. The refund policy tells students to include
+                <!--/* Optional order picker. The refund policy tells students to include
                      their order token; asking for it as a dropdown means support gets a
-                     real foreign key instead of a token typed from memory. -->
+                     real foreign key instead of a token typed from memory. */-->
                 <div class="mb-3" th:if="${!#lists.isEmpty(orders)}">
                     <label class="form-label" for="grievance-order">Which order is this about?</label>
                     <select th:field="*{orderId}" id="grievance-order" class="form-select">

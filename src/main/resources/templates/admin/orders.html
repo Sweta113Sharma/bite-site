@@ -20,9 +20,9 @@
             <option th:each="s : ${statuses}" th:value="${s}" th:selected="${s == selectedStatus}"
                     th:text="${s.name().replace('_',' ')}"></option>
         </select>
-        <!-- The two things a student can actually give you. Until now this screen filtered
+        <!--/* The two things a student can actually give you. Until now this screen filtered
              by college and status only, so finding one person's order meant paging by eye
-             or going to the support desk for its separate lookup. -->
+             or going to the support desk for its separate lookup. */-->
         <input type="search" name="q" class="form-control" style="width:auto; min-width:16rem;"
                th:value="${q}" placeholder="Order token or student email"/>
         <button type="submit" class="btn btn-outline-secondary">

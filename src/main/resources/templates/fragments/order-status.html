@@ -9,8 +9,8 @@
                        (${status.name() == 'COMPLETED'} ? 'bg-success' : 'bg-danger'))))"
       th:text="${status.name().replace('_', ' ')}">STATUS</span>
 
-<!-- Status → medallion icon + tone, mapped once here rather than per screen.
-     Sits beside statusBadge above so both readings of a status stay in step. -->
+<!--/* Status → medallion icon + tone, mapped once here rather than per screen.
+     Sits beside statusBadge above so both readings of a status stay in step. */-->
 <div th:fragment="statusMedallion(status)"
      th:with="s=${status.name()},
               icon=${s == 'AWAITING_PAYMENT' ? 'hourglass_empty' :
@@ -25,7 +25,7 @@
 </body>
 </html>
 
-<!-- ============================================================
+<!--/* ============================================================
      PROGRESS RAIL
 
      "Where is my order" answered without reading anything. The badge says the current
@@ -38,7 +38,7 @@
 
      Times come from the columns the transitions already stamp, so a step that has
      happened can say when, and one that has not stays quiet rather than guessing.
-     ============================================================ -->
+     ============================================================ */-->
 <div th:fragment="progressRail(order)" class="rail" th:if="${order.status.progressStep() >= 0}"
      th:with="now=${order.status.progressStep()}">
 
@@ -51,11 +51,11 @@
         </span>
     </div>
 
-    <!-- Current for both PAID and PREPARING. From the student's side those are one thing —
+    <!--/* Current for both PAID and PREPARING. From the student's side those are one thing —
          the canteen has it — and a rail with no current step at all, which is what a paid
          order showed before, reads as though nothing is happening. The label still tells
          the two apart, because waiting in the queue and being cooked are different answers
-         to "how long". -->
+         to "how long". */-->
     <div class="rail__step" th:classappend="${now > 2} ? 'is-done' : ((${now == 1} or ${now == 2}) ? 'is-now' : 'is-todo')">
         <span class="rail__pip"></span>
         <span class="rail__label" th:text="${now == 1} ? 'In the kitchen queue' : 'Being prepared'">Being prepared</span>

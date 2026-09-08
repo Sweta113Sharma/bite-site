@@ -44,8 +44,8 @@
         </div>
     </div>
 
-    <!-- The reason the student was given. Shown here so staff answering a complaint see
-         exactly what the customer saw, rather than guessing. -->
+    <!--/* The reason the student was given. Shown here so staff answering a complaint see
+         exactly what the customer saw, rather than guessing. */-->
     <div class="alert alert-warning" th:if="${order.cancellationReason != null}">
         <strong>Cancellation reason</strong>
         <div th:text="${order.cancellationReason}">reason</div>

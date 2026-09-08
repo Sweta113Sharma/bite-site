@@ -10,7 +10,7 @@
         <p class="console-head__blurb">Where the platform is right now, and what is waiting on someone.</p>
     </div>
 
-    <!-- Today. Answers "is it working", which is the first thing you want on opening this. -->
+    <!--/* Today. Answers "is it working", which is the first thing you want on opening this. */-->
     <div class="stat-row">
         <div class="stat">
             <span class="stat__label">Orders today</span>
@@ -27,8 +27,8 @@
         </div>
     </div>
 
-    <!-- Queues with a person at the end of them. Each links to the screen that clears it,
-         and each goes quiet when there is nothing to do rather than showing a proud zero. -->
+    <!--/* Queues with a person at the end of them. Each links to the screen that clears it,
+         and each goes quiet when there is nothing to do rather than showing a proud zero. */-->
     <h6 class="mt-4 mb-2">Needs attention</h6>
     <div class="stat-row">
         <a class="stat stat--action" th:classappend="${snapshot.openGrievances() > 0} ? 'is-live'"
@@ -41,9 +41,9 @@
             <span class="stat__label">Failed payments today</span>
             <span class="stat__value" th:text="${snapshot.failedPaymentsToday()}">0</span>
         </a>
-        <!-- Money taken against an order that cannot be honoured. Loudest tile on the
+        <!--/* Money taken against an order that cannot be honoured. Loudest tile on the
              screen when it is non-zero, because it is the only one that is somebody's
-             money sitting in the wrong place. -->
+             money sitting in the wrong place. */-->
         <a class="stat stat--action" th:classappend="${snapshot.paymentsNeedingRefund() > 0} ? 'is-urgent'"
            th:href="@{/admin/payments(needsRefund=true)}">
             <span class="stat__label">Awaiting refund</span>
@@ -60,7 +60,7 @@
 
     <h6 class="mt-4 mb-2">Today's insights</h6>
 
-    <!-- Sell-outs: items that hit their daily_limit today. Quiet when nothing has. -->
+    <!--/* Sell-outs: items that hit their daily_limit today. Quiet when nothing has. */-->
     <div class="mb-3" th:if="${!insights.sellOuts().isEmpty()}">
         <div class="alert alert-warning py-2 mb-2">Sold out today</div>
         <ul class="mb-0">
@@ -73,7 +73,7 @@
         </ul>
     </div>
 
-    <!-- Most ordered items today. -->
+    <!--/* Most ordered items today. */-->
     <div class="mb-3" th:if="${!insights.popularItems().isEmpty()}">
         <div class="alert alert-info py-2 mb-2">Most ordered today</div>
         <ol class="mb-0">
@@ -86,7 +86,7 @@
         </ol>
     </div>
 
-    <!-- Peak hours: order count per hour, as a compact bar. -->
+    <!--/* Peak hours: order count per hour, as a compact bar. */-->
     <div class="mb-3" th:if="${!insights.peakHours().isEmpty()}">
         <div class="alert alert-light py-2 mb-2">Orders by hour</div>
         <div class="d-flex align-items-end gap-2" style="height: 90px;">

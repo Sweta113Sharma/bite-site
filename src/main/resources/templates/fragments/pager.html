@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!-- ============================================================
+<!--/* ============================================================
      PAGER
 
      One control for every paged list, so "next page" behaves and looks the same on
@@ -17,7 +17,7 @@
      than the page needed, so there is no COUNT(*) behind these buttons — and therefore
      no total to show. Nobody has needed to know they are on page 3 of 47 to find an
      order; they need the next page.
-     ============================================================ -->
+     ============================================================ */-->
 <nav th:fragment="pager(paged, prevUrl, nextUrl)" class="pager"
      th:if="${paged != null and (paged.hasPrev() or paged.hasNext())}"
      aria-label="Pagination">
@@ -25,8 +25,8 @@
     <a class="pager__step" th:if="${paged.hasPrev()}" th:href="${prevUrl}">
         <span class="material-symbols-outlined">arrow_back</span>Previous
     </a>
-    <!-- Kept in the DOM when unavailable rather than removed, so the row does not reflow
-         as you page and Next stays under the cursor. -->
+    <!--/* Kept in the DOM when unavailable rather than removed, so the row does not reflow
+         as you page and Next stays under the cursor. */-->
     <span class="pager__step is-disabled" th:unless="${paged.hasPrev()}" aria-hidden="true">
         <span class="material-symbols-outlined">arrow_back</span>Previous
     </span>

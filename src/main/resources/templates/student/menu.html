@@ -5,7 +5,7 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
-<!-- Mobile Bottom Nav -->
+<!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container">
@@ -18,7 +18,7 @@
     </div>
 
     <div th:if="${!#lists.isEmpty(outlets)}">
-        <!-- Hero: BIG BEEF energy — huge display type, yellow burst sticker. -->
+        <!--/* Hero: BIG BEEF energy — huge display type, yellow burst sticker. */-->
         <div class="menu-hero">
             <div class="menu-hero-copy">
                 <h3 class="menu-hero-title">
@@ -38,16 +38,16 @@
             </div>
         </div>
 
-        <!-- Red ticker: landing-page energy strip. -->
+        <!--/* Red ticker: landing-page energy strip. */-->
         <div class="ticker" aria-hidden="true">
             <div class="ticker-track">
                 <span>FRESH · FAST · FIERCE&nbsp;</span><span>FRESH · FAST · FIERCE&nbsp;</span><span>FRESH · FAST · FIERCE&nbsp;</span><span>FRESH · FAST · FIERCE&nbsp;</span>
             </div>
         </div>
 
-        <!-- The canteen has paused new orders. Said once, at the top, rather than
+        <!--/* The canteen has paused new orders. Said once, at the top, rather than
              repeated on every card — and every Add control below is gone, so the page
-             is not offering something it will then refuse. -->
+             is not offering something it will then refuse. */-->
         <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" th:if="${!ordersOpen}">
             <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><span class="material-symbols-outlined">pause_circle</span></div>
             <div>
@@ -56,7 +56,7 @@
             </div>
         </div>
 
-        <!-- Search and categories come before the specials rail.
+        <!--/* Search and categories come before the specials rail.
 
              They were nested inside the menu-list block, which rendered after the rail, so
              on a 390x844 phone the search field landed at 725px and the categories at 819px
@@ -64,15 +64,15 @@
              the app scrolled past a greeting, a decorative ticker and a carousel before
              reaching anything they could order. Search and categories are how you navigate
              a menu, so they now sit directly under the header, and the rail becomes what it
-             should be: discovery you meet on the way down, not a toll gate. -->
+             should be: discovery you meet on the way down, not a toll gate. */-->
         <div th:if="${!#maps.isEmpty(itemsByCategory)}">
-            <!-- Search -->
+            <!--/* Search */-->
             <div class="search-bar">
                 <span class="material-symbols-outlined">search</span>
                 <input type="text" id="menu-search" placeholder="Search delicious food..."/>
             </div>
 
-            <!-- Foochi-style Circular Category Chips -->
+            <!--/* Foochi-style Circular Category Chips */-->
             <div class="category-chips-wrapper">
                 <div class="category-chips" id="category-chips">
                     <a class="category-chip active" data-category="all">
@@ -97,12 +97,12 @@
         </div>
 
 
-        <!-- Order again — this student's usual, one tap away.
+        <!--/* Order again — this student's usual, one tap away.
 
              Above the specials on purpose: a discount is the canteen's priority, but the
              thing someone opening the app at 1pm most likely wants is what they had last
              time. Empty for a first-time student, and for anyone whose past favourites
-             are all off today's menu, in which case nothing renders at all. -->
+             are all off today's menu, in which case nothing renders at all. */-->
         <div th:if="${!#lists.isEmpty(reorderItems)}" class="mb-4">
             <h5 class="mb-3 d-flex align-items-center gap-2" style="font-family: var(--font-display); font-weight: 800; font-size: 1.25rem;">
                 <span class="material-symbols-outlined">history</span>
@@ -131,7 +131,7 @@
             </div>
         </div>
 
-        <!-- Today's Deals (Foochi-style Specials carousel) -->
+        <!--/* Today's Deals (Foochi-style Specials carousel) */-->
         <div th:if="${!#lists.isEmpty(dealItems)}" class="mb-4">
             <h5 class="mb-3 d-flex align-items-center gap-2" style="font-family: var(--font-display); font-weight: 800; font-size: 1.25rem;">
                 <span class="material-symbols-outlined is-filled">local_fire_department</span>
@@ -140,9 +140,9 @@
             <div class="featured-scroll">
                 <div class="deal-card" th:each="item : ${dealItems}">
                     <div class="deal-card-photo">
-                        <!-- Canteen's own photo when uploaded; otherwise a neutral
+                        <!--/* Canteen's own photo when uploaded; otherwise a neutral
                              placeholder — no pre-made food illustration, since canteens
-                             supply their own images. -->
+                             supply their own images. */-->
                         <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
                         <div th:if="${item.usesIllustration()}" class="photo-placeholder">
                             <span class="material-symbols-outlined">restaurant</span>
@@ -171,14 +171,14 @@
         </div>
 
         <div th:if="${!#maps.isEmpty(itemsByCategory)}">
-            <!-- No search results -->
+            <!--/* No search results */-->
             <div id="menu-no-results" class="state-panel" style="display:none;">
                 <div th:replace="~{fragments/state :: medallion('search','neutral')}"></div>
                 <h4>No matches</h4>
                 <p>We couldn't find anything for that search. Try a different word.</p>
             </div>
 
-            <!-- Menu List -->
+            <!--/* Menu List */-->
             <div th:each="entry : ${itemsByCategory}" class="menu-category-section mb-5" th:id="${#strings.replace(entry.key.toLowerCase(), ' ', '-')}">
                 <h5 class="mb-3 d-flex align-items-center gap-2">
                     <span class="cat-bullet"></span>
@@ -188,11 +188,11 @@
                     <div class="col" th:each="item : ${entry.value}">
                         <div class="menu-card" th:data-name="${item.name}">
                             <div class="menu-card-row">
-                                <!-- Photo and the add control are siblings inside the media
+                                <!--/* Photo and the add control are siblings inside the media
                                      wrapper, never nested: the photo is a link to the dish page
                                      and a <form> inside an <a> is invalid markup that browsers
                                      recover from unpredictably. CSS floats the control over the
-                                     image's bottom-right corner. -->
+                                     image's bottom-right corner. */-->
                                 <div class="menu-card-media">
                                     <a th:href="@{/student/menu/item/{id}(id=${item.id})}"
                                        class="menu-card-photo">
@@ -213,21 +213,21 @@
                                         <span th:if="${item.hasDiscount()}" class="price-strike" th:text="'₹' + ${item.price}"></span>
                                         <span th:text="'₹' + ${item.effectivePrice()}"></span>
                                     </div>
-                                    <!-- Only shown when it changes what you'd do: the last few,
-                                         or none left. A cap of 40 with 40 left is not news. -->
+                                    <!--/* Only shown when it changes what you'd do: the last few,
+                                         or none left. A cap of 40 with 40 left is not news. */-->
                                     <div class="stock-note is-out" th:if="${item.soldOutToday()}">
                                         <span class="material-symbols-outlined ms-16">block</span><span>Sold out today</span>
                                     </div>
                                     <div class="stock-note is-low" th:if="${item.runningLowToday()}">
                                         <span class="material-symbols-outlined ms-16">local_fire_department</span><span th:text="'Only ' + ${item.remainingToday()} + ' left'">Only 3 left</span>
                                     </div>
-                                    <!-- Add button and stepper both render; .is-active picks which
+                                    <!--/* Add button and stepper both render; .is-active picks which
                                          one is visible. Doing it this way rather than building the
                                          stepper in JS keeps the no-JS path working: without script
                                          the form still posts and the page reloads with the right
                                          control already chosen server-side. This lives in a
                                          reserved footer row in normal flow — never over the photo —
-                                         so it cannot collide with the name, price, or image. -->
+                                         so it cannot collide with the name, price, or image. */-->
                                     <div class="menu-card-actions">
                                         <div class="cart-control" th:if="${ordersOpen and item.orderable()}"
                                              th:with="qty=${cartQuantities != null and cartQuantities.containsKey(item.id)} ? ${cartQuantities.get(item.id)} : 0"
@@ -265,7 +265,7 @@
     </div>
 </div>
 
-<!-- Sticky cart bar.
+<!--/* Sticky cart bar.
 
      Deliberately a direct child of <body>. It was nested inside .container, and
      `.container > * { animation: fade-up ... both }` leaves transform: translateY(0)
@@ -273,7 +273,7 @@
      that element the containing block for position:fixed descendants — so this bar was
      being positioned against a div 2,000px down the page rather than the viewport, and
      came to rest on top of the bottom tab bar. Fixed overlays must not live inside
-     animated content. -->
+     animated content. */-->
 <div id="sticky-cart-bar" class="sticky-cart-bar" th:style="${cartItemCount == null or cartItemCount == 0} ? 'display:none' : 'display:block'">
                 <a class="sticky-cart-inner" th:href="@{/student/cart}">
                     <div class="sticky-cart-info">

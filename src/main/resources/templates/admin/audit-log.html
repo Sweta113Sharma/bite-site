@@ -16,9 +16,9 @@
         </select>
     </form>
 
-    <!-- Two different empty states, because they mean different things: one is "you have
+    <!--/* Two different empty states, because they mean different things: one is "you have
          not asked yet", the other is "there is genuinely nothing". The page previously
-         rendered neither before a college was chosen, so it opened completely blank. -->
+         rendered neither before a college was chosen, so it opened completely blank. */-->
     <div th:if="${selectedTenantId == null}" class="state-panel">
         <div th:replace="~{fragments/state :: medallion('history','neutral')}"></div>
         <h4>Pick a college</h4>

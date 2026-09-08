@@ -5,7 +5,7 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <div th:replace="~{fragments/navbar :: activeOrderStrip}"></div>
 
-<!-- Mobile Bottom Nav -->
+<!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container">
@@ -14,8 +14,8 @@
         <p class="page-header-sub">Anything still in progress is pinned at the top.</p>
     </div>
 
-    <!-- Both groups must be empty. Keying this off the past-orders list alone would show
-         "No orders yet" to someone whose only order is still being cooked. -->
+    <!--/* Both groups must be empty. Keying this off the past-orders list alone would show
+         "No orders yet" to someone whose only order is still being cooked. */-->
     <div th:if="${#lists.isEmpty(pastOrders) and (activeOrders == null or #lists.isEmpty(activeOrders))}" class="state-panel">
         <div th:replace="~{fragments/state :: medallion('receipt_long','neutral')}"></div>
         <h4>No orders yet</h4>
@@ -23,8 +23,8 @@
         <a class="btn btn-primary" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Browse the menu</a>
     </div>
 
-    <!-- Active group. `activeOrders` comes from GlobalModelAttributes already sorted by
-         urgency, so the order needing attention soonest is first on the screen. -->
+    <!--/* Active group. `activeOrders` comes from GlobalModelAttributes already sorted by
+         urgency, so the order needing attention soonest is first on the screen. */-->
     <div th:if="${activeOrders != null and !#lists.isEmpty(activeOrders)}" class="orders-group orders-group--active">
         <p class="section-label">
             <span class="live-dot" aria-hidden="true"></span>Active now
@@ -50,8 +50,8 @@
                 </div>
                 
                 <ul class="order-card-lines">
-                    <!-- Capped at four so a large order can't run the card down the
-                         page; the count below picks up whatever is left. -->
+                    <!--/* Capped at four so a large order can't run the card down the
+                         page; the count below picks up whatever is left. */-->
                     <li th:each="item, iter : ${order.items}" th:if="${iter.index < 4}">
                         <span class="qty" th:text="${item.quantity} + '×'">1x</span><span th:text="${item.itemNameSnapshot}">Item</span>
                     </li>
@@ -71,9 +71,9 @@
                     <div class="order-card-total" th:text="'₹' + ${order.totalAmount}">₹0</div>
                 </div>
 
-                <!-- Inlined rather than hoisted into th:with: th:if has precedence 300
+                <!--/* Inlined rather than hoisted into th:with: th:if has precedence 300
                      and th:with 600, so a variable declared here would not exist yet
-                     when the condition is evaluated. -->
+                     when the condition is evaluated. */-->
                 <div class="order-card-track"
                      th:if="${order.status.name() == 'AWAITING_PAYMENT' or order.status.name() == 'PAID'
                              or order.status.name() == 'PREPARING' or order.status.name() == 'READY_FOR_PICKUP'}">
@@ -81,9 +81,9 @@
                 </div>
             </a>
 
-            <!-- Outside the card's anchor: a form nested in an <a> is invalid markup.
+            <!--/* Outside the card's anchor: a form nested in an <a> is invalid markup.
                  Offered only on finished orders — there is no sense reordering something
-                 that is still being made. -->
+                 that is still being made. */-->
             <form method="post" th:action="@{/student/orders/{id}/reorder(id=${order.id})}" class="mt-2"
                   th:if="${order.status.name() == 'COMPLETED' or order.status.name() == 'CANCELLED'}">
                 <button type="submit" class="btn btn-sm btn-outline-secondary w-100">

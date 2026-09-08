@@ -27,8 +27,8 @@
             </div>
             <p class="mb-2" th:text="${row.grievance().message}">Message</p>
 
-            <!-- The whole point of the order link: from a complaint, one click to the
-                 order and its payment, instead of asking the student to repeat it. -->
+            <!--/* The whole point of the order link: from a complaint, one click to the
+                 order and its payment, instead of asking the student to repeat it. */-->
             <p class="mb-2 small" th:if="${row.orderToken() != null}">
                 <span class="material-symbols-outlined">receipt_long</span>
                 About order <strong th:text="${row.orderToken()}">TOKEN</strong>

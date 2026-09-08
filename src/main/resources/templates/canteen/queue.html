@@ -7,8 +7,8 @@
     <div class="console-head">
         <h3>
             <span class="live-dot" aria-hidden="true"></span>Order queue
-            <!-- How many are waiting is the first thing anyone opening this screen wants
-                 to know, and it was the one number the page didn't state. -->
+            <!--/* How many are waiting is the first thing anyone opening this screen wants
+                 to know, and it was the one number the page didn't state. */-->
             <span class="console-head__count" th:if="${!#lists.isEmpty(orders)}"
                   th:text="${#lists.size(orders)} + (${#lists.size(orders)} == 1 ? ' waiting' : ' waiting')">0 waiting</span>
         </h3>
@@ -17,9 +17,9 @@
     <div class="alert alert-success" th:if="${queueNotice}" th:text="${queueNotice}"></div>
     <div class="alert alert-danger" th:if="${queueError}" th:text="${queueError}"></div>
 
-    <!-- Pause switch. Lives on the queue rather than in a settings page because the moment
+    <!--/* Pause switch. Lives on the queue rather than in a settings page because the moment
          you need it is the moment you are staring at twenty tokens. Pausing only stops new
-         orders; everything already below stays workable. -->
+         orders; everything already below stays workable. */-->
     <div class="outlet-switch" th:classappend="${!outlet.acceptingOrders} ? 'is-paused'">
         <div class="outlet-switch__text">
             <strong th:if="${outlet.acceptingOrders}">Taking new orders</strong>
@@ -37,8 +37,8 @@
         </form>
     </div>
 
-    <!-- Filled and revealed by queue-poll.js when orders arrive between polls. Paired
-         with a chime: a tablet on a shelf needs to be heard as well as seen. -->
+    <!--/* Filled and revealed by queue-poll.js when orders arrive between polls. Paired
+         with a chime: a tablet on a shelf needs to be heard as well as seen. */-->
     <div id="queue-alert" class="alert alert-warning d-none" role="status" aria-live="polite"></div>
     <div id="queue-empty" class="state-panel" th:if="${#lists.isEmpty(orders)}">
         <div th:replace="~{fragments/state :: medallion('hourglass_top','neutral')}"></div>
@@ -64,10 +64,10 @@
                             <button type="submit" class="btn btn-sm btn-warning w-100"><span class="material-symbols-outlined">skillet</span>Start preparing</button>
                         </form>
 
-                        <!-- Reason is asked for here, not after the fact: it is the only
+                        <!--/* Reason is asked for here, not after the fact: it is the only
                              thing the student will be told, and nobody comes back to fill
                              it in later. Kept behind a disclosure so the common path
-                             (start preparing) stays the obvious one. -->
+                             (start preparing) stays the obvious one. */-->
                         <details class="cancel-panel">
                             <summary><span class="material-symbols-outlined">cancel</span>Cancel &amp; refund</summary>
                             <form method="post" th:action="@{/canteen/queue/{id}/cancel(id=${order.id})}"
@@ -91,8 +91,8 @@
                         <input type="hidden" name="newStatus" value="READY_FOR_PICKUP"/>
                         <button type="submit" class="btn btn-sm btn-primary w-100"><span class="material-symbols-outlined">notifications_active</span>Mark ready</button>
                     </form>
-                    <!-- Handover is authenticated: the student shows the code on their
-                         order page and staff type it here. -->
+                    <!--/* Handover is authenticated: the student shows the code on their
+                         order page and staff type it here. */-->
                     <form method="post" th:if="${order.status.name() == 'READY_FOR_PICKUP'}"
                           th:action="@{/canteen/queue/{id}/collect(id=${order.id})}" class="pickup-form">
                         <label class="form-label small mb-1">Pickup code from the student's screen</label>

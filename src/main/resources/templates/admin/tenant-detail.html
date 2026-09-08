@@ -54,8 +54,8 @@
                             <span class="d-flex gap-1">
                                 <span class="badge" th:classappend="${o.active} ? 'bg-success' : 'bg-secondary'"
                                       th:text="${o.active} ? 'Active' : 'Disabled'">Active</span>
-                                <!-- The outlet's own pause, shown here so an admin fielding
-                                     "why can't I order" can see it without calling them. -->
+                                <!--/* The outlet's own pause, shown here so an admin fielding
+                                     "why can't I order" can see it without calling them. */-->
                                 <span class="badge bg-warning text-dark" th:if="${o.active and !o.acceptingOrders}">Paused</span>
                             </span>
                         </div>
@@ -79,9 +79,9 @@
                             </form>
                         </div>
 
-                        <!-- Deletion is deliberately awkward: two clicks and the canteen's
+                        <!--/* Deletion is deliberately awkward: two clicks and the canteen's
                              exact name typed back. The same check runs server-side, so
-                             this box is the prompt, not the protection. -->
+                             this box is the prompt, not the protection. */-->
                         <details class="danger-zone">
                             <summary><span class="material-symbols-outlined">delete</span>Delete this canteen</summary>
                             <p class="danger-zone__warning">
@@ -134,9 +134,9 @@
                                       th:text="${s.role.name() == 'CANTEEN_MANAGER'} ? 'Manager' : 'Operator'">Role</span>
                             </td>
                             <td class="text-end">
-                                <!-- Mails a code to the staff member rather than setting a
+                                <!--/* Mails a code to the staff member rather than setting a
                                      password here, so an admin never handles someone else's
-                                     credential. -->
+                                     credential. */-->
                                 <form method="post"
                                       th:action="@{/admin/tenants/{id}/staff/{userId}/password-reset(id=${tenant.id},userId=${s.id})}"
                                       class="m-0"
@@ -160,9 +160,9 @@
                             <div class="text-danger small" th:if="${#fields.hasErrors('outletId')}" th:errors="*{outletId}"></div>
                         </div>
                         <div class="mb-2">
-                            <!-- Only the two outlet roles are offered, and the controller
+                            <!--/* Only the two outlet roles are offered, and the controller
                                  re-checks isOutletPortalRole() — this select must not become
-                                 a route to minting a platform account. -->
+                                 a route to minting a platform account. */-->
                             <select th:field="*{role}" class="form-select">
                                 <option value="" disabled selected>Choose role</option>
                                 <option value="CANTEEN_MANAGER">Manager — menu, prices, and the queue</option>
