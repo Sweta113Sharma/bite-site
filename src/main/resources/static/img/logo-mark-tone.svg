@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="BiteSite">
-  <!-- Single-colour variant: inherits the surrounding text colour, for places that need the
-       silhouette rather than the brand red — the red panel, ink-on-bone chrome, a disabled
-       state. Solid rather than outlined, because a keyline in one colour would just be a
-       thinner slab. -->
-  <path fill="currentColor" fill-rule="evenodd"
-        d="M6 6 H94 V94 H6 Z
-           M33 6 a17 17 0 1 0 34 0 a17 17 0 1 0 -34 0 Z"/>
-</svg>

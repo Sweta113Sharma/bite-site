@@ -25,7 +25,7 @@
             <img th:if="${currentTenant != null and currentTenant.logoPath != null}"
                  th:src="@{${currentTenant.logoPath}}" height="28" alt="logo"/>
             <img th:if="${currentTenant == null or currentTenant.logoPath == null}"
-                 th:src="@{/img/logo-mark.svg}" class="brand-mark" alt=""/>
+                 th:src="@{/img/logo-mark.png}" class="brand-mark" alt=""/>
             <span th:text="${currentTenant != null ? currentTenant.name : 'BiteSite'}">BiteSite</span>
         </a>
 

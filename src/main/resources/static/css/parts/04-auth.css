@@ -223,7 +223,7 @@
         bottom: -18%;
         width: 62%;
         aspect-ratio: 1;
-        background: url('/img/logo-mark-pastel.svg') center / contain no-repeat;
+        background: url('/img/logo-mark-pastel.png') center / contain no-repeat;
         opacity: 0.32;
         pointer-events: none;
     }

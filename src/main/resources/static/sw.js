@@ -30,7 +30,7 @@ const OFFLINE_URL = '/offline.html';
 // no list to maintain and no version bump to invalidate.
 const PRECACHE_URLS = [
     OFFLINE_URL,
-    '/img/logo-mark-pastel.svg',
+    '/img/logo-mark-pastel.png',
 ];
 
 self.addEventListener('install', (event) => {
