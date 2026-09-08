@@ -30,7 +30,25 @@
     <h5 class="mt-4">Grievance officer</h5>
     <p>A named grievance officer and a published response deadline are required under
        India's Digital Personal Data Protection Act, 2025.</p>
-    <div class="alert alert-warning">
+
+    <!-- Publishes only when every required field is set (GrievanceOfficer.isComplete()).
+         The alternative is a section that names a person but not how to reach them, or
+         promises a deadline with nobody attached to it, which is the placeholder problem
+         wearing a different hat. Editable at /admin/grievance-officer by a super admin. -->
+    <div th:if="${officer.isComplete()}">
+        <p class="mb-1">
+            <strong th:text="${officer.name()}">Name</strong>
+            <span th:if="${officer.designation() != null}" class="text-muted"
+                  th:text="', ' + ${officer.designation()}">, Designation</span>
+        </p>
+        <p class="mb-1">
+            <a th:href="'mailto:' + ${officer.email()}" th:text="${officer.email()}">email</a>
+        </p>
+        <p class="mb-1" style="white-space: pre-line;" th:text="${officer.address()}">Address</p>
+        <p class="mb-0 text-muted">Response timeframe: <span th:text="${officer.responseWindow()}">window</span></p>
+    </div>
+
+    <div th:unless="${officer.isComplete()}" class="alert alert-warning">
         <strong>Not yet appointed.</strong> This section must name a real person, their
         contact address, and a response timeframe before this service is offered to the
         public. It is left explicitly blank rather than filled with a placeholder, because a

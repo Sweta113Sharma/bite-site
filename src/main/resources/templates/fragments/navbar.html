@@ -251,6 +251,7 @@
                 <a class="nav-drawer__link" th:href="@{/admin/support}"><span class="material-symbols-outlined">support_agent</span>Support desk</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/grievances}"><span class="material-symbols-outlined">flag</span>Grievances</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/dpdp}"><span class="material-symbols-outlined">privacy_tip</span>Data requests</a>
+                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/grievance-officer}"><span class="material-symbols-outlined">assignment</span>Grievance officer</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/audit-log}"><span class="material-symbols-outlined">history</span>Audit log</a>
                 <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/users}"><span class="material-symbols-outlined">manage_accounts</span>Platform users</a>
             </div>

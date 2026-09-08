@@ -132,6 +132,21 @@ class RolePermissionSecurityTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void onlySuperAdminCanNameTheGrievanceOfficer() throws Exception {
+        // The split that matters: handling the grievance queue is operations, so
+        // TECH_MANAGER keeps it (asserted above). Naming the officer publishes a real
+        // person's name and postal address as the platform's legal contact, so it is
+        // FULL_ADMIN and the same tech manager must be refused here.
+        mockMvc.perform(get("/admin/grievance-officer").header("Host", ADMIN_HOST)
+                        .with(user(new AppUserPrincipal(superAdmin))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/admin/grievance-officer").header("Host", ADMIN_HOST)
+                        .with(user(new AppUserPrincipal(techManager))))
+                .andExpect(status().isForbidden());
+    }
+
     // ---- Portal gate: wrong portal → 403 ----
 
     @Test

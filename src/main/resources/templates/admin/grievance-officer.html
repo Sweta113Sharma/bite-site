@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 480px;">
+    <div class="console-head">
+        <h3 class="console-head__title" th:text="${pageTitle}">Grievance officer</h3>
+        <p class="console-head__blurb">Published on the public grievance page. Name someone real and
+            reachable: this is the contact a complainant, and a regulator, is told to use.</p>
+    </div>
+
+    <div th:if="${saved}" class="alert alert-success">Saved. The
+        <a th:href="@{/grievance-policy}">grievance page</a> is updated.</div>
+
+    <div th:unless="${officer.isComplete()}" class="alert alert-warning">
+        <strong>Not published yet.</strong> The public page currently says no officer has been
+        appointed. It stays that way until every field below is filled.
+    </div>
+
+    <form method="post" th:action="@{/admin/grievance-officer}" th:object="${form}">
+        <div class="mb-3">
+            <label class="form-label">Full name</label>
+            <input type="text" th:field="*{name}" class="form-control" autocomplete="off"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Designation <span class="text-muted small">(optional)</span></label>
+            <input type="text" th:field="*{designation}" class="form-control" autocomplete="off"/>
+            <div class="text-danger small" th:if="${#fields.hasErrors('designation')}" th:errors="*{designation}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Contact email</label>
+            <input type="email" th:field="*{email}" class="form-control" autocomplete="off"/>
+            <div class="form-text">Prefer a role address such as grievance@yourdomain, which survives
+                the person changing.</div>
+            <div class="text-danger small" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Postal address</label>
+            <textarea th:field="*{address}" class="form-control" rows="3"></textarea>
+            <div class="text-danger small" th:if="${#fields.hasErrors('address')}" th:errors="*{address}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Response timeframe</label>
+            <input type="text" th:field="*{responseWindow}" class="form-control" autocomplete="off"
+                   placeholder="e.g. within 30 days"/>
+            <div class="form-text">Publish the figure you can meet on a bad week. Missing a published
+                deadline is worse than publishing a longer one.</div>
+            <div class="text-danger small" th:if="${#fields.hasErrors('responseWindow')}" th:errors="*{responseWindow}"></div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+            <span class="material-symbols-outlined">check</span>Publish</button>
+    </form>
+</div>
+</body>
+</html>
