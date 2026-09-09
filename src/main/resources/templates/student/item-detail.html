@@ -13,7 +13,7 @@
     </a>
 
     <div class="detail-hero" th:classappend="${item.usesIllustration()} ? 'is-illustration'">
-        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" data-shimmer="data-shimmer" th:alt="${item.name}"/>
         <div th:if="${item.usesIllustration()}" class="photo-placeholder">
             <span class="material-symbols-outlined">restaurant</span>
         </div>

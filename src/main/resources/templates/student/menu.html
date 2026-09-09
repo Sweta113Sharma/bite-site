@@ -111,7 +111,7 @@
             <div class="featured-scroll">
                 <div class="deal-card" th:each="item : ${reorderItems}">
                     <div class="deal-card-photo">
-                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" data-shimmer="data-shimmer" th:alt="${item.name}"/>
                         <div th:if="${item.usesIllustration()}" class="photo-placeholder">
                             <span class="material-symbols-outlined">restaurant</span>
                         </div>
@@ -143,7 +143,7 @@
                         <!--/* Canteen's own photo when uploaded; otherwise a neutral
                              placeholder — no pre-made food illustration, since canteens
                              supply their own images. */-->
-                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" data-shimmer="data-shimmer" th:alt="${item.name}"/>
                         <div th:if="${item.usesIllustration()}" class="photo-placeholder">
                             <span class="material-symbols-outlined">restaurant</span>
                         </div>
@@ -196,7 +196,7 @@
                                 <div class="menu-card-media">
                                     <a th:href="@{/student/menu/item/{id}(id=${item.id})}"
                                        class="menu-card-photo">
-                                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                                        <img th:if="${!item.usesIllustration()}" th:src="@{${item.photoPath}}" data-shimmer="data-shimmer" th:alt="${item.name}"/>
                                         <div th:if="${item.usesIllustration()}" class="photo-placeholder">
                                             <span class="material-symbols-outlined">restaurant</span>
                                         </div>

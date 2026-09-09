@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initNativeShell();
     initSelects();
     initConsoleFilters();
+    initFormBusyStates();
+    initRouteProgress();
+    initImageLoadingStates();
 });
 
 /* ============================================================
@@ -824,6 +827,8 @@ function initCartPageControls() {
     const setBusy = (form, busy) => {
         form.querySelectorAll('button').forEach(b => {
             b.disabled = busy;
+            // Picks up the same spinner every other button in the product now uses.
+            b.classList.toggle('is-busy', busy);
         });
         form.classList.toggle('is-busy', busy);
     };
@@ -1577,5 +1582,199 @@ function initConsoleFilters() {
 
         bar.hidden = false;
         apply();
+    });
+}
+
+/* ============================================================
+   LOADING STATE — say something happened, and stop the second tap
+   ============================================================ */
+
+/** Below this, a spinner is a flicker rather than information. */
+const BUSY_SPINNER_DELAY_MS = 120;
+
+/**
+ * Puts a form's submit button into a waiting state, and — the part that actually
+ * matters — stops it being pressed again.
+ *
+ * <p>Nothing in this product acknowledged a wait before. On campus mobile data a POST
+ * can take seconds, during which the page looked exactly as it did before the tap, so
+ * the natural thing to do was tap again. On "Proceed to Pay" that means two Razorpay
+ * orders for one lunch.
+ *
+ * <p>Two different timings on purpose. The guard is immediate, because that is the
+ * correctness half. The spinner waits {@link BUSY_SPINNER_DELAY_MS}, because a form that
+ * comes back in 40ms should not flash a spinner on its way out — the flash reads as a
+ * glitch, not as feedback.
+ *
+ * <p>Delegated from the document, so every form in the product is covered, including the
+ * ones rendered by templates this file has never heard of.
+ */
+function initFormBusyStates() {
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.dataset.noBusy !== undefined) {
+            return;
+        }
+        // Add-to-cart and the cart's own controls handle their submit with fetch and call
+        // preventDefault. This listener is on the document, so it runs after theirs — and
+        // a page that is not going to navigate has nothing to come back and unlock the
+        // button. Those forms manage their own busy state; see setBusy.
+        if (event.defaultPrevented) {
+            return;
+        }
+        // GET forms are the console filters and the search boxes: they submit constantly
+        // and return instantly, and a spinner on them is noise.
+        if ((form.method || 'get').toLowerCase() !== 'post') {
+            return;
+        }
+        // The browser blocks submission of an invalid form, so locking the button here
+        // would leave it disabled with nothing on its way back to re-enable it.
+        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+            return;
+        }
+
+        const button = event.submitter && event.submitter.form === form
+            ? event.submitter
+            : form.querySelector('button[type="submit"], button:not([type]), input[type="submit"]');
+        if (!button || button.disabled || button.dataset.busy === '1') {
+            return;
+        }
+
+        button.dataset.busy = '1';
+        button.setAttribute('aria-busy', 'true');
+
+        // Disabling inside the submit handler drops the button's own name/value from the
+        // payload, and several screens post which action was taken that way. A zero-delay
+        // timeout lands after the browser has serialised the form.
+        setTimeout(() => { button.disabled = true; }, 0);
+
+        setTimeout(() => {
+            if (button.dataset.busy === '1') {
+                button.classList.add('is-busy');
+            }
+        }, BUSY_SPINNER_DELAY_MS);
+    });
+
+    // Coming back via the back button restores the old page from the bfcache with the
+    // button still locked, which would leave a dead form. Undo it.
+    window.addEventListener('pageshow', () => {
+        document.querySelectorAll('[data-busy="1"]').forEach((button) => {
+            delete button.dataset.busy;
+            button.disabled = false;
+            button.classList.remove('is-busy');
+            button.removeAttribute('aria-busy');
+        });
+    });
+}
+
+/**
+ * A thin bar at the top of the screen while a full page navigation is in flight.
+ *
+ * <p>Server-rendered pages give no feedback between the tap and the next paint, and on a
+ * slow connection that gap is long enough to look like nothing happened. A bar is enough:
+ * it does not cover the page the reader can still use.
+ *
+ * <p>It creeps rather than tracks, because there is no progress to report — the browser
+ * will not say how far along a navigation is. Creeping is honest about that; it says
+ * "working", not "62% done".
+ */
+function initRouteProgress() {
+    let bar = null;
+    let creep = null;
+    let startTimer = null;
+    let width = 0;
+
+    function element() {
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.className = 'route-progress';
+            document.body.appendChild(bar);
+        }
+        return bar;
+    }
+
+    function start() {
+        if (creep) return;
+        // Same reasoning as the button spinner: a navigation that resolves in 100ms
+        // should not leave a bar flickering across the top of the screen.
+        startTimer = setTimeout(() => {
+            const el = element();
+            el.classList.add('is-active');
+            width = 8;
+            el.style.width = width + '%';
+            creep = setInterval(() => {
+                // Approaches 90% and never arrives, because arriving would be a lie.
+                width += Math.max(0.4, (90 - width) / 14);
+                el.style.width = Math.min(width, 90) + '%';
+            }, 220);
+        }, BUSY_SPINNER_DELAY_MS);
+    }
+
+    function stop() {
+        clearTimeout(startTimer);
+        if (creep) {
+            clearInterval(creep);
+            creep = null;
+        }
+        if (bar) {
+            bar.style.width = '100%';
+            bar.classList.remove('is-active');
+            setTimeout(() => { if (bar) bar.style.width = '0'; }, 260);
+        }
+        width = 0;
+    }
+
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest && event.target.closest('a[href]');
+        if (!link || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey) {
+            return;
+        }
+        const href = link.getAttribute('href');
+        // Anchors, downloads, new tabs and javascript: links never replace this page.
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')
+            || link.target === '_blank' || link.hasAttribute('download')) {
+            return;
+        }
+        if (link.origin && link.origin !== window.location.origin) {
+            return;
+        }
+        start();
+    });
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        // defaultPrevented means a fetch handler took it: no navigation, so no bar.
+        if (event.defaultPrevented || !(form instanceof HTMLFormElement)) {
+            return;
+        }
+        if (typeof form.checkValidity !== 'function' || form.checkValidity()) {
+            start();
+        }
+    });
+
+    // Fires on a normal load and on a bfcache restore, which is what clears the bar when
+    // someone navigates back to a page that was mid-flight.
+    window.addEventListener('pageshow', stop);
+    window.addEventListener('beforeunload', () => clearTimeout(startTimer));
+}
+
+/**
+ * Holds a shimmer in the space a menu photo will occupy until it arrives.
+ *
+ * <p>Only for images that have not already loaded — an image served from cache is
+ * complete before this runs, and giving it a loading state would be inventing a wait
+ * that did not happen.
+ */
+function initImageLoadingStates() {
+    document.querySelectorAll('img[data-shimmer]').forEach((img) => {
+        if (img.complete) {
+            return;
+        }
+        const holder = img.parentElement || img;
+        holder.classList.add('img-loading');
+        const done = () => holder.classList.remove('img-loading');
+        img.addEventListener('load', done, { once: true });
+        // A broken photo must not shimmer for ever; the alt text is the fallback.
+        img.addEventListener('error', done, { once: true });
     });
 }

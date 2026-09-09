@@ -48,7 +48,7 @@
         <div class="cart-items mb-4">
             <div class="cart-item-card" th:each="line : ${lines}">
                 <div class="cart-item-photo" th:classappend="${line.item().usesIllustration()} ? 'is-illustration'">
-                    <img th:if="${!line.item().usesIllustration()}" th:src="@{${line.item().photoPath}}" th:alt="${line.item().name}"/>
+                    <img th:if="${!line.item().usesIllustration()}" th:src="@{${line.item().photoPath}}" data-shimmer="data-shimmer" th:alt="${line.item().name}"/>
                     <span th:if="${line.item().usesIllustration()}" class="material-symbols-outlined">restaurant</span>
                 </div>
                 

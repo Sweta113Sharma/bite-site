@@ -825,3 +825,104 @@ hr.rule-strong {
     font-size: var(--text-label-sm, 12px);
 }
 .select--sm .select__option { padding: 0.4rem 0.55rem; }
+
+/* ============================================================
+   LOADING STATE
+   Three things, all of them about the same problem: this app's
+   users are on campus mobile data, and until now nothing in the
+   product acknowledged a wait. A tap produced no response until
+   the next page painted, which is how you get people tapping
+   "Proceed to Pay" twice.
+   ============================================================ */
+
+/* Full-page navigation. Deliberately a thin bar rather than an overlay: it says
+   "something is happening" without taking the screen away from what is still readable. */
+.route-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: var(--color-primary);
+    z-index: 3000;
+    pointer-events: none;
+    opacity: 0;
+    transition: width 240ms ease-out, opacity 200ms ease-out;
+}
+
+.route-progress.is-active {
+    opacity: 1;
+}
+
+/* A button that has been pressed and is waiting on the server.
+   currentColor is used for the spinner so this works on every button variant —
+   primary, outline, danger — without a rule per variant. */
+.btn.is-busy {
+    pointer-events: none;
+    cursor: progress;
+}
+
+.btn.is-busy::before {
+    content: '';
+    display: inline-block;
+    flex: none;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.45em;
+    vertical-align: -0.15em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: bitesite-spin 620ms linear infinite;
+}
+
+/* The button's own icon steps aside for the spinner rather than sitting beside it,
+   so a busy "Save" does not read as two icons competing. */
+.btn.is-busy .material-symbols-outlined {
+    display: none;
+}
+
+/* Flex buttons already space their children; the margin above would double up. */
+.btn.is-busy.d-flex::before,
+.btn.is-busy.d-inline-flex::before {
+    margin-right: 0;
+}
+
+@keyframes bitesite-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Menu photos arrive after the HTML does. Without this the card holds a blank
+   rectangle that then pops — the shimmer says the space is spoken for. */
+.img-loading {
+    background-color: var(--color-surface-deep);
+    background-image: linear-gradient(
+        100deg,
+        transparent 20%,
+        rgba(255, 255, 255, 0.55) 50%,
+        transparent 80%);
+    background-size: 220% 100%;
+    animation: bitesite-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes bitesite-shimmer {
+    from { background-position: 140% 0; }
+    to { background-position: -40% 0; }
+}
+
+/* Motion is the decoration here, not the information: the spinner still reads as a
+   ring, the bar still fills, the shimmer becomes a plain tint. Nothing is lost. */
+@media (prefers-reduced-motion: reduce) {
+    .btn.is-busy::before {
+        animation-duration: 2s;
+    }
+
+    .route-progress {
+        transition: opacity 200ms ease-out;
+    }
+
+    .img-loading {
+        background-image: none;
+        animation: none;
+    }
+}

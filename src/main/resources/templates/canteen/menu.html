@@ -67,7 +67,7 @@
                      data-stock=${!item.available} ? 'OFF' : (${item.soldOutToday()} ? 'SOLDOUT' : 'ON')">
 
             <div class="menu-admin__thumb" th:classappend="${item.photoPath == null} ? 'is-placeholder'">
-                <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>
+                <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" data-shimmer="data-shimmer" th:alt="${item.name}"/>
                 <span th:if="${item.photoPath == null}" class="material-symbols-outlined" aria-hidden="true">restaurant</span>
             </div>
 
