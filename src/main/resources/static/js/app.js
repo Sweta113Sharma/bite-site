@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initOfflineState();
     initNativeShell();
     initSelects();
+    initConsoleFilters();
 });
 
 /* ============================================================
@@ -1493,3 +1494,88 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeOpenSelect();
 });
+
+/* ============================================================
+   CONSOLE FILTERS — narrow a long staff list without a round trip
+   ============================================================ */
+
+/**
+ * One filter engine for every staff list, driven by data attributes so a screen
+ * adds a filter with markup alone.
+ *
+ * Deliberately client-side. Every list this runs on is rendered whole already, so
+ * filtering here is instant and costs the database nothing — the opposite of a
+ * round trip per keystroke. The paginated screens (all orders, payments, support,
+ * data requests) keep their server-side GET filters, because there the rest of the
+ * rows genuinely are not on the page to filter.
+ *
+ * Markup contract:
+ *   <div class="console-filter" data-filter="#thing-list" data-filter-empty="#thing-none" hidden>
+ *     <input type="search" data-filter-search>
+ *     <select data-filter-field="status">   value "" means no constraint
+ *     <span data-filter-count></span>
+ *     <button data-filter-clear>
+ *   <tr data-filter-row data-search="hbtu kanpur" data-status="ACTIVE">
+ *
+ * The bar ships hidden and is revealed here, so a browser running no JS shows the
+ * whole list rather than a filter that cannot filter.
+ */
+function initConsoleFilters() {
+    document.querySelectorAll('.console-filter').forEach((bar) => {
+        const target = document.querySelector(bar.dataset.filter || '');
+        if (!target) return;
+        const rows = Array.from(target.querySelectorAll('[data-filter-row]'));
+        // A filter bar over four rows is itself the clutter it was added to cure.
+        if (rows.length < Number(bar.dataset.filterMin || 6)) return;
+
+        const search = bar.querySelector('[data-filter-search]');
+        const fields = Array.from(bar.querySelectorAll('[data-filter-field]'));
+        const count = bar.querySelector('[data-filter-count]');
+        const empty = bar.dataset.filterEmpty ? document.querySelector(bar.dataset.filterEmpty) : null;
+
+        function apply() {
+            const q = (search ? search.value : '').toLowerCase().trim();
+            let shown = 0;
+            rows.forEach((row) => {
+                // data-search is the curated haystack; textContent is the fallback so a
+                // row that forgets one is still findable rather than silently unmatchable.
+                const hay = (row.dataset.search || row.textContent || '').toLowerCase();
+                let match = !q || hay.includes(q);
+                for (const field of fields) {
+                    if (!match) break;
+                    if (field.value) match = row.dataset[field.dataset.filterField] === field.value;
+                }
+                row.hidden = !match;
+                if (match) shown++;
+            });
+            if (count) {
+                count.textContent = shown === rows.length
+                    ? rows.length + ' shown'
+                    : shown + ' of ' + rows.length;
+            }
+            if (empty) empty.hidden = shown > 0;
+        }
+
+        if (search) search.addEventListener('input', apply);
+        // Upgraded selects re-dispatch a bubbling change on the native element, so this
+        // listener is the same one a native <select> would have fired. See upgradeSelect.
+        fields.forEach((f) => f.addEventListener('change', apply));
+
+        const clear = bar.querySelector('[data-filter-clear]');
+        if (clear) {
+            clear.addEventListener('click', () => {
+                if (search) search.value = '';
+                fields.forEach((f) => {
+                    f.selectedIndex = 0;
+                    // Makes the custom trigger redraw its label; upgradeSelect syncs on change.
+                    f.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                apply();
+                if (search) search.focus();
+            });
+        }
+
+        bar.hidden = false;
+        apply();
+    });
+}

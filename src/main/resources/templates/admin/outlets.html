@@ -15,11 +15,42 @@
         <p>Onboard a college and add its first canteen to see it here.</p>
     </div>
 
+    <div class="console-filter" data-filter="#canteen-rows" data-filter-empty="#canteen-none"
+         th:if="${!#lists.isEmpty(outlets)}" hidden="hidden">
+        <input type="search" class="form-control console-filter__search" data-filter-search
+               placeholder="Search canteen or college" aria-label="Search canteens"/>
+        <select class="form-select" data-filter-field="college" aria-label="Filter by college">
+            <option value="">All colleges</option>
+            <option th:each="c : ${collegeNames}" th:value="${c.key}" th:text="${c.value}"></option>
+        </select>
+        <select class="form-select" data-filter-field="status" aria-label="Filter by status">
+            <option value="">Any status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="DISABLED">Disabled</option>
+        </select>
+        <!--/* The one an admin fielding "why can't I order" reaches for. */-->
+        <select class="form-select" data-filter-field="orders" aria-label="Filter by whether orders are open">
+            <option value="">Open or paused</option>
+            <option value="YES">Taking orders</option>
+            <option value="PAUSED">Paused</option>
+        </select>
+        <button type="button" class="btn btn-outline-secondary" data-filter-clear="data-filter-clear">
+            <span class="material-symbols-outlined">close</span>Clear
+        </button>
+        <span class="console-filter__count" data-filter-count="data-filter-count"></span>
+    </div>
+
+    <div id="canteen-none" class="console-filter-empty" hidden="hidden">No canteen matches that.</div>
+
     <div class="table-responsive" th:if="${!#lists.isEmpty(outlets)}">
         <table class="table bg-white align-middle">
             <thead><tr><th>Canteen</th><th>College</th><th>Status</th><th>Taking orders</th><th>Hours</th></tr></thead>
-            <tbody>
-            <tr th:each="o : ${outlets}">
+            <tbody id="canteen-rows">
+            <tr th:each="o : ${outlets}" data-filter-row="data-filter-row"
+                th:attr="data-search=${o.name} + ' ' + ${collegeNames.get(o.tenantId)} ?: '',
+                         data-college=${o.tenantId},
+                         data-status=${o.active} ? 'ACTIVE' : 'DISABLED',
+                         data-orders=${o.acceptingOrders} ? 'YES' : 'PAUSED'">
                 <td class="fw-bold" th:text="${o.name}">Canteen</td>
                 <!--/* Printed per row: an admin holds no tenant, so there is no ambient
                      college name for the page to inherit. */-->

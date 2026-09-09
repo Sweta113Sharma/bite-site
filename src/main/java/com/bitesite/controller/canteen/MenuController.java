@@ -32,6 +32,9 @@ public class MenuController {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
         model.addAttribute("items", menuService.listForOutlet(user.getOutletId(), user.getTenantId()));
+        // The outlet's own taxonomy, in its own order — the same list the add/edit form
+        // offers, so the filter can only name categories items are actually filed under.
+        model.addAttribute("categories", categoryService.listForOutlet(user.getOutletId(), user.getTenantId()));
         model.addAttribute("pageTitle", "Menu");
         return "canteen/menu";
     }

@@ -12,11 +12,36 @@
     <div class="alert alert-success" th:if="${staffNotice}" th:text="${staffNotice}"></div>
     <div class="alert alert-danger" th:if="${staffError}" th:text="${staffError}"></div>
 
+    <div class="console-filter" data-filter="#staff-rows" data-filter-empty="#staff-none"
+         th:if="${!#lists.isEmpty(staff)}" hidden="hidden">
+        <input type="search" class="form-control console-filter__search" data-filter-search
+               placeholder="Search name or email" aria-label="Search staff"/>
+        <select class="form-select" data-filter-field="role" aria-label="Filter by role">
+            <option value="">Both roles</option>
+            <option value="CANTEEN_MANAGER">Manager</option>
+            <option value="CANTEEN_OPERATOR">Operator</option>
+        </select>
+        <select class="form-select" data-filter-field="state" aria-label="Filter by status">
+            <option value="">Any status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="OFF">Off</option>
+        </select>
+        <button type="button" class="btn btn-outline-secondary" data-filter-clear="data-filter-clear">
+            <span class="material-symbols-outlined">close</span>Clear
+        </button>
+        <span class="console-filter__count" data-filter-count="data-filter-count"></span>
+    </div>
+
+    <div id="staff-none" class="console-filter-empty" hidden="hidden">Nobody matches that.</div>
+
     <div class="table-responsive" th:if="${!#lists.isEmpty(staff)}">
         <table class="table bg-white align-middle">
             <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-            <tr th:each="s : ${staff}">
+            <tbody id="staff-rows">
+            <tr th:each="s : ${staff}" data-filter-row="data-filter-row"
+                th:attr="data-search=${s.name} + ' ' + ${s.email},
+                         data-role=${s.role},
+                         data-state=${s.active} ? 'ACTIVE' : 'OFF'">
                 <td th:text="${s.name}">Name</td>
                 <td class="small text-muted" th:text="${s.email}">email</td>
                 <td>

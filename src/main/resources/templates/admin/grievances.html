@@ -15,8 +15,27 @@
         <p>No grievances raised across any college.</p>
     </div>
 
-    <div class="list-group">
-        <div class="list-group-item" th:each="row : ${grievances}">
+    <div class="console-filter" data-filter="#grievance-rows" data-filter-empty="#grievance-none"
+         th:if="${!#lists.isEmpty(grievances)}" hidden="hidden">
+        <input type="search" class="form-control console-filter__search" data-filter-search
+               placeholder="Search subject, college, student or token" aria-label="Search grievances"/>
+        <select class="form-select" data-filter-field="status" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option th:each="st : ${statuses}" th:value="${st}" th:text="${st.name().replace('_',' ')}"></option>
+        </select>
+        <button type="button" class="btn btn-outline-secondary" data-filter-clear="data-filter-clear">
+            <span class="material-symbols-outlined">close</span>Clear
+        </button>
+        <span class="console-filter__count" data-filter-count="data-filter-count"></span>
+    </div>
+
+    <div id="grievance-none" class="console-filter-empty" hidden="hidden">No grievance matches that.</div>
+
+    <div class="list-group" id="grievance-rows">
+        <div class="list-group-item" th:each="row : ${grievances}" data-filter-row="data-filter-row"
+             th:attr="data-search=${row.grievance().subject} + ' ' + ${row.collegeName} + ' ' + ${row.raisedByName}
+                                  + ' ' + ${row.raisedByEmail} + ' ' + (${row.orderToken()} ?: ''),
+                      data-status=${row.grievance().status}">
             <div class="d-flex justify-content-between align-items-start mb-1">
                 <div>
                     <strong th:text="${row.grievance().subject}">Subject</strong>

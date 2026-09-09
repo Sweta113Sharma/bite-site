@@ -1282,3 +1282,62 @@ body.console .stat--action.is-urgent {
     background: var(--color-danger-tint);
     box-shadow: inset 4px 0 0 var(--color-primary);
 }
+
+/* ============================================================
+   CONSOLE FILTER BAR
+   Sits under the console head on screens whose list is rendered
+   whole. Revealed by initConsoleFilters() in app.js, and only
+   when the list is long enough to be worth narrowing — so the
+   bar never becomes the clutter it exists to remove.
+   ============================================================ */
+
+body.console .console-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--color-surface-deep);
+    border: var(--border-w) solid var(--color-ink);
+}
+
+body.console .console-filter .form-control,
+body.console .console-filter .form-select,
+body.console .console-filter .select {
+    width: auto;
+    min-width: 9rem;
+    margin-bottom: 0;
+}
+
+/* The search box is the one control that should take the slack. */
+body.console .console-filter__search {
+    flex: 1 1 14rem;
+    min-width: 11rem;
+}
+
+body.console .console-filter__count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+}
+
+/* Bootstrap sets an explicit display on tr and on .list-group-item, which outranks
+   the [hidden] default. Stated at the same strength so a filtered-out row really goes. */
+body.console [data-filter-row][hidden] {
+    display: none !important;
+}
+
+/* The "nothing matches that" line, shown only while the filter empties the list. */
+body.console .console-filter-empty {
+    padding: 1.25rem;
+    text-align: center;
+    color: var(--color-ink-muted);
+    background: var(--color-surface);
+    border: var(--border-w) dashed var(--color-ink-muted);
+    margin-bottom: 1.25rem;
+}

@@ -34,9 +34,37 @@
          colour carrying no information — six items ran to 3,225px of scroll on a
          phone. Staff scanning this screen want name, price, today's count and the
          stock toggle, many rows at a time. */-->
-    <ul class="menu-admin" th:if="${!#lists.isEmpty(items)}">
+    <div class="console-filter" data-filter="#menu-rows" data-filter-empty="#menu-none"
+         th:if="${!#lists.isEmpty(items)}" hidden="hidden">
+        <input type="search" class="form-control console-filter__search" data-filter-search
+               placeholder="Search items" aria-label="Search menu items"/>
+        <select class="form-select" data-filter-field="category" aria-label="Filter by category">
+            <option value="">All categories</option>
+            <option th:each="c : ${categories}" th:value="${c.name}" th:text="${c.name}"></option>
+        </select>
+        <!--/* Switched off and sold out against today's cap are separate facts on the rows
+             below, so they are separate choices here too. */-->
+        <select class="form-select" data-filter-field="stock" aria-label="Filter by stock">
+            <option value="">Any stock</option>
+            <option value="ON">On sale</option>
+            <option value="SOLDOUT">Sold out today</option>
+            <option value="OFF">Out of stock</option>
+        </select>
+        <button type="button" class="btn btn-outline-secondary" data-filter-clear="data-filter-clear">
+            <span class="material-symbols-outlined">close</span>Clear
+        </button>
+        <span class="console-filter__count" data-filter-count="data-filter-count"></span>
+    </div>
+
+    <div id="menu-none" class="console-filter-empty" hidden="hidden">No item matches that.</div>
+
+    <ul class="menu-admin" id="menu-rows" th:if="${!#lists.isEmpty(items)}">
         <li class="menu-admin__row" th:each="item : ${items}"
-            th:classappend="${!item.available} ? 'is-off'">
+            th:classappend="${!item.available} ? 'is-off'"
+            data-filter-row="data-filter-row"
+            th:attr="data-search=${item.name} + ' ' + ${item.category},
+                     data-category=${item.category},
+                     data-stock=${!item.available} ? 'OFF' : (${item.soldOutToday()} ? 'SOLDOUT' : 'ON')">
 
             <div class="menu-admin__thumb" th:classappend="${item.photoPath == null} ? 'is-placeholder'">
                 <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" th:alt="${item.name}"/>

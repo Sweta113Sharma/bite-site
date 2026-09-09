@@ -12,6 +12,8 @@
         </div>
     </div>
 
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}"></div>
+
     <div th:if="${#lists.isEmpty(tenants)}" class="state-panel">
         <div th:replace="~{fragments/state :: medallion('apartment','neutral')}"></div>
         <h4>No colleges yet</h4>
@@ -19,11 +21,29 @@
         <a class="btn btn-primary" th:href="@{/admin/tenants/new}"><span class="material-symbols-outlined">add</span>Onboard a college</a>
     </div>
 
+    <!--/* Client-side because every college is already on the page. See initConsoleFilters. */-->
+    <div class="console-filter" data-filter="#college-rows" data-filter-empty="#college-none"
+         th:if="${!#lists.isEmpty(tenants)}" hidden="hidden">
+        <input type="search" class="form-control console-filter__search" data-filter-search
+               placeholder="Search by name" aria-label="Search colleges by name"/>
+        <select class="form-select" data-filter-field="status" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
+        </select>
+        <button type="button" class="btn btn-outline-secondary" data-filter-clear="data-filter-clear">
+            <span class="material-symbols-outlined">close</span>Clear
+        </button>
+        <span class="console-filter__count" data-filter-count="data-filter-count"></span>
+    </div>
+
+    <div id="college-none" class="console-filter-empty" hidden="hidden">No college matches that.</div>
+
     <div class="table-responsive" th:if="${!#lists.isEmpty(tenants)}">
     <table class="table bg-white">
         <thead><tr><th class="col-optional">Logo</th><th>Name</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-        <tr th:each="t : ${tenants}">
+        <tbody id="college-rows">
+        <tr th:each="t : ${tenants}" data-filter-row="data-filter-row"
+            th:attr="data-search=${t.name},data-status=${t.status}">
             <td class="col-optional">
                 <img th:if="${t.logoPath != null}" th:src="@{${t.logoPath}}" height="32" alt="logo"/>
                 <span th:if="${t.logoPath == null}" class="material-symbols-outlined text-muted fs-4">apartment</span>

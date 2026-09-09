@@ -15,11 +15,29 @@
         <p>Add a college you're talking to and track it through the pipeline.</p>
     </div>
 
+    <div class="console-filter" data-filter="#lead-rows" data-filter-empty="#lead-none"
+         th:if="${!#lists.isEmpty(leads)}" hidden="hidden">
+        <input type="search" class="form-control console-filter__search" data-filter-search
+               placeholder="Search college or contact" aria-label="Search leads"/>
+        <select class="form-select" data-filter-field="stage" aria-label="Filter by stage">
+            <option value="">All stages</option>
+            <option th:each="s : ${stages}" th:value="${s}" th:text="${s}"></option>
+        </select>
+        <button type="button" class="btn btn-outline-secondary" data-filter-clear="data-filter-clear">
+            <span class="material-symbols-outlined">close</span>Clear
+        </button>
+        <span class="console-filter__count" data-filter-count="data-filter-count"></span>
+    </div>
+
+    <div id="lead-none" class="console-filter-empty" hidden="hidden">No lead matches that.</div>
+
     <div class="table-responsive" th:if="${!#lists.isEmpty(leads)}">
     <table class="table bg-white">
         <thead><tr><th>College</th><th>Contact</th><th>Stage</th><th></th></tr></thead>
-        <tbody>
-        <tr th:each="lead : ${leads}">
+        <tbody id="lead-rows">
+        <tr th:each="lead : ${leads}" data-filter-row="data-filter-row"
+            th:attr="data-search=${lead.collegeName} + ' ' + ${lead.contactName} + ' ' + ${lead.contactEmail},
+                     data-stage=${lead.stage}">
             <td th:text="${lead.collegeName}">College</td>
             <td>
                 <div th:text="${lead.contactName}">Contact</div>
