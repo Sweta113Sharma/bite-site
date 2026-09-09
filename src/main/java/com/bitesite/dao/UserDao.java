@@ -22,6 +22,19 @@ public interface UserDao {
 
     List<User> findPlatformUsers();
 
+    /**
+     * The platform-wide account directory, paged and filtered.
+     *
+     * <p>Fetch {@code limit + 1} and let {@link com.bitesite.dto.Paged} work out whether a
+     * next page exists, the same trick every other paged screen here uses — a student body
+     * is the one table where a COUNT(*) per page view would actually be felt.
+     *
+     * @param platformOnly restrict to accounts with no college (super admins, admins,
+     *                     tech managers); ignored when a tenantId is given
+     */
+    List<User> search(String query, Role role, Long tenantId, boolean platformOnly, Boolean active,
+            int limit, int offset);
+
     /** Live accounts holding a role, by grant rather than by view-mode. Used to refuse
      *  revoking the last super admin, which would leave nobody able to appoint one. */
     int countActiveWithRole(Role role);

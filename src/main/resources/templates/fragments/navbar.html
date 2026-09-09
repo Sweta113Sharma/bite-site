@@ -155,6 +155,9 @@
             <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/users}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/users')} ? 'page' : null">
                 <span class="material-symbols-outlined">manage_accounts</span>Platform users</a>
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/accounts}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath,'/admin/accounts')} ? 'is-active'">
+                <span class="material-symbols-outlined">group</span>All accounts</a>
 
             <!--/* Tech manager */-->
             <a sec:authorize="hasRole('TECH_MANAGER')" class="console-nav__link" th:href="@{/techmgr}"

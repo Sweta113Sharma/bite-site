@@ -4,6 +4,7 @@ import com.bitesite.config.RateLimiter;
 import com.bitesite.dao.FcmTokenDao;
 import com.bitesite.dao.UserDao;
 import com.bitesite.config.RoleAssignment;
+import com.bitesite.dto.Paged;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
 import com.bitesite.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import com.bitesite.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -182,6 +184,56 @@ public class UserService {
             Role fallback = user.getRoles().stream().filter(r -> r != role).findFirst().orElseThrow();
             userDao.updateActiveRole(userId, fallback);
         }
+    }
+
+    /**
+     * The platform-wide account directory: every account, whatever college or role.
+     *
+     * <p>Nothing else in the console answers "who is on this platform". Platform users has
+     * only the tenant-less accounts, and outlet staff are visible one college at a time —
+     * so a support question about a named student had nowhere to start.
+     *
+     * <p>Paged on the server rather than filtered in the browser, unlike the console's
+     * other lists: those render a college's canteens or a handful of admins, and this one
+     * renders a student body.
+     */
+    public Paged<User> searchAccounts(String query, Role role, Long tenantId, boolean platformOnly,
+            Boolean active, int page, int size) {
+        List<User> rows = userDao.search(query, role, tenantId, platformOnly, active,
+                size + 1, Paged.offsetFor(page, size));
+        return Paged.of(rows, page, size);
+    }
+
+    /**
+     * Switches any account on or off from the directory.
+     *
+     * <p>Guarded by {@link RoleAssignment}, so an admin cannot switch off a super admin —
+     * a directory that reached every account without that check would be a way around the
+     * whole role rule. The actor is re-read from the database rather than trusted from the
+     * session, for the same reason grantRole does it.
+     */
+    public void setAccountActive(Long userId, boolean active, Long actorUserId) {
+        User actor = userDao.findById(actorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+        if (userId.equals(actorUserId)) {
+            throw new BusinessException("You can't switch off your own account.");
+        }
+        if (!RoleAssignment.canManage(actor, target)) {
+            throw new AccessDeniedException(
+                    "Only a super admin can change an account that holds an elevated role.");
+        }
+        // The last super admin must stay able to sign in, for the same reason revokeRole
+        // refuses to remove the role itself.
+        if (!active && target.hasRole(Role.SUPER_ADMIN)
+                && userDao.countActiveWithRole(Role.SUPER_ADMIN) <= 1) {
+            throw new BusinessException("That is the last active super admin. Switching it off would "
+                    + "leave nobody able to appoint another.");
+        }
+        userDao.setActive(userId, active);
+        auditService.record(actorUserId, target.getTenantId(), "User", userId,
+                active ? "REACTIVATE_ACCOUNT" : "DEACTIVATE_ACCOUNT", !active, active);
     }
 
     /** Staff at one outlet, for that outlet's own manager. */

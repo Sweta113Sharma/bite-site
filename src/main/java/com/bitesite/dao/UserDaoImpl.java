@@ -12,6 +12,10 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -216,6 +220,68 @@ public class UserDaoImpl implements UserDao {
     }
 
     // ---- Multi-role support ----
+
+    @Override
+    public List<User> search(String query, Role role, Long tenantId, boolean platformOnly, Boolean active,
+            int limit, int offset) {
+        StringBuilder sql = new StringBuilder("SELECT u.* FROM users u WHERE 1 = 1");
+        List<Object> args = new ArrayList<>();
+
+        if (query != null && !query.isBlank()) {
+            // The three things somebody at a support desk is handed: a name, an address,
+            // or a roll number. All contains-matches, because people paraphrase all three.
+            sql.append(" AND (u.name LIKE ? OR u.email LIKE ? OR u.roll_no LIKE ?)");
+            String term = "%" + query.trim() + "%";
+            args.add(term);
+            args.add(term);
+            args.add(term);
+        }
+        if (role != null) {
+            // Against the durable grant rather than active_role, which is only a view-mode
+            // and would hide a super admin currently looking at the tech console.
+            sql.append(" AND EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = ?)");
+            args.add(role.name());
+        }
+        if (tenantId != null) {
+            sql.append(" AND u.tenant_id = ?");
+            args.add(tenantId);
+        } else if (platformOnly) {
+            sql.append(" AND u.tenant_id IS NULL");
+        }
+        if (active != null) {
+            sql.append(" AND u.is_active = ?");
+            args.add(active);
+        }
+        sql.append(" ORDER BY u.created_at DESC LIMIT ? OFFSET ?");
+        args.add(limit);
+        args.add(offset);
+
+        List<User> users = jdbcTemplate.query(sql.toString(), ROW_MAPPER, args.toArray());
+        attachRoles(users);
+        return users;
+    }
+
+    /**
+     * Loads every listed user's roles in one query instead of one per row.
+     *
+     * <p>The per-row {@code loadRoles} is fine for a handful of platform accounts; on a
+     * directory page it is 25 extra round trips, on the database tier this runs on, for
+     * data that one IN clause returns.
+     */
+    private void attachRoles(List<User> users) {
+        if (users.isEmpty()) {
+            return;
+        }
+        String placeholders = String.join(",", Collections.nCopies(users.size(), "?"));
+        Map<Long, Set<Role>> byUser = new HashMap<>();
+        jdbcTemplate.query("SELECT user_id, role FROM user_roles WHERE user_id IN (" + placeholders + ")",
+                rs -> {
+                    byUser.computeIfAbsent(rs.getLong("user_id"), k -> EnumSet.noneOf(Role.class))
+                            .add(Role.valueOf(rs.getString("role")));
+                },
+                users.stream().map(User::getId).toArray());
+        users.forEach(u -> u.setRoles(byUser.getOrDefault(u.getId(), EnumSet.noneOf(Role.class))));
+    }
 
     @Override
     public Set<Role> findRoles(Long userId) {

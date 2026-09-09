@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container">
+    <div class="console-head">
+        <div class="console-head__text">
+            <h3 class="m-0">All accounts</h3>
+            <p class="console-head__blurb mb-0">
+                Everyone on the platform — students, canteen staff and platform accounts.
+            </p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/users}">
+            <span class="material-symbols-outlined">manage_accounts</span>Platform users
+        </a>
+    </div>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}"></div>
+    <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+
+    <!--/* Server-side, unlike the console's other filters. Those narrow a college's
+         canteens or a handful of admins and can afford to hold the whole list in the
+         page; this one is searching a student body. */-->
+    <form method="get" th:action="@{/admin/accounts}" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+        <input type="search" name="q" class="form-control" style="width:auto; min-width:18rem;"
+               th:value="${q}" placeholder="Name, email or roll number"/>
+
+        <select name="role" class="form-select" style="width:auto;" onchange="this.form.submit()"
+                aria-label="Filter by role">
+            <option value="">Any role</option>
+            <option th:each="r : ${roles}" th:value="${r}" th:selected="${r == selectedRole}"
+                    th:text="${#strings.replace(r.name(),'_',' ')}"></option>
+        </select>
+
+        <select name="college" class="form-select" style="width:auto;" onchange="this.form.submit()"
+                aria-label="Filter by college">
+            <option value="">All colleges</option>
+            <option value="platform" th:selected="${selectedCollege == 'platform'}">No college (platform staff)</option>
+            <option th:each="t : ${tenants}" th:value="${t.id}"
+                    th:selected="${selectedCollege == #strings.toString(t.id)}" th:text="${t.name}"></option>
+        </select>
+
+        <select name="active" class="form-select" style="width:auto;" onchange="this.form.submit()"
+                aria-label="Filter by status">
+            <option value="">Any status</option>
+            <option value="true" th:selected="${selectedActive != null and selectedActive}">Active</option>
+            <option value="false" th:selected="${selectedActive != null and !selectedActive}">Switched off</option>
+        </select>
+
+        <button type="submit" class="btn btn-outline-secondary">
+            <span class="material-symbols-outlined">search</span>Search
+        </button>
+        <a th:if="${q != null or selectedRole != null or selectedCollege != null or selectedActive != null}"
+           class="btn btn-link" th:href="@{/admin/accounts}">Clear</a>
+    </form>
+
+    <div th:if="${#lists.isEmpty(accounts)}" class="alert alert-secondary">
+        No account matches that.
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(accounts)}">
+        <table class="table bg-white align-middle">
+            <thead>
+            <tr>
+                <th>Name</th><th>Email</th><th>Roles</th><th>College</th>
+                <th>Status</th><th>Joined</th><th class="text-end">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="u : ${accounts}">
+                <td>
+                    <span th:text="${u.name}">Name</span>
+                    <!--/* Their own row, so the missing switch below reads as deliberate. */-->
+                    <span class="badge bg-info text-dark" th:if="${u.id == selfId}">you</span>
+                    <div class="text-muted small" th:if="${u.rollNo != null and !u.rollNo.isEmpty()}"
+                         th:text="'Roll ' + ${u.rollNo}">Roll</div>
+                </td>
+                <td class="small">
+                    <span th:text="${u.email}">email</span>
+                    <!--/* An unverified address is why their codes are not arriving, which is
+                         the single most common support question this screen will be opened for. */-->
+                    <span class="badge bg-warning text-dark" th:unless="${u.emailVerified}">unverified</span>
+                </td>
+                <td>
+                    <span th:each="r : ${u.roles}" class="badge bg-primary me-1"
+                          th:text="${#strings.replace(r.name(),'_',' ')}">ROLE</span>
+                    <span class="text-muted small" th:if="${#sets.isEmpty(u.roles)}">none</span>
+                </td>
+                <td class="small text-muted">
+                    <span th:if="${u.tenantId == null}">Platform</span>
+                    <span th:if="${u.tenantId != null}" th:text="${collegeNames.get(u.tenantId)} ?: '(deleted)'">College</span>
+                    <div th:if="${u.outletId != null}" th:text="${outletNames.get(u.outletId)} ?: ''">Canteen</div>
+                </td>
+                <td>
+                    <span class="badge" th:classappend="${u.active} ? 'bg-success' : 'bg-secondary'"
+                          th:text="${u.active} ? 'Active' : 'Off'">Active</span>
+                </td>
+                <td class="small text-muted"
+                    th:text="${u.createdAt != null} ? ${#temporals.format(u.createdAt,'dd MMM yyyy')} : ''">date</td>
+                <td class="text-end">
+                    <!--/* Drawn only when this actor may actually use it. An admin sees no
+                         switch on a super admin's row, because RoleAssignment would refuse
+                         it — and a control whose only purpose is to say no is worse than
+                         no control. */-->
+                    <form method="post" class="m-0 d-inline"
+                          th:if="${manageable.get(u.id) and u.id != selfId}"
+                          th:action="@{/admin/accounts/{id}/status(id=${u.id})}"
+                          th:attr="onsubmit=${u.active}
+                                   ? 'return confirm(\'Switch this account off? They will not be able to sign in.\');'
+                                   : null">
+                        <input type="hidden" name="active" th:value="${!u.active}"/>
+                        <input type="hidden" name="back" th:value="${backQuery}"/>
+                        <button type="submit" class="btn btn-sm"
+                                th:classappend="${u.active} ? 'btn-outline-danger' : 'btn-outline-success'"
+                                th:text="${u.active} ? 'Switch off' : 'Switch on'">Switch off</button>
+                    </form>
+                    <span class="text-muted small" th:unless="${manageable.get(u.id) or u.id == selfId}">
+                        Super admin only
+                    </span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div th:replace="~{fragments/pager :: pager(${paged},
+            @{/admin/accounts(page=${paged != null ? paged.page - 1 : 0},q=${q},role=${selectedRole},college=${selectedCollege},active=${selectedActive})},
+            @{/admin/accounts(page=${paged != null ? paged.page + 1 : 0},q=${q},role=${selectedRole},college=${selectedCollege},active=${selectedActive})})}"></div>
+</div>
+</body>
+</html>
