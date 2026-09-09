@@ -139,7 +139,7 @@
 
                     <div class="table-responsive" th:if="${!#lists.isEmpty(staff)}">
                     <table class="table table-sm align-middle">
-                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th class="text-end">Password</th></tr></thead>
+                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
                         <tbody>
                         <tr th:each="s : ${staff}" th:if="${s.role.isOutletPortalRole()}">
                             <td th:text="${s.name}">Name</td>
@@ -149,16 +149,36 @@
                                       th:classappend="${s.role.name() == 'CANTEEN_MANAGER'} ? 'bg-primary' : 'bg-secondary'"
                                       th:text="${s.role.name() == 'CANTEEN_MANAGER'} ? 'Manager' : 'Operator'">Role</span>
                             </td>
+                            <td>
+                                <span class="badge" th:classappend="${s.active} ? 'bg-success' : 'bg-secondary'"
+                                      th:text="${s.active} ? 'Active' : 'Off'">Active</span>
+                            </td>
                             <td class="text-end">
-                                <!--/* Mails a code to the staff member rather than setting a
-                                     password here, so an admin never handles someone else's
-                                     credential. */-->
-                                <form method="post"
-                                      th:action="@{/admin/tenants/{id}/staff/{userId}/password-reset(id=${tenant.id},userId=${s.id})}"
-                                      class="m-0"
-                                      onsubmit="return confirm('Email a password reset code to this person?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Reset password</button>
-                                </form>
+                                <div class="d-inline-flex gap-2">
+                                    <!--/* Mails a code to the staff member rather than setting a
+                                         password here, so an admin never handles someone else's
+                                         credential. The code is entered at /reset-password. */-->
+                                    <form method="post"
+                                          th:action="@{/admin/tenants/{id}/staff/{userId}/password-reset(id=${tenant.id},userId=${s.id})}"
+                                          class="m-0"
+                                          onsubmit="return confirm('Email a password reset code to this person?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">Reset password</button>
+                                    </form>
+                                    <!--/* There was no way at all to stop a canteen account signing
+                                         in from this screen. Deactivation, not deletion: the account
+                                         is named across the audit log and the orders it handled. */-->
+                                    <form method="post"
+                                          th:action="@{/admin/tenants/{id}/staff/{userId}/status(id=${tenant.id},userId=${s.id})}"
+                                          class="m-0"
+                                          th:attr="onsubmit=${s.active}
+                                                   ? 'return confirm(\'Switch this account off? They will not be able to sign in.\');'
+                                                   : null">
+                                        <input type="hidden" name="active" th:value="${!s.active}"/>
+                                        <button type="submit" class="btn btn-sm"
+                                                th:classappend="${s.active} ? 'btn-outline-danger' : 'btn-outline-success'"
+                                                th:text="${s.active} ? 'Switch off' : 'Switch on'">Switch off</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         </tbody>

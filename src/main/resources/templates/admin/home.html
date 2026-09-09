@@ -50,7 +50,7 @@
             <span class="stat__value" th:text="${snapshot.paymentsNeedingRefund()}">0</span>
             <span class="stat__note">Captured, but the order could not be honoured</span>
         </a>
-        <a sec:authorize="hasRole('SUPER_ADMIN')" class="stat stat--action"
+        <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="stat stat--action"
            th:classappend="${snapshot.openDataRequests() > 0} ? 'is-live'" th:href="@{/admin/dpdp}">
             <span class="stat__label">Open data requests</span>
             <span class="stat__value" th:text="${snapshot.openDataRequests()}">0</span>

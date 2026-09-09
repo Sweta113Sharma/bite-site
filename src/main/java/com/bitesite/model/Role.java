@@ -11,7 +11,18 @@ package com.bitesite.model;
  */
 public enum Role {
     // --- Admin portal roles ---
+    //
+    // Declaration order is load-bearing here too. RoleBasedAuthenticationSuccessHandler
+    // prefers SUPER_ADMIN explicitly and otherwise takes findFirst() over an EnumSet,
+    // which iterates in declaration order — so ADMIN sits above TECH_MANAGER and someone
+    // holding both signs into the admin portal as the more privileged of the two.
     SUPER_ADMIN,
+
+    // Full run of the admin console, with one thing held back: an ADMIN cannot create,
+    // grant or revoke an elevated role, and cannot touch an account that holds one. That
+    // is what separates them from a SUPER_ADMIN, and the rule lives in RoleAssignment.
+    ADMIN,
+
     TECH_MANAGER,
 
     // --- Outlet portal roles ---
@@ -31,7 +42,19 @@ public enum Role {
 
     /** True if this role belongs to the admin portal (admin.bitesite.in). */
     public boolean isAdminPortalRole() {
-        return this == SUPER_ADMIN || this == TECH_MANAGER;
+        return this == SUPER_ADMIN || this == ADMIN || this == TECH_MANAGER;
+    }
+
+    /**
+     * Roles that confer administrative power over other people's access.
+     *
+     * <p>Only a SUPER_ADMIN may grant or revoke one of these, and only a SUPER_ADMIN may
+     * act on an account that holds one. Without the second half an ADMIN could not make
+     * themselves a super admin, but could strip one — which is the same lockout by a
+     * longer route.
+     */
+    public boolean isElevated() {
+        return this == SUPER_ADMIN || this == ADMIN;
     }
 
     /** True if this role belongs to the outlet portal (outlet.bitesite.in). */

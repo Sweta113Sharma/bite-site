@@ -20,7 +20,7 @@ public enum PortalTarget {
 
     private static final Set<Role> APP_ROLES    = Set.of(Role.USER);
     private static final Set<Role> OUTLET_ROLES = Set.of(Role.CANTEEN_MANAGER, Role.CANTEEN_OPERATOR);
-    private static final Set<Role> ADMIN_ROLES  = Set.of(Role.SUPER_ADMIN, Role.TECH_MANAGER);
+    private static final Set<Role> ADMIN_ROLES  = Set.of(Role.SUPER_ADMIN, Role.ADMIN, Role.TECH_MANAGER);
 
     /** Whether the given role is allowed to operate on this portal. */
     public boolean allowsRole(Role role) {

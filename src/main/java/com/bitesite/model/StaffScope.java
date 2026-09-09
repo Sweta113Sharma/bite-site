@@ -16,14 +16,20 @@ public final class StaffScope {
     private StaffScope() {}
 
     /** Operational scope: approvals, grievances. */
-    public static final Set<Role> OPS_SCOPE = Set.of(Role.SUPER_ADMIN, Role.TECH_MANAGER);
+    public static final Set<Role> OPS_SCOPE = Set.of(Role.SUPER_ADMIN, Role.ADMIN, Role.TECH_MANAGER);
 
     /** Technical scope: catalog, pricing, feature flags, system health. */
-    public static final Set<Role> TECH_SCOPE = Set.of(Role.SUPER_ADMIN, Role.TECH_MANAGER);
+    public static final Set<Role> TECH_SCOPE = Set.of(Role.SUPER_ADMIN, Role.ADMIN, Role.TECH_MANAGER);
 
-    /** Full admin: user management, audit log, tenant CRUD, sales/onboarding pipeline —
-     * SUPER_ADMIN only. */
-    public static final Set<Role> FULL_ADMIN = Set.of(Role.SUPER_ADMIN);
+    /**
+     * Full admin: user management, audit log, tenant CRUD, sales/onboarding pipeline.
+     *
+     * <p>ADMIN joins SUPER_ADMIN here, so an admin runs the console. What separates the
+     * two is not a screen but a rule: {@link com.bitesite.config.RoleAssignment} refuses
+     * an ADMIN any elevated grant, and any account that holds one. Reaching the platform
+     * users screen is not the same as being able to make somebody a super admin on it.
+     */
+    public static final Set<Role> FULL_ADMIN = Set.of(Role.SUPER_ADMIN, Role.ADMIN);
 
     // ---- Outlet portal ----
     //

@@ -3,6 +3,7 @@ package com.bitesite.service;
 import com.bitesite.config.RateLimiter;
 import com.bitesite.dao.FcmTokenDao;
 import com.bitesite.dao.UserDao;
+import com.bitesite.config.RoleAssignment;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
 import com.bitesite.exception.ResourceNotFoundException;
@@ -138,7 +139,20 @@ public class UserService {
 
     /** Grant an additional role. {@code user_roles.grantRole} is itself the audit record
      * (via {@code role_audit}) — nothing further to log here. */
+    /**
+     * Grants a role, after checking the actor is allowed to hand out that one.
+     *
+     * <p>The check is here rather than only in the controller because this is the method
+     * that hands out power: a future caller that forgets the guard would be an escalation,
+     * not a bug. The actor is re-read from the database rather than taken from the
+     * caller's session, so a role revoked minutes ago cannot still be used to grant.
+     */
     public void grantRole(Long userId, Role role, Long actorUserId) {
+        User actor = userDao.findById(actorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        RoleAssignment.requireCanAssign(actor, target, role);
         userDao.grantRole(userId, role, actorUserId);
     }
 
@@ -147,10 +161,21 @@ public class UserService {
      * their active one, falls back to another role they still hold so their next request
      * doesn't reference a role that's gone. */
     public void revokeRole(Long userId, Role role, Long actorUserId) {
+        User actor = userDao.findById(actorUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         User user = userDao.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        RoleAssignment.requireCanAssign(actor, user, role);
         if (user.getRoles().size() <= 1) {
             throw new BusinessException("Can't revoke a user's only remaining role.");
+        }
+        // The platform must never be left without someone who can appoint admins. An
+        // ADMIN cannot grant SUPER_ADMIN, so losing the last one is not a mistake anybody
+        // could undo from inside the product.
+        if (role == Role.SUPER_ADMIN && userDao.countActiveWithRole(Role.SUPER_ADMIN) <= 1) {
+            throw new BusinessException(
+                    "That is the last super admin. Grant the role to somebody else first — "
+                            + "no other role can appoint one.");
         }
         userDao.revokeRole(userId, role, actorUserId);
         if (user.getActiveRole() == role) {
@@ -171,14 +196,46 @@ public class UserService {
      * request, so a crafted user id cannot reach across to another canteen — or to a
      * platform account, which has no outlet at all and therefore never matches.
      */
-    public void deactivateOutletstaff(Long userId, Long outletId, Long tenantId, Long actorUserId) {
+    /**
+     * Switches an outlet's own staff account on or off, for that outlet's manager.
+     *
+     * <p>Was deactivate-only, which made it a one-way door: a manager who switched off the
+     * wrong person had no way to put them back and no screen that admitted it. Off and on
+     * are the same operation with a different argument, so they are the same method.
+     */
+    public void setOutletStaffActive(Long userId, Long outletId, Long tenantId, boolean active,
+            Long actorUserId) {
         User target = userDao.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff account not found"));
         if (!outletId.equals(target.getOutletId()) || !tenantId.equals(target.getTenantId())) {
             throw new ResourceNotFoundException("Staff account not found");
         }
-        userDao.setActive(userId, false);
-        auditService.record(actorUserId, tenantId, "User", userId, "DEACTIVATE_STAFF", true, false);
+        userDao.setActive(userId, active);
+        auditService.record(actorUserId, tenantId, "User", userId,
+                active ? "REACTIVATE_STAFF" : "DEACTIVATE_STAFF", !active, active);
+    }
+
+    /**
+     * The same switch for a platform admin, scoped to the college rather than to one
+     * canteen — an admin manages every canteen in it, and previously could not switch off
+     * a single staff account anywhere.
+     *
+     * <p>Restricted to outlet-portal roles so a crafted id cannot reach a platform account
+     * through the college screen; those are managed on /admin/users and are governed by
+     * {@link com.bitesite.config.RoleAssignment}.
+     */
+    public void setTenantStaffActive(Long userId, Long tenantId, boolean active, Long actorUserId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff account not found"));
+        if (!tenantId.equals(target.getTenantId()) || !target.getRole().isOutletPortalRole()) {
+            throw new ResourceNotFoundException("Staff account not found");
+        }
+        if (userId.equals(actorUserId)) {
+            throw new BusinessException("You can't switch off your own account.");
+        }
+        userDao.setActive(userId, active);
+        auditService.record(actorUserId, tenantId, "User", userId,
+                active ? "REACTIVATE_STAFF" : "DEACTIVATE_STAFF", !active, active);
     }
 
     // ---------- Profile ----------
@@ -330,7 +387,7 @@ public class UserService {
      * out loud — the manager never learns the new credential.
      *
      * <p>Outlet and tenant are checked against the target, not trusted from the request,
-     * for the same reason {@link #deactivateOutletstaff} checks them: a crafted id must
+     * for the same reason {@link #setTenantStaffActive} checks them: a crafted id must
      * not reach another canteen's account, or a platform account (which has no outlet and
      * so never matches).
      */

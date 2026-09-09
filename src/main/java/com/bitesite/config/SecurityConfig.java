@@ -129,9 +129,9 @@ public class SecurityConfig {
                             "/login/verify",
                             "/manifest.webmanifest", "/sw.js", "/offline.html").permitAll()
                     // Admin portal routes — any admin-portal role
-                    .requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "TECH_MANAGER")
-                    .requestMatchers("/techmgr/**").hasAnyRole("SUPER_ADMIN", "TECH_MANAGER")
-                    .requestMatchers("/actuator/**").hasAnyRole("SUPER_ADMIN", "TECH_MANAGER")
+                    .requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECH_MANAGER")
+                    .requestMatchers("/techmgr/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECH_MANAGER")
+                    .requestMatchers("/actuator/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECH_MANAGER")
                     // Outlet portal routes. Coarse on purpose — this rule says only which
                     // roles may enter the portal. Manager-vs-operator capability is
                     // enforced per method with PortalGuard + StaffScope, because some

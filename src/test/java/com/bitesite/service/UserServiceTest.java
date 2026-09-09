@@ -8,6 +8,7 @@ import com.bitesite.model.Role;
 import com.bitesite.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -200,15 +201,66 @@ class UserServiceTest {
         verify(fcmTokenDao).deleteByUserId(42L);
     }
 
+    /** Actor 1 is a super admin unless a test says otherwise; role changes now check them. */
+    private void actorIsSuperAdmin() {
+        when(userDao.findById(1L)).thenReturn(Optional.of(User.builder().id(1L)
+                .activeRole(Role.SUPER_ADMIN).roles(EnumSet.of(Role.SUPER_ADMIN)).build()));
+    }
+
+    private void actorIsAdmin() {
+        when(userDao.findById(1L)).thenReturn(Optional.of(User.builder().id(1L)
+                .activeRole(Role.ADMIN).roles(EnumSet.of(Role.ADMIN)).build()));
+    }
+
     @Test
-    void grantRoleDelegatesStraightToTheDao() {
+    void grantRoleDelegatesToTheDaoOnceTheActorIsAllowed() {
+        actorIsSuperAdmin();
+        when(userDao.findById(7L)).thenReturn(Optional.of(User.builder().id(7L)
+                .activeRole(Role.USER).roles(EnumSet.of(Role.USER)).build()));
+
         userService.grantRole(7L, Role.TECH_MANAGER, 1L);
 
         verify(userDao).grantRole(7L, Role.TECH_MANAGER, 1L);
     }
 
     @Test
+    void anAdminCannotGrantAnElevatedRole() {
+        actorIsAdmin();
+        when(userDao.findById(7L)).thenReturn(Optional.of(User.builder().id(7L)
+                .activeRole(Role.USER).roles(EnumSet.of(Role.USER)).build()));
+
+        assertThatThrownBy(() -> userService.grantRole(7L, Role.SUPER_ADMIN, 1L))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(userDao, never()).grantRole(any(), any(), any());
+    }
+
+    /** The escalation by subtraction, refused at the service and not just in the view. */
+    @Test
+    void anAdminCannotRevokeAnythingFromASuperAdmin() {
+        actorIsAdmin();
+        when(userDao.findById(7L)).thenReturn(Optional.of(User.builder().id(7L)
+                .activeRole(Role.SUPER_ADMIN)
+                .roles(EnumSet.of(Role.SUPER_ADMIN, Role.TECH_MANAGER)).build()));
+
+        assertThatThrownBy(() -> userService.revokeRole(7L, Role.TECH_MANAGER, 1L))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(userDao, never()).revokeRole(any(), any(), any());
+    }
+
+    @Test
+    void anAdminCanStillGrantAnOrdinaryRole() {
+        actorIsAdmin();
+        when(userDao.findById(7L)).thenReturn(Optional.of(User.builder().id(7L)
+                .activeRole(Role.USER).roles(EnumSet.of(Role.USER)).build()));
+
+        userService.grantRole(7L, Role.CANTEEN_MANAGER, 1L);
+
+        verify(userDao).grantRole(7L, Role.CANTEEN_MANAGER, 1L);
+    }
+
+    @Test
     void revokeRoleRefusesToRemoveAUsersOnlyRemainingRole() {
+        actorIsSuperAdmin();
         User user = User.builder().id(7L).activeRole(Role.SUPER_ADMIN)
                 .roles(EnumSet.of(Role.SUPER_ADMIN)).build();
         when(userDao.findById(7L)).thenReturn(Optional.of(user));
@@ -218,11 +270,31 @@ class UserServiceTest {
         verify(userDao, never()).revokeRole(any(), any(), any());
     }
 
+    /**
+     * Nothing below super admin can appoint one, so losing the last of them is a state the
+     * product cannot get itself out of.
+     */
     @Test
-    void revokingTheActiveRoleFallsBackToAnotherHeldRole() {
+    void revokingTheLastSuperAdminIsRefused() {
+        actorIsSuperAdmin();
         User user = User.builder().id(7L).activeRole(Role.SUPER_ADMIN)
                 .roles(EnumSet.of(Role.SUPER_ADMIN, Role.TECH_MANAGER)).build();
         when(userDao.findById(7L)).thenReturn(Optional.of(user));
+        when(userDao.countActiveWithRole(Role.SUPER_ADMIN)).thenReturn(1);
+
+        assertThatThrownBy(() -> userService.revokeRole(7L, Role.SUPER_ADMIN, 1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("last super admin");
+        verify(userDao, never()).revokeRole(any(), any(), any());
+    }
+
+    @Test
+    void revokingTheActiveRoleFallsBackToAnotherHeldRole() {
+        actorIsSuperAdmin();
+        User user = User.builder().id(7L).activeRole(Role.SUPER_ADMIN)
+                .roles(EnumSet.of(Role.SUPER_ADMIN, Role.TECH_MANAGER)).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+        when(userDao.countActiveWithRole(Role.SUPER_ADMIN)).thenReturn(2);
 
         userService.revokeRole(7L, Role.SUPER_ADMIN, 1L);
 
@@ -232,6 +304,7 @@ class UserServiceTest {
 
     @Test
     void revokingANonActiveRoleDoesNotTouchTheActiveRole() {
+        actorIsSuperAdmin();
         User user = User.builder().id(7L).activeRole(Role.SUPER_ADMIN)
                 .roles(EnumSet.of(Role.SUPER_ADMIN, Role.TECH_MANAGER)).build();
         when(userDao.findById(7L)).thenReturn(Optional.of(user));

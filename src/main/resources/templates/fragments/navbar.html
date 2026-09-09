@@ -90,7 +90,7 @@
      removed request access from expressions.
      ============================================================ */-->
 <nav class="console-nav"
-     sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR','SUPER_ADMIN','TECH_MANAGER')"
+     sec:authorize="hasAnyRole('CANTEEN_MANAGER','CANTEEN_OPERATOR','SUPER_ADMIN','ADMIN','TECH_MANAGER')"
      aria-label="Portal sections">
     <div class="container">
         <div class="console-nav__strip">
@@ -120,39 +120,39 @@
                 <span class="material-symbols-outlined">settings</span>Settings</a>
 
             <!--/* Admin */-->
-            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin}"
                th:attrappend="aria-current=${currentPath != null and currentPath == '/admin'} ? 'page' : null">
                 <span class="material-symbols-outlined">home</span>Overview</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/tenants}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/tenants}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/tenants')} ? 'page' : null">
                 <span class="material-symbols-outlined">apartment</span>Colleges</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/onboarding}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/onboarding}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/onboarding')} ? 'page' : null">
                 <span class="material-symbols-outlined">filter_alt</span>Pipeline</a>
-            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/outlets}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/outlets}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/outlets')} ? 'page' : null">
                 <span class="material-symbols-outlined">storefront</span>Canteens</a>
-            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/orders}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/orders}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/orders')} ? 'page' : null">
                 <span class="material-symbols-outlined">receipt_long</span>Orders</a>
-            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/payments}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/payments}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/payments')} ? 'page' : null">
                 <span class="material-symbols-outlined">credit_card</span>Payments</a>
-            <a sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/support}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/support}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/support')} ? 'page' : null">
                 <span class="material-symbols-outlined">support_agent</span>Support</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/grievances}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/grievances}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/grievances')} ? 'page' : null">
                 <span class="material-symbols-outlined">flag</span>Grievances</a>
             <!--/* Data-principal requests. Had no link at all until now: the screen existed
                  and was reachable only by typing the URL. */-->
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/dpdp}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/dpdp}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/dpdp')} ? 'page' : null">
                 <span class="material-symbols-outlined">privacy_tip</span>Data requests</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/audit-log}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/audit-log}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/audit-log')} ? 'page' : null">
                 <span class="material-symbols-outlined">history</span>Audit log</a>
-            <a sec:authorize="hasRole('SUPER_ADMIN')" class="console-nav__link" th:href="@{/admin/users}"
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/users}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/users')} ? 'page' : null">
                 <span class="material-symbols-outlined">manage_accounts</span>Platform users</a>
 
@@ -237,23 +237,23 @@
             </div>
 
             <!--/* Admin */-->
-            <div sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-drawer__group">
+            <div sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="nav-drawer__group">
                 <p class="nav-drawer__label">Platform</p>
                 <a class="nav-drawer__link" th:href="@{/admin}"><span class="material-symbols-outlined">home</span>Overview</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Onboarding pipeline</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Onboarding pipeline</a>
                 <a class="nav-drawer__link" th:href="@{/admin/outlets}"><span class="material-symbols-outlined">storefront</span>Canteens</a>
                 <a class="nav-drawer__link" th:href="@{/admin/orders}"><span class="material-symbols-outlined">receipt_long</span>Orders</a>
                 <a class="nav-drawer__link" th:href="@{/admin/payments}"><span class="material-symbols-outlined">credit_card</span>Payments</a>
             </div>
-            <div sec:authorize="hasAnyRole('SUPER_ADMIN','TECH_MANAGER')" class="nav-drawer__group">
+            <div sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="nav-drawer__group">
                 <p class="nav-drawer__label">Oversight</p>
                 <a class="nav-drawer__link" th:href="@{/admin/support}"><span class="material-symbols-outlined">support_agent</span>Support desk</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/grievances}"><span class="material-symbols-outlined">flag</span>Grievances</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/dpdp}"><span class="material-symbols-outlined">privacy_tip</span>Data requests</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/grievance-officer}"><span class="material-symbols-outlined">assignment</span>Grievance officer</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/audit-log}"><span class="material-symbols-outlined">history</span>Audit log</a>
-                <a sec:authorize="hasRole('SUPER_ADMIN')" class="nav-drawer__link" th:href="@{/admin/users}"><span class="material-symbols-outlined">manage_accounts</span>Platform users</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/grievances}"><span class="material-symbols-outlined">flag</span>Grievances</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/dpdp}"><span class="material-symbols-outlined">privacy_tip</span>Data requests</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/grievance-officer}"><span class="material-symbols-outlined">assignment</span>Grievance officer</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/audit-log}"><span class="material-symbols-outlined">history</span>Audit log</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/users}"><span class="material-symbols-outlined">manage_accounts</span>Platform users</a>
             </div>
 
             <!--/* Tech manager */-->

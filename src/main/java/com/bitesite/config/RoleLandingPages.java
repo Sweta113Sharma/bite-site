@@ -16,7 +16,7 @@ public final class RoleLandingPages {
     public static String forActiveRole(Role activeRole) {
         if (activeRole == null) return "/login";
         return switch (activeRole) {
-            case SUPER_ADMIN -> "/admin";
+            case SUPER_ADMIN, ADMIN -> "/admin";
             case TECH_MANAGER -> "/techmgr";
             // Both outlet roles land on the queue. It is the shift-opening screen for an
             // operator, and the manager's own menu work is one nav click away — landing a

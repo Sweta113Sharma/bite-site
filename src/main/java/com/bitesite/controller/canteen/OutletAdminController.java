@@ -195,18 +195,21 @@ public class OutletAdminController {
         return "redirect:/canteen/staff";
     }
 
-    @PostMapping("/staff/{userId}/deactivate")
-    public String deactivateStaff(@AuthenticationPrincipal AppUserPrincipal principal,
-            @PathVariable Long userId, RedirectAttributes redirectAttributes) {
+    @PostMapping("/staff/{userId}/status")
+    public String setStaffActive(@AuthenticationPrincipal AppUserPrincipal principal,
+            @PathVariable Long userId, @RequestParam boolean active,
+            RedirectAttributes redirectAttributes) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
         User user = principal.getUser();
         if (userId.equals(user.getId())) {
             // Otherwise a sole manager can lock their own outlet out of its own console.
-            redirectAttributes.addFlashAttribute("staffError", "You can't deactivate your own account.");
+            redirectAttributes.addFlashAttribute("staffError", "You can't switch off your own account.");
             return "redirect:/canteen/staff";
         }
-        userService.deactivateOutletstaff(userId, user.getOutletId(), user.getTenantId(), user.getId());
-        redirectAttributes.addFlashAttribute("staffNotice", "Account deactivated.");
+        userService.setOutletStaffActive(userId, user.getOutletId(), user.getTenantId(), active, user.getId());
+        redirectAttributes.addFlashAttribute("staffNotice", active
+                ? "Account switched back on — they can sign in again."
+                : "Account switched off — they can no longer sign in.");
         return "redirect:/canteen/staff";
     }
 }

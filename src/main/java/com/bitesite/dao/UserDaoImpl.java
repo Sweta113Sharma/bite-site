@@ -92,6 +92,15 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
+    public int countActiveWithRole(Role role) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(DISTINCT u.id) FROM users u JOIN user_roles r ON r.user_id = u.id "
+                        + "WHERE r.role = ? AND u.is_active = TRUE",
+                Integer.class, role.name());
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public User save(User user) {
         if (user.getId() == null) {
             // Default active_role to primary role if not explicitly set

@@ -225,6 +225,29 @@ public class TenantController {
         return "redirect:/admin/tenants/" + id;
     }
 
+    /**
+     * Switches a canteen staff account on or off from the college screen.
+     *
+     * <p>There was nothing here before: an admin could mail a staff member a reset code
+     * but could not stop them signing in, which is the wrong way round for the person who
+     * onboarded them. Deactivation rather than deletion, because the account is named all
+     * over the audit log and the orders it handled.
+     */
+    @PostMapping("/{id}/staff/{userId}/status")
+    public String setStaffActive(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @PathVariable Long userId, @RequestParam boolean active, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        try {
+            userService.setTenantStaffActive(userId, id, active, principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("staffNotice", active
+                    ? "Account switched back on — they can sign in again."
+                    : "Account switched off — they can no longer sign in.");
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("staffError", e.getMessage());
+        }
+        return "redirect:/admin/tenants/" + id;
+    }
+
     @PostMapping("/{id}/outlets/{outletId}/rename")
     public String renameOutlet(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
             @PathVariable Long outletId, @RequestParam String name, RedirectAttributes redirectAttributes) {

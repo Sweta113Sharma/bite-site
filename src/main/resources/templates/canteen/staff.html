@@ -55,15 +55,22 @@
                 </td>
                 <td class="text-end">
                     <div class="d-inline-flex gap-2">
-                        <form method="post" th:if="${s.active}"
+                        <form method="post"
                               th:action="@{/canteen/staff/{id}/password-reset(id=${s.id})}" class="m-0"
                               onsubmit="return confirm('Email a password reset code to this person?');">
                             <button type="submit" class="btn btn-sm btn-outline-secondary">Reset password</button>
                         </form>
-                        <form method="post" th:if="${s.active}"
-                              th:action="@{/canteen/staff/{id}/deactivate(id=${s.id})}" class="m-0"
-                              onsubmit="return confirm('Deactivate this account? They will not be able to sign in.');">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Deactivate</button>
+                        <!--/* Both directions. This used to offer deactivate only, so
+                             switching somebody off by mistake was permanent. */-->
+                        <form method="post"
+                              th:action="@{/canteen/staff/{id}/status(id=${s.id})}" class="m-0"
+                              th:attr="onsubmit=${s.active}
+                                       ? 'return confirm(\'Switch this account off? They will not be able to sign in.\');'
+                                       : null">
+                            <input type="hidden" name="active" th:value="${!s.active}"/>
+                            <button type="submit" class="btn btn-sm"
+                                    th:classappend="${s.active} ? 'btn-outline-danger' : 'btn-outline-success'"
+                                    th:text="${s.active} ? 'Switch off' : 'Switch on'">Switch off</button>
                         </form>
                     </div>
                 </td>

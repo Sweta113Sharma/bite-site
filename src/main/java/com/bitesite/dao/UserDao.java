@@ -22,6 +22,10 @@ public interface UserDao {
 
     List<User> findPlatformUsers();
 
+    /** Live accounts holding a role, by grant rather than by view-mode. Used to refuse
+     *  revoking the last super admin, which would leave nobody able to appoint one. */
+    int countActiveWithRole(Role role);
+
     User save(User user);
 
     void setActive(Long id, boolean active);
