@@ -293,10 +293,19 @@ public class OrderService {
         Payment payment = paymentDao.findByRazorpayOrderId(gatewayOrderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
         if (payment.getStatus() == PaymentStatus.CAPTURED) {
+            // Both paths confirm the same payment, so this is the normal outcome of the
+            // slower one arriving second, not a fault. Logged at debug because it happens
+            // on most orders and would otherwise drown the line that matters.
+            log.debug("Payment {} already captured; confirmation via {} is a no-op",
+                    payment.getId(), signature == null ? "webhook" : "client callback");
             return true;
         }
 
         if (signature != null && !paymentGateway.verifyPaymentSignature(gatewayOrderId, gatewayPaymentId, signature)) {
+            // Either a forged callback or a misconfigured key. Both need to be visible,
+            // and neither was: this returned false and left no trace.
+            log.warn("Rejected payment {} for gateway order {} — signature did not verify",
+                    payment.getId(), gatewayOrderId);
             paymentDao.updateStatus(payment.getId(), PaymentStatus.FAILED);
             return false;
         }
@@ -328,6 +337,12 @@ public class OrderService {
         }
 
         orderDao.updateStatus(order.getId(), order.getTenantId(), OrderStatus.PAID);
+        // The success path wrote nothing before this line, which made "has any money ever
+        // moved through production" unanswerable from the logs — only the failure branches
+        // above logged, so silence looked identical to a payment path that had never run.
+        // No amount and no gateway payment id: this says a payment landed, not what it was.
+        log.info("Order {} paid — payment {} captured via {}", order.getId(), payment.getId(),
+                signature == null ? "webhook" : "client callback");
             // Doubles as the receipt. Payment succeeded and the only acknowledgement was
             // the page the student happened to be looking at — nothing they could keep,
             // and nothing at all if the browser closed on the redirect back from Razorpay.

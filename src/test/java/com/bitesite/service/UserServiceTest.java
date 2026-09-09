@@ -212,6 +212,51 @@ class UserServiceTest {
                 .activeRole(Role.ADMIN).roles(EnumSet.of(Role.ADMIN)).build()));
     }
 
+    /**
+     * The safety net under the whole recovery flow: a guessed code, an intercepted
+     * admin-issued one and a compromised mailbox all end in a changed password, and until
+     * this notice existed every one of them was silent.
+     */
+    @Test
+    void aResetTellsTheAccountItsPasswordChanged() {
+        User user = User.builder().id(7L).email("student@test.local").name("Student")
+                .activeRole(Role.USER).roles(EnumSet.of(Role.USER)).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        userService.resetPassword(7L, "Recovered1");
+
+        verify(emailService).sendPasswordChangedEmail("student@test.local", "Student");
+    }
+
+    /** Sent on a self-service change too: knowing the old password is exactly what a
+     *  hijacked session already has. */
+    @Test
+    void aSelfServiceChangeAlsoTellsTheAccount() {
+        // The encoder here is a real BCrypt, not a mock, so the hash has to be real too.
+        User user = User.builder().id(7L).email("student@test.local").name("Student")
+                .passwordHash(passwordEncoder.encode("Old12345"))
+                .activeRole(Role.USER).roles(EnumSet.of(Role.USER)).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        userService.changeOwnPassword(7L, "Old12345", "New12345");
+
+        verify(emailService).sendPasswordChangedEmail("student@test.local", "Student");
+    }
+
+    /** A refused change must not tell anyone anything happened. */
+    @Test
+    void aRefusedChangeSendsNoNotice() {
+        User user = User.builder().id(7L).email("student@test.local").name("Student")
+                .passwordHash(passwordEncoder.encode("Old12345"))
+                .activeRole(Role.USER).roles(EnumSet.of(Role.USER)).build();
+        when(userDao.findById(7L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.changeOwnPassword(7L, "WrongOld1", "New12345"))
+                .isInstanceOf(BusinessException.class);
+
+        verify(emailService, never()).sendPasswordChangedEmail(anyString(), anyString());
+    }
+
     @Test
     void grantRoleDelegatesToTheDaoOnceTheActorIsAllowed() {
         actorIsSuperAdmin();

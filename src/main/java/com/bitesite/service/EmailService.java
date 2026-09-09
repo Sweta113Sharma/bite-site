@@ -20,4 +20,12 @@ public interface EmailService {
     /** A sign-in code for a platform account. Worded so that receiving one unexpectedly
      * reads as an alarm, because it means someone has the password. */
     void sendLoginCodeEmail(String toEmail, String recipientName, String code);
+
+    /**
+     * Tells an account its password just changed. Not a code and nothing to act on: it is
+     * the safety net under every other control here. A guessed reset code, an intercepted
+     * admin-issued one, or a compromised mailbox all end the same way — someone else holds
+     * the account — and until this existed that happened in complete silence.
+     */
+    void sendPasswordChangedEmail(String toEmail, String recipientName);
 }

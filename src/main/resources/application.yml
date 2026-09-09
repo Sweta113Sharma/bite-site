@@ -115,6 +115,13 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      # Splits the aggregate into liveness (is this process serving?) and readiness (can
+      # it do useful work?). The distinction matters because the platform's health probe
+      # restarts an instance that fails it — and restarting fixes a wedged JVM, but does
+      # nothing whatsoever about a mail relay being down. Pointing the probe at the
+      # aggregate would turn a broken SMTP host into a site-wide restart loop.
+      probes:
+        enabled: true
   info:
     env:
       enabled: true

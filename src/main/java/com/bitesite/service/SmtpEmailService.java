@@ -105,6 +105,39 @@ public class SmtpEmailService implements EmailService {
     }
     @Async
     @Override
+    public void sendPasswordChangedEmail(String toEmail, String recipientName) {
+        if (!isConfigured()) {
+            log.warn("SMTP not configured — skipping password changed notice to {}", toEmail);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromAddress);
+            helper.setTo(toEmail);
+            helper.setSubject("Your BiteSite password was changed");
+            // No code, no link, nothing to click. A notice that asks the reader to click
+            // something is indistinguishable from the phishing it is meant to warn about.
+            helper.setText("""
+                    Hi %s,
+
+                    The password on your BiteSite account was just changed, and every
+                    device that was signed in has been signed out.
+
+                    If that was you, there is nothing to do.
+
+                    If it was not, someone else has access to this account. Reset the
+                    password immediately from the sign-in screen, and tell your canteen or
+                    college administrator.
+                    """.formatted(recipientName));
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send password changed notice to {}", toEmail, e);
+        }
+    }
+
+    @Async
+    @Override
     public void sendEmailChangeEmail(String toEmail, String recipientName, String code) {
         if (!isConfigured()) {
             log.warn("SMTP not configured — skipping email change code to {}", toEmail);

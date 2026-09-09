@@ -117,7 +117,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/", "/login", "/tenant-unavailable",
                             "/register/student", "/css/**", "/js/**", "/img/**", "/fonts/**", "/uploads/**", "/error",
-                            "/actuator/health", "/api/payments/webhook", "/api/csp-report",
+                            "/actuator/health", "/actuator/health/liveness", "/api/payments/webhook", "/api/csp-report",
                             "/privacy-policy", "/terms", "/refund-policy",
                             "/shipping-policy", "/grievance-policy",
                             "/verify", "/verify/**", "/resend-verification",

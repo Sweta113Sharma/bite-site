@@ -361,6 +361,10 @@ public class UserService {
         // Neither password goes into the audit row — before/after stay null. The record is
         // that a change happened and when, which is what an investigation needs.
         auditService.record(userId, user.getTenantId(), "User", userId, "CHANGE_PASSWORD", null, null);
+        // Sent even though they just typed their old password, because that only proves
+        // whoever did this had the old password — which is exactly what a hijacked session
+        // or a shoulder-surfed login also has.
+        emailService.sendPasswordChangedEmail(user.getEmail(), user.getName());
     }
 
     /**
@@ -379,6 +383,10 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         userDao.updatePasswordHash(userId, passwordEncoder.encode(newPassword));
         auditService.record(userId, user.getTenantId(), "User", userId, "RESET_PASSWORD", null, null);
+        // The one that matters most. A reset is the end of every path an attacker takes —
+        // a guessed code, an intercepted admin-issued one, a compromised mailbox — and
+        // this is the only thing that tells the owner it happened.
+        emailService.sendPasswordChangedEmail(user.getEmail(), user.getName());
     }
 
     /**
