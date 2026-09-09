@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 900px;">
+    <div class="console-head">
+        <div class="console-head__text">
+            <h3 class="m-0">Import menu</h3>
+            <p class="console-head__blurb mb-0">
+                <span th:text="${outlet.name}">Canteen</span> ·
+                <a th:href="@{/admin/tenants/{id}(id=${tenant.id})}" th:text="${tenant.name}">College</a>
+            </p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/tenants/{id}(id=${tenant.id})}">
+            <span class="material-symbols-outlined">arrow_back</span>Back
+        </a>
+    </div>
+
+    <div class="alert alert-danger" th:if="${importError}" th:text="${importError}"></div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title"><span class="material-symbols-outlined">upload</span>Upload a CSV</h5>
+
+            <p class="mb-3">
+                Build the menu in a spreadsheet and upload it here. The canteen adds photos
+                afterwards by editing items on its own menu screen, exactly as it would have anyway.
+                <strong>Start from the template</strong> below if you have not done this before.
+            </p>
+
+            <p class="form-text mb-3">
+                <strong>Saving as CSV:</strong>
+                Excel — File → Save As → <em>CSV UTF-8 (Comma delimited)</em>.
+                Google Sheets — File → Download → <em>Comma-separated values</em>.
+                Numbers — File → Export To → CSV.
+            </p>
+
+            <!--/* The format documented on the screen that uses it, rather than in a
+                 README nobody opens at the moment they need it. */-->
+            <h6 class="mt-4">The columns</h6>
+            <p class="form-text mb-2">
+                The first row must be the header. Column order does not matter, the names are not
+                case-sensitive, and any column not listed here is ignored.
+            </p>
+            <div class="table-responsive">
+                <table class="table table-sm bg-white align-middle">
+                    <thead>
+                        <tr><th>Column</th><th>Required</th><th>What it means</th><th>Example</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><code>category</code></td>
+                        <td><span class="badge bg-danger">Yes</span></td>
+                        <td>The section it appears under. Created automatically if new, in the order it
+                            first appears in the file. Max 80 characters.</td>
+                        <td><code>Snacks</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>item</code></td>
+                        <td><span class="badge bg-danger">Yes</span></td>
+                        <td>The dish name, as students will see it. Max 150 characters.
+                            Wrap it in quotes if it contains a comma.</td>
+                        <td><code>"Chicken Roll, Large"</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>price</code></td>
+                        <td><span class="badge bg-danger">Yes</span></td>
+                        <td>Rupees. A <code>₹</code> sign and thousands commas are fine and get stripped.
+                            Up to ₹99,999.99.</td>
+                        <td><code>20</code> or <code>₹1,250.00</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>discount_price</code></td>
+                        <td><span class="badge bg-secondary">No</span></td>
+                        <td>A flat offer price. Must be <em>below</em> the price. Leave blank for none.</td>
+                        <td><code>75.00</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>discount_percent</code></td>
+                        <td><span class="badge bg-secondary">No</span></td>
+                        <td>An offer as a percentage, between 0 and 100. Use this <em>or</em>
+                            <code>discount_price</code>, not both on the same row.</td>
+                        <td><code>10</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>daily_limit</code></td>
+                        <td><span class="badge bg-secondary">No</span></td>
+                        <td>How many can be sold in a day before it shows as sold out. Whole number.
+                            Blank means no limit.</td>
+                        <td><code>30</code></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h6 class="mt-4">What the upload does</h6>
+            <ul class="form-text mb-3" style="padding-left:1.1rem;">
+                <li><strong>Preview first.</strong> The Preview button changes nothing. It shows every
+                    row it read, which items are new, and the old price beside any it would change.
+                    You then pick the same file again to import it for real.</li>
+                <li><strong>Items are matched by name</strong>, ignoring case and extra spaces. An item
+                    that already exists is updated, so re-uploading a corrected file fixes prices
+                    instead of creating a second copy of the menu.</li>
+                <li><strong>Nothing is ever deleted.</strong> An item missing from the file is left
+                    exactly as it is. To remove something, delete it on the canteen's menu screen.</li>
+                <li><strong>Photos are never touched.</strong> Any picture the canteen has already
+                    uploaded survives a re-import.</li>
+                <li><strong>Sold-out switches are respected.</strong> Updating an item does not put it
+                    back on sale; the canteen controls that from its own screen.</li>
+                <li><strong>All or nothing.</strong> If any row has a problem, nothing is imported and
+                    every problem is listed with its line number, so one pass fixes the lot.</li>
+                <li>Up to <strong>500 rows</strong> per file, and up to 5 MB.</li>
+            </ul>
+
+            <h6 class="mt-4">A file that works</h6>
+            <pre class="bg-white border p-3 mb-3" style="overflow-x:auto; font-size:0.82rem;"><code>category,item,price,discount_price,discount_percent,daily_limit
+Snacks,Samosa,20.00,,,
+Snacks,"Chicken Roll, Large",90.00,75.00,,30
+Beverages,Masala Chai,15.00,,10,
+Beverages,Cold Coffee,60.00,,,20</code></pre>
+
+            <form method="post" enctype="multipart/form-data"
+                  th:action="@{/admin/tenants/{id}/outlets/{outletId}/menu-import(id=${tenant.id},outletId=${outlet.id})}">
+                <div class="mb-3">
+                    <input type="file" name="file" accept=".csv,text/csv" class="form-control" required="required"/>
+                </div>
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    <button type="submit" class="btn btn-primary" name="apply" value="false">
+                        <span class="material-symbols-outlined">visibility</span>Preview
+                    </button>
+                    <a class="btn btn-outline-secondary"
+                       th:href="@{/admin/tenants/{id}/outlets/{outletId}/menu-import/template(id=${tenant.id},outletId=${outlet.id})}">
+                        <span class="material-symbols-outlined">download</span>Download template
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--/* Problems first and on their own. An admin who has a malformed file has nothing to
+         decide yet, so offering them an Import button here would be offering them a mistake. */-->
+    <div class="card mb-4" th:if="${result != null and result.hasProblems()}">
+        <div class="card-body">
+            <h5 class="card-title text-danger">
+                <span class="material-symbols-outlined">error</span>
+                <span th:text="${#lists.size(result.problems)} + ' problem' + (${#lists.size(result.problems)} == 1 ? '' : 's')">Problems</span>
+            </h5>
+            <p class="form-text">Nothing was imported. Line numbers match your spreadsheet.</p>
+            <div class="table-responsive">
+                <table class="table table-sm bg-white align-middle">
+                    <thead><tr><th style="width:6rem;">Line</th><th>What is wrong</th></tr></thead>
+                    <tbody>
+                    <tr th:each="p : ${result.problems}">
+                        <td th:text="${p.line() == 0} ? '—' : ${p.line()}">3</td>
+                        <td th:text="${p.message()}">message</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-success" th:if="${result != null and result.applied}">
+        <strong>Imported.</strong>
+        <span th:text="${result.createCount}">0</span> item(s) created,
+        <span th:text="${result.updateCount}">0</span> updated,
+        <span th:text="${#sets.size(result.newCategories)}">0</span> new categor(y/ies).
+        The canteen can add photos by editing items on its own menu screen.
+    </div>
+
+    <div class="card" th:if="${result != null and !result.hasProblems() and !#lists.isEmpty(result.rows)}">
+        <div class="card-body">
+            <h5 class="card-title">
+                <span class="material-symbols-outlined">assignment</span>
+                <span th:text="${result.applied} ? 'What was imported' : 'What this would do'">Preview</span>
+            </h5>
+
+            <p class="mb-2">
+                <span class="badge bg-success" th:text="${result.createCount} + ' new'">0 new</span>
+                <span class="badge bg-secondary" th:text="${result.updateCount} + ' updated'">0 updated</span>
+                <span class="badge bg-warning text-dark" th:if="${result.priceChangeCount > 0}"
+                      th:text="${result.priceChangeCount} + ' price change(s)'">0 price changes</span>
+            </p>
+
+            <p class="mb-3" th:if="${!#sets.isEmpty(result.newCategories)}">
+                New sections: <span th:each="c,it : ${result.newCategories}"><span class="badge bg-primary" th:text="${c}">Cat</span><span th:if="${!it.last}"> </span></span>
+            </p>
+
+            <div class="table-responsive">
+                <table class="table table-sm bg-white align-middle">
+                    <thead><tr><th>Line</th><th>Category</th><th>Item</th><th>Price</th><th>Offer</th><th>Daily cap</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:each="r : ${result.rows}">
+                        <td class="text-muted small" th:text="${r.line()}">2</td>
+                        <td th:text="${r.category()}">Snacks</td>
+                        <td th:text="${r.name()}">Samosa</td>
+                        <td>
+                            <span th:text="'₹' + ${r.price()}">₹0</span>
+                            <!--/* The old price is the thing worth double-checking before applying:
+                                 a shifted column turns a whole menu's prices into nonsense. */-->
+                            <span class="text-muted small" th:if="${r.isPriceChange()}"
+                                  th:text="'(was ₹' + ${r.previousPrice()} + ')'"></span>
+                        </td>
+                        <td class="small text-muted">
+                            <span th:if="${r.discountPrice() != null}" th:text="'₹' + ${r.discountPrice()}"></span>
+                            <span th:if="${r.discountPercent() != null}" th:text="${r.discountPercent()} + '%'"></span>
+                        </td>
+                        <td class="small text-muted" th:text="${r.dailyLimit()} ?: '—'">—</td>
+                        <td>
+                            <span class="badge" th:classappend="${r.isNew()} ? 'bg-success' : 'bg-secondary'"
+                                  th:text="${r.isNew()} ? 'New' : 'Update'">New</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!--/* The second upload is deliberate. Holding the parsed file between requests
+                 would mean putting it in the session, and the confirm step would then be
+                 applying something the admin can no longer see. Re-picking the same file is
+                 one click and leaves no room for the two to disagree. */-->
+            <div th:unless="${result.applied}" class="mt-3 pt-3 border-top">
+                <p class="mb-2"><strong>Looks right?</strong> Choose the same file again and import it.</p>
+                <form method="post" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap align-items-center"
+                      th:action="@{/admin/tenants/{id}/outlets/{outletId}/menu-import(id=${tenant.id},outletId=${outlet.id})}">
+                    <input type="file" name="file" accept=".csv,text/csv" class="form-control"
+                           style="max-width:22rem;" required="required"/>
+                    <input type="hidden" name="apply" value="true"/>
+                    <button type="submit" class="btn btn-danger">
+                        <span class="material-symbols-outlined">upload</span>Import for real
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

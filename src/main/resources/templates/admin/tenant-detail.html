@@ -84,6 +84,12 @@
                         </form>
 
                         <div class="d-flex gap-2 flex-wrap">
+                            <!--/* Typing a whole menu in one item at a time is the slowest part
+                                 of getting a canteen live. */-->
+                            <a class="btn btn-sm btn-outline-primary"
+                               th:href="@{/admin/tenants/{id}/outlets/{outletId}/menu-import(id=${tenant.id},outletId=${o.id})}">
+                                <span class="material-symbols-outlined">upload</span>Import menu
+                            </a>
                             <form method="post"
                                   th:action="@{/admin/tenants/{id}/outlets/{outletId}/status(id=${tenant.id},outletId=${o.id})}">
                                 <input type="hidden" name="active" th:value="${!o.active}"/>

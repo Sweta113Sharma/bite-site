@@ -12,6 +12,7 @@ import com.bitesite.model.Outlet;
 import com.bitesite.model.Role;
 import com.bitesite.model.StaffScope;
 import com.bitesite.model.User;
+import com.bitesite.service.MenuImportService;
 import com.bitesite.service.OutletService;
 import com.bitesite.service.TenantService;
 import com.bitesite.service.UserService;
@@ -19,6 +20,9 @@ import com.bitesite.tenant.Tenant;
 import com.bitesite.tenant.TenantStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -35,6 +39,7 @@ public class TenantController {
     private final TenantService tenantService;
     private final OutletService outletService;
     private final UserService userService;
+    private final MenuImportService menuImportService;
 
     @GetMapping
     public String list(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
@@ -246,6 +251,65 @@ public class TenantController {
             redirectAttributes.addFlashAttribute("staffError", e.getMessage());
         }
         return "redirect:/admin/tenants/" + id;
+    }
+
+    /**
+     * Bulk menu upload. Onboarding a canteen otherwise means typing its whole menu in one
+     * item at a time, which is the slowest part of getting a college live.
+     *
+     * <p>Deliberately CSV rather than .xlsx: reading a real Excel file needs Apache POI,
+     * which is a large dependency to carry for one occasional screen, and every
+     * spreadsheet program exports CSV. The reader handles what those exports actually do
+     * to a parser — see {@link com.bitesite.service.MenuImportService}.
+     */
+    @GetMapping("/{id}/outlets/{outletId}/menu-import")
+    public String menuImportForm(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @PathVariable Long outletId, Model model) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        Tenant tenant = tenantService.get(id);
+        Outlet outlet = outletService.get(outletId, id);
+        model.addAttribute("tenant", tenant);
+        model.addAttribute("outlet", outlet);
+        model.addAttribute("pageTitle", "Import menu — " + outlet.getName());
+        return "admin/menu-import";
+    }
+
+    /** The file to start from, so nobody has to reverse-engineer the column names. */
+    @GetMapping("/{id}/outlets/{outletId}/menu-import/template")
+    public ResponseEntity<String> menuImportTemplate(@AuthenticationPrincipal AppUserPrincipal principal,
+            @PathVariable Long id, @PathVariable Long outletId) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        outletService.get(outletId, id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"bitesite-menu-template.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(MenuImportService.templateCsv());
+    }
+
+    /**
+     * Checks the file, and writes only when the admin has explicitly asked it to.
+     *
+     * <p>Preview is the default because this writes to a menu students are ordering from,
+     * and a spreadsheet is the easiest thing in the world to get one column wrong in.
+     */
+    @PostMapping("/{id}/outlets/{outletId}/menu-import")
+    public String menuImport(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @PathVariable Long outletId, @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "false") boolean apply, Model model) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        Tenant tenant = tenantService.get(id);
+        Outlet outlet = outletService.get(outletId, id);
+        model.addAttribute("tenant", tenant);
+        model.addAttribute("outlet", outlet);
+        model.addAttribute("pageTitle", "Import menu — " + outlet.getName());
+        try {
+            model.addAttribute("result", apply
+                    ? menuImportService.apply(file, outletId, id, principal.getUser().getId())
+                    : menuImportService.preview(file, outletId, id));
+        } catch (BusinessException e) {
+            model.addAttribute("importError", e.getMessage());
+        }
+        return "admin/menu-import";
     }
 
     @PostMapping("/{id}/outlets/{outletId}/rename")

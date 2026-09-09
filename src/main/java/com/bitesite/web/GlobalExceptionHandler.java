@@ -13,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.io.IOException;
@@ -48,6 +49,21 @@ public class GlobalExceptionHandler {
     public ModelAndView accessDenied(AccessDeniedException e, HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         return respond(HttpStatus.FORBIDDEN, "You don't have permission to do that.", request, response);
+    }
+
+    /**
+     * An upload past spring.servlet.multipart.max-file-size. Thrown while parsing the
+     * request, before any controller sees it, so the screen's own error handling never
+     * gets a chance — without this it lands on the generic 500 page and reads like a bug
+     * in the app rather than a file that is too big. Named limits, since the menu import
+     * and the logo uploader both publish theirs.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ModelAndView uploadTooLarge(MaxUploadSizeExceededException e, HttpServletRequest request,
+            HttpServletResponse response) throws IOException {
+        log.warn("Upload rejected on {}: over the size limit", request.getRequestURI());
+        return respond(HttpStatus.PAYLOAD_TOO_LARGE,
+                "That file is too large. The limit is 5 MB.", request, response);
     }
 
     // A missing static file (image, css, js) is routine — not an application error. Without this,
