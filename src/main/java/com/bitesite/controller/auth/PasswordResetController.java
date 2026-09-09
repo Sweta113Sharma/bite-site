@@ -99,14 +99,31 @@ public class PasswordResetController {
         return "redirect:/reset-password";
     }
 
+    /**
+     * Reachable cold, on purpose.
+     *
+     * <p>This used to redirect anyone whose session had not just been through
+     * /forgot-password, which quietly broke every code this app issues by any other route
+     * — an admin pressing "Reset password" for a canteen manager mailed out a code with
+     * nowhere to type it, and the mail does not carry a link. The only way through was to
+     * start Forgot password yourself, which issues a second code and makes the first
+     * pointless.
+     *
+     * <p>Opening it cold gives up nothing: the code still has to arrive in that mailbox,
+     * the submission limiter is still keyed to the address, and the page still says the
+     * same thing whether or not the account exists.
+     */
     @GetMapping("/reset-password")
-    public String showResetForm(HttpSession session, Model model) {
-        if (session.getAttribute(PENDING_RESET_EMAIL) == null) {
-            return "redirect:/forgot-password";
+    public String showResetForm(@RequestParam(required = false) String email,
+            HttpSession session, Model model) {
+        if (email != null && !email.isBlank()) {
+            session.setAttribute(PENDING_RESET_EMAIL, email.trim().toLowerCase(Locale.ROOT));
         }
         if (!model.containsAttribute("form")) {
             model.addAttribute("form", new ResetPasswordForm());
         }
+        // With no address in hand the form asks for one rather than sending them away.
+        model.addAttribute("needsEmail", session.getAttribute(PENDING_RESET_EMAIL) == null);
         model.addAttribute("pageTitle", "Choose a new password");
         return "auth/reset-password";
     }
@@ -114,18 +131,24 @@ public class PasswordResetController {
     @PostMapping("/reset-password")
     public String reset(@Valid @ModelAttribute("form") ResetPasswordForm form, BindingResult bindingResult,
             HttpSession session, Model model) {
-        if (!(session.getAttribute(PENDING_RESET_EMAIL) instanceof String email)) {
-            return "redirect:/forgot-password";
+        // Session first, then whatever the form supplied — the cold-open case above.
+        String email = session.getAttribute(PENDING_RESET_EMAIL) instanceof String pending
+                ? pending
+                : (form.getEmail() == null ? null : form.getEmail().trim().toLowerCase(Locale.ROOT));
+        if (email == null || email.isBlank()) {
+            bindingResult.rejectValue("email", "required", "Enter the email your code was sent to");
         }
         if (!bindingResult.hasErrors() && !form.confirmationMatches()) {
             bindingResult.rejectValue("confirmPassword", "mismatch", "Those passwords don't match");
         }
         if (bindingResult.hasErrors()) {
+            model.addAttribute("needsEmail", session.getAttribute(PENDING_RESET_EMAIL) == null);
             model.addAttribute("pageTitle", "Choose a new password");
             return "auth/reset-password";
         }
         if (!rateLimiter.tryConsume("pwreset-submit:" + email, MAX_SUBMISSIONS, REQUEST_WINDOW)) {
             model.addAttribute("rateLimited", true);
+            model.addAttribute("needsEmail", session.getAttribute(PENDING_RESET_EMAIL) == null);
             model.addAttribute("pageTitle", "Choose a new password");
             return "auth/reset-password";
         }
@@ -135,6 +158,7 @@ public class PasswordResetController {
         // class comment. Splitting them would turn this form into an account oracle.
         if (account.isEmpty() || !otpService.verifyPasswordReset(account.get().getId(), form.getCode())) {
             model.addAttribute("codeError", true);
+            model.addAttribute("needsEmail", session.getAttribute(PENDING_RESET_EMAIL) == null);
             model.addAttribute("pageTitle", "Choose a new password");
             return "auth/reset-password";
         }

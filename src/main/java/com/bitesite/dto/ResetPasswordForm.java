@@ -11,6 +11,13 @@ import java.io.Serializable;
 @Data
 public class ResetPasswordForm implements Serializable {
 
+    /**
+     * Only filled in when this page was opened cold — someone who was sent a code by an
+     * admin, or who is finishing on a different device from the one that asked. When the
+     * session already knows which account is resetting, this stays empty and is ignored.
+     */
+    private String email;
+
     @NotBlank(message = "Enter the code we emailed you")
     @Pattern(regexp = "\\d{6}", message = "The code is 6 digits")
     private String code;

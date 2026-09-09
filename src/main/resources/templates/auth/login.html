@@ -56,6 +56,9 @@
             </div>
             <p class="text-end mb-3" style="font-size:0.88rem;">
                 <a th:href="@{/forgot-password}">Forgot password?</a>
+            <!--/* An admin can issue a reset code from the console, and that code had
+                 nowhere to be typed. This is the way in for someone holding one. */-->
+            &middot; <a th:href="@{/reset-password}">Have a code?</a>
             </p>
             <button type="submit" class="btn btn-primary btn-auth">Sign in</button>
         </form>

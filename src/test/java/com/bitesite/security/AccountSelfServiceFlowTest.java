@@ -81,6 +81,8 @@ class AccountSelfServiceFlowTest {
     @Autowired private UserDao userDao;
     @Autowired private OutletDao outletDao;
     @Autowired private PasswordEncoder passwordEncoder;
+    // Issues a code the way an admin does: straight from the service, with no session.
+    @Autowired private com.bitesite.service.OtpService otpService;
 
     @MockitoBean private EmailService emailService;
     @MockitoBean private SmsService smsService;
@@ -226,15 +228,87 @@ class AccountSelfServiceFlowTest {
                         .param("confirmPassword", "Recovered1"))
                 .andExpect(redirectedUrl("/login?passwordReset"));
 
-        // The session marker is cleared on success, so a replay can no longer even name
-        // an account — and the code itself was consumed regardless.
+        // The session marker is cleared on success, so a replay cannot name an account
+        // and the form comes back asking which one.
         client.perform(post("/reset-password").with(csrf())
                         .param("code", code)
                         .param("newPassword", "Attacker11")
                         .param("confirmPassword", "Attacker11"))
-                .andExpect(redirectedUrl("/forgot-password"));
+                .andExpect(status().isOk());
 
         assertCannotSignIn(student.getEmail(), "Attacker11");
+    }
+
+    /**
+     * The sharper version of the replay, now that the page can be opened cold: naming the
+     * address explicitly does not resurrect a spent code.
+     */
+    @Test
+    void aSpentCodeStaysSpentEvenWhenTheEmailIsSuppliedByHand() throws Exception {
+        User student = seedUser("reset-replay-named", Role.USER);
+        Client client = new Client();
+
+        String code = requestCode(student.getEmail(), client);
+        client.perform(post("/reset-password").with(csrf())
+                        .param("code", code)
+                        .param("newPassword", "Recovered1")
+                        .param("confirmPassword", "Recovered1"))
+                .andExpect(redirectedUrl("/login?passwordReset"));
+
+        new Client().perform(post("/reset-password").with(csrf())
+                        .param("email", student.getEmail())
+                        .param("code", code)
+                        .param("newPassword", "Attacker11")
+                        .param("confirmPassword", "Attacker11"))
+                .andExpect(status().isOk());
+
+        assertCannotSignIn(student.getEmail(), "Attacker11");
+        assertSignsIn(student.getEmail(), "Recovered1");
+    }
+
+    /**
+     * The flow this whole change exists for: a code issued by an admin, spent on a page
+     * the recipient opened cold with no forgot-password request behind it.
+     */
+    @Test
+    void aCodeCanBeSpentOnAPageOpenedColdWithTheEmailTypedIn() throws Exception {
+        User staff = seedUser("reset-cold-open", Role.USER);
+
+        // Issued the way an admin issues one: straight from the service, no session.
+        otpService.issuePasswordResetOtp(staff);
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendPasswordResetEmail(eq(staff.getEmail()), anyString(), code.capture());
+
+        Client fresh = new Client();
+        fresh.perform(get("/reset-password")).andExpect(status().isOk());
+        fresh.perform(post("/reset-password").with(csrf())
+                        .param("email", staff.getEmail())
+                        .param("code", code.getValue())
+                        .param("newPassword", "ColdOpen1")
+                        .param("confirmPassword", "ColdOpen1"))
+                .andExpect(redirectedUrl("/login?passwordReset"));
+
+        assertSignsIn(staff.getEmail(), "ColdOpen1");
+    }
+
+    /** A valid code is bound to its own account, not to whoever types it. */
+    @Test
+    void aCodeDoesNotWorkAgainstSomebodyElsesEmail() throws Exception {
+        User owner = seedUser("reset-owner", Role.USER);
+        User victim = seedUser("reset-victim", Role.USER);
+
+        otpService.issuePasswordResetOtp(owner);
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendPasswordResetEmail(eq(owner.getEmail()), anyString(), code.capture());
+
+        new Client().perform(post("/reset-password").with(csrf())
+                        .param("email", victim.getEmail())
+                        .param("code", code.getValue())
+                        .param("newPassword", "Attacker11")
+                        .param("confirmPassword", "Attacker11"))
+                .andExpect(status().isOk());
+
+        assertCannotSignIn(victim.getEmail(), "Attacker11");
     }
 
     @Test
@@ -318,8 +392,10 @@ class AccountSelfServiceFlowTest {
     @Test
     void recoveryPagesAreReachableWithoutSigningIn() throws Exception {
         new Client().perform(get("/forgot-password")).andExpect(status().isOk());
-        // Arriving at /reset-password with no request behind it has nothing to reset.
-        new Client().perform(get("/reset-password")).andExpect(redirectedUrl("/forgot-password"));
+        // Arriving at /reset-password cold now serves the form with an email field rather
+        // than turning the visitor away. It has to: codes issued by an admin arrive with
+        // no session behind them, and this page is the only place to spend one.
+        new Client().perform(get("/reset-password")).andExpect(status().isOk());
     }
 
     @Test

@@ -89,7 +89,11 @@ public class SmtpEmailService implements EmailService {
 
                     %s
 
-                    Enter it within 10 minutes to choose a new password.
+                    To use it: open BiteSite, and on the sign-in screen tap "Have a code?".
+                    Enter your email address and this code within 10 minutes.
+
+                    This code may have been issued for you by an administrator, so you may
+                    not have asked for it yourself.
 
                     If you didn't ask to reset your password, ignore this email — nothing
                     has changed and your current password still works.
