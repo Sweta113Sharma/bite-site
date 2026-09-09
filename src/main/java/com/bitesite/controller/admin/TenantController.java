@@ -40,6 +40,7 @@ public class TenantController {
     public String list(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         model.addAttribute("tenants", tenantService.listAll());
+        model.addAttribute("statuses", TenantStatus.values());
         model.addAttribute("pageTitle", "Colleges");
         return "admin/tenants";
     }
@@ -84,12 +85,71 @@ public class TenantController {
         return "admin/tenant-detail";
     }
 
+    /**
+     * The 150 is the column width, checked here as well as in the browser: an over-long
+     * name would otherwise reach MySQL and come back as a data-truncation 500 rather than
+     * something the admin can read and act on.
+     */
+    @PostMapping("/{id}/rename")
+    public String rename(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @RequestParam String name, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) {
+            redirectAttributes.addFlashAttribute("tenantError", "A college needs a name.");
+        } else if (trimmed.length() > 150) {
+            redirectAttributes.addFlashAttribute("tenantError",
+                    "That name is " + trimmed.length() + " characters; the limit is 150.");
+        } else {
+            try {
+                tenantService.rename(id, trimmed, principal.getUser().getId());
+                redirectAttributes.addFlashAttribute("tenantNotice", "Renamed to " + trimmed + ".");
+            } catch (BusinessException e) {
+                redirectAttributes.addFlashAttribute("tenantError", e.getMessage());
+            }
+        }
+        return "redirect:/admin/tenants/" + id;
+    }
+
     @PostMapping("/{id}/status")
     public String changeStatus(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
             @RequestParam TenantStatus status) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         tenantService.setStatus(id, status, principal.getUser().getId());
         return "redirect:/admin/tenants/" + id;
+    }
+
+    /**
+     * Permanent deletion, gated on the admin typing the college's name back — the same
+     * shape as the canteen deletion below it, because it is the same kind of act one level
+     * up and should not feel different.
+     *
+     * <p>The typed-name check runs here and not only in the browser: a prompt that exists
+     * only in JavaScript protects nobody from a mis-aimed form post, and this endpoint
+     * destroys a college's canteens, menus and staff accounts. Exact match after trimming
+     * — a close-enough match is precisely what the prompt is there to stop, and with three
+     * near-identically named colleges on screen it is the realistic mistake.
+     */
+    @PostMapping("/{id}/delete")
+    public String delete(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @RequestParam(required = false) String confirmName, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        Tenant tenant = tenantService.get(id);
+        if (confirmName == null || !confirmName.trim().equals(tenant.getName())) {
+            redirectAttributes.addFlashAttribute("tenantError",
+                    "Type the college's name exactly (\"" + tenant.getName() + "\") to confirm deletion.");
+            return "redirect:/admin/tenants/" + id;
+        }
+        try {
+            int staff = tenantService.delete(id, principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("notice", tenant.getName() + " and its canteens were deleted."
+                    + (staff == 0 ? ""
+                            : " " + staff + " staff account" + (staff == 1 ? " was" : "s were") + " removed."));
+            return "redirect:/admin/tenants";
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("tenantError", e.getMessage());
+            return "redirect:/admin/tenants/" + id;
+        }
     }
 
     @PostMapping("/{id}/logo")

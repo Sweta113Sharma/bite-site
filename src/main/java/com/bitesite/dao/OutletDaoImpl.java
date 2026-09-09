@@ -123,10 +123,20 @@ public class OutletDaoImpl implements OutletDao {
     @Override
     @Transactional
     public void delete(Long id, Long tenantId) {
+        // Saved carts point at this outlet and at its menu items, and both foreign keys are
+        // NO ACTION, so they have to go first. Without these two lines a student who had
+        // ever left something in a cart here made the outlet undeletable.
+        jdbcTemplate.update(
+                "DELETE FROM saved_cart_items WHERE menu_item_id IN (SELECT id FROM menu_items WHERE outlet_id = ?)", id);
+        jdbcTemplate.update("DELETE FROM saved_carts WHERE outlet_id = ?", id);
         // Menu items go with the outlet: they are its own catalog and mean nothing without
         // it. Safe to hard-delete only because callers refuse the whole operation when any
         // order exists, and an order_items row can only point at a menu item through one.
         jdbcTemplate.update("DELETE FROM menu_items WHERE outlet_id = ? AND tenant_id = ?", id, tenantId);
+        // Categories are the outlet's own too, and menu_items.category_id points at them,
+        // so they follow the items. This line was missing: any canteen whose manager had
+        // added a single category could not be deleted at all — the FK threw instead.
+        jdbcTemplate.update("DELETE FROM categories WHERE outlet_id = ? AND tenant_id = ?", id, tenantId);
         jdbcTemplate.update("DELETE FROM outlets WHERE id = ? AND tenant_id = ?", id, tenantId);
     }
 }

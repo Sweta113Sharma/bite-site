@@ -19,6 +19,22 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
+                    <h5 class="card-title"><span class="material-symbols-outlined">edit</span>Name</h5>
+
+                    <div class="alert alert-success py-2" th:if="${tenantNotice}" th:text="${tenantNotice}"></div>
+                    <div class="alert alert-danger py-2" th:if="${tenantError}" th:text="${tenantError}"></div>
+
+                    <form method="post" th:action="@{/admin/tenants/{id}/rename(id=${tenant.id})}" class="d-flex gap-2">
+                        <input type="text" name="name" class="form-control" th:value="${tenant.name}"
+                               maxlength="150" required="required" aria-label="College name"/>
+                        <button type="submit" class="btn btn-outline-primary"><span class="material-symbols-outlined">check</span>Save</button>
+                    </form>
+                    <p class="form-text mb-0">Students see this when they pick their college and on every order.</p>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
                     <h5 class="card-title"><span class="material-symbols-outlined">toggle_off</span>Status</h5>
                     <form method="post" th:action="@{/admin/tenants/{id}/status(id=${tenant.id})}" class="d-flex gap-2">
                         <select name="status" class="form-select">
@@ -188,6 +204,36 @@
             </div>
         </div>
     </div>
+
+    <!--/* Same two clicks and the same typed-name confirmation as the canteen deletion
+         above, because it is the same kind of act one level up. The counts are named so
+         the confirmation is an informed one rather than a dare — with three
+         near-identically named colleges on screen, "which one is this" is the question
+         the box has to answer. */-->
+    <details class="danger-zone mt-4">
+        <summary><span class="material-symbols-outlined">delete</span>Delete this college</summary>
+        <p class="danger-zone__warning">
+            This permanently removes <strong th:text="${tenant.name}">the college</strong>,
+            <strong th:text="${#lists.size(outlets)}">0</strong>
+            <span th:text="${#lists.size(outlets)} == 1 ? 'canteen' : 'canteens'">canteens</span>
+            and their entire menus, and deletes
+            <strong th:text="${#lists.size(staff)}">0</strong> staff
+            <span th:text="${#lists.size(staff)} == 1 ? 'account' : 'accounts'">accounts</span>
+            attached to it.
+            It is refused if the college has ever taken an order, or if any student account is
+            attached — suspend it instead in either case.
+        </p>
+        <form method="post" th:action="@{/admin/tenants/{id}/delete(id=${tenant.id})}" style="max-width: 420px;">
+            <label class="form-label small mb-1">
+                Type <code th:text="${tenant.name}">name</code> to confirm
+            </label>
+            <input type="text" name="confirmName" class="form-control form-control-sm mb-2"
+                   th:placeholder="${tenant.name}" autocomplete="off" required="required"/>
+            <button type="submit" class="btn btn-sm btn-danger">
+                <span class="material-symbols-outlined">delete</span>Delete this college permanently
+            </button>
+        </form>
+    </details>
 </div>
 </body>
 </html>
