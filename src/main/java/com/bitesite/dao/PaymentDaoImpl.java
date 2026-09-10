@@ -83,11 +83,11 @@ public class PaymentDaoImpl implements PaymentDao {
         // full scan.
         if (status == null) {
             return jdbcTemplate.query(
-                    "SELECT * FROM payments ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                    "SELECT * FROM payments ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
                     ROW_MAPPER, limit, offset);
         }
         return jdbcTemplate.query(
-                "SELECT * FROM payments WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                "SELECT * FROM payments WHERE status = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
                 ROW_MAPPER, status.name(), limit, offset);
     }
 
@@ -117,7 +117,7 @@ public class PaymentDaoImpl implements PaymentDao {
     public List<Payment> findNeedingReconciliation(int limit, int offset) {
         return jdbcTemplate.query(
                 "SELECT * FROM payments WHERE needs_reconciliation = TRUE "
-                        + "ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                        + "ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
                 ROW_MAPPER, limit, offset);
     }
 

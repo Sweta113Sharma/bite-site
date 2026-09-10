@@ -252,7 +252,7 @@ public class UserDaoImpl implements UserDao {
             sql.append(" AND u.is_active = ?");
             args.add(active);
         }
-        sql.append(" ORDER BY u.created_at DESC LIMIT ? OFFSET ?");
+        sql.append(" ORDER BY u.created_at DESC, u.id DESC LIMIT ? OFFSET ?");
         args.add(limit);
         args.add(offset);
 

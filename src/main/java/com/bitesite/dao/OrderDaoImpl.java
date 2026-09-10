@@ -185,11 +185,14 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    // id is the tiebreaker, and it is not cosmetic: created_at is second-precision, so rows written in the same second tie.
+    // MySQL is free to order ties differently between two queries, which means a paginated list can repeat a row on page two and skip another entirely.
+    // Ordering by a unique column last makes the sort total and the paging stable.
     public List<Order> findTerminalByUserId(Long userId, Long tenantId, int limit, int offset) {
         List<Order> orders = jdbcTemplate.query(
                 "SELECT * FROM orders WHERE user_id = ? AND tenant_id = ? "
                         + "AND status IN ('COMPLETED','EXPIRED','CANCELLED') "
-                        + "ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                        + "ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
                 ORDER_ROW_MAPPER, userId, tenantId, limit, offset);
         attachItems(orders);
         return orders;
@@ -230,7 +233,7 @@ public class OrderDaoImpl implements OrderDao {
             sql.append(" AND status = ?");
             args.add(status.name());
         }
-        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        sql.append(" ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?");
         args.add(limit);
         args.add(offset);
 
@@ -472,7 +475,7 @@ public class OrderDaoImpl implements OrderDao {
             args.add(term + "%");
             args.add("%" + term + "%");
         }
-        sql.append(" ORDER BY o.created_at DESC LIMIT ? OFFSET ?");
+        sql.append(" ORDER BY o.created_at DESC, o.id DESC LIMIT ? OFFSET ?");
         args.add(limit);
         args.add(offset);
         List<Order> orders = jdbcTemplate.query(sql.toString(), ORDER_ROW_MAPPER, args.toArray());

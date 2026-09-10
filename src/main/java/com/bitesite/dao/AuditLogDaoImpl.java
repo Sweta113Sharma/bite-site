@@ -39,7 +39,7 @@ public class AuditLogDaoImpl implements AuditLogDao {
     @Override
     public List<AuditLogEntry> findByTenantId(Long tenantId, int limit, int offset) {
         return jdbcTemplate.query(
-                "SELECT * FROM audit_log WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                "SELECT * FROM audit_log WHERE tenant_id = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
                 ROW_MAPPER, tenantId, limit, offset);
     }
 

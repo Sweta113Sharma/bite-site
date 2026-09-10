@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -51,6 +52,7 @@ class OrderHistoryPagingTest {
     @Autowired private UserDao userDao;
     @Autowired private OrderDao orderDao;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     private Long tenantId;
     private Long userId;
@@ -90,6 +92,15 @@ class OrderHistoryPagingTest {
                     .tokenNo("L" + runId + "-" + i).totalAmount(new BigDecimal("40.00"))
                     .status(OrderStatus.PAID).items(List.of()).build());
         }
+
+        /* Every order is given the SAME created_at, deliberately.
+           created_at is second-precision and these are written in a tight loop, so in
+           production many orders genuinely do tie. MySQL is free to order ties differently
+           between two queries, so a list paginated on created_at alone can repeat a row on
+           page two and skip another entirely. Forcing a total tie makes that failure certain
+           rather than a matter of timing: it is what caught the missing tiebreaker, and it
+           caught it on CI while passing locally. */
+        jdbcTemplate.update("UPDATE orders SET created_at = '2026-09-01 12:00:00' WHERE user_id = ?", userId);
     }
 
     @Test
@@ -140,12 +151,16 @@ class OrderHistoryPagingTest {
         }
     }
 
-    /** Newest first, or "show more" walks the history in an order nobody expects. */
+    /**
+     * Newest first, or "show more" walks the history in an order nobody expects. With every
+     * created_at tied by the seeding above, this is really asserting the id tiebreaker, which
+     * is the half that makes paging stable.
+     */
     @Test
     void historyIsNewestFirstAcrossPages() {
         List<Order> all = orderDao.findTerminalByUserId(userId, tenantId, 25, 0);
 
-        assertThat(all).extracting(Order::getCreatedAt)
+        assertThat(all).extracting(Order::getId)
                 .isSortedAccordingTo((a, b) -> b.compareTo(a));
     }
 
