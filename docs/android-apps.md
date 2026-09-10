@@ -6,8 +6,8 @@ frontend is bundled — the apps are thin remote-URL shells.
 
 | App | Directory | Package ID | Remote URL |
 |-----|-----------|-----------|------------|
-| Student | `android-student/` | `in.bitesite.app` | `https://bitesite-app.azurewebsites.net` |
-| Outlet | `android-outlet/` | `in.bitesite.outlet` | `https://bitesite-app.azurewebsites.net/canteen` |
+| Student | `android-student/` | `in.bitesite.app` | `https://app.bitesite.in` |
+| Outlet | `android-outlet/` | `in.bitesite.outlet` | `https://outlet.bitesite.in/canteen` |
 
 Paths below are relative to the repository root.
 
@@ -144,7 +144,12 @@ live; on the desktop web both fall back to `0px` and nothing moves.
   it, which also guarantees the non-auto-hiding splash always gets dismissed.
 - **Student app** declares `ACCESS_COARSE_LOCATION` / `ACCESS_FINE_LOCATION` for
   nearest-canteen selection. The outlet app does not.
-- **Phase 2** (not yet done): release signing, signed AABs, Play CI.
+- **Release signing is done.** Both apps sign from an `upload-keystore.jks` +
+  `keystore.properties` pair in each `android/` directory, both gitignored. Signed
+  AABs verify with `jarsigner -verify` and land at
+  `android-*/android/app/build/outputs/bundle/release/app-release.aab`.
+- **Still not done:** Play CI, and the Play Console listings themselves. `versionCode`
+  is `1` on both apps and must be bumped on every upload after the first.
 
 ## Push notifications (FCM)
 
