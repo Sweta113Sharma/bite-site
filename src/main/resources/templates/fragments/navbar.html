@@ -246,6 +246,7 @@
             <div sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="nav-drawer__group">
                 <p class="nav-drawer__label">Platform</p>
                 <a class="nav-drawer__link" th:href="@{/admin}"><span class="material-symbols-outlined">home</span>Overview</a>
+                <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/analytics}"><span class="material-symbols-outlined">bar_chart</span>Analytics</a>
                 <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/tenants}"><span class="material-symbols-outlined">apartment</span>Colleges</a>
                 <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="nav-drawer__link" th:href="@{/admin/onboarding}"><span class="material-symbols-outlined">filter_alt</span>Onboarding pipeline</a>
                 <a class="nav-drawer__link" th:href="@{/admin/outlets}"><span class="material-symbols-outlined">storefront</span>Canteens</a>
@@ -421,6 +422,9 @@
                th:attr="data-match-exact=true"
                th:classappend="${currentPath != null and currentPath == '/admin'} ? 'is-active'">
                 <span class="material-symbols-outlined">home</span>Overview</a>
+            <a class="console-sidebar__link" th:href="@{/admin/analytics}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/analytics')} ? 'is-active'">
+                <span class="material-symbols-outlined">bar_chart</span>Analytics</a>
             <a class="console-sidebar__link" th:href="@{/admin/tenants}"
                th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/tenants')} ? 'is-active'">
                 <span class="material-symbols-outlined">apartment</span>Colleges</a>

@@ -147,6 +147,24 @@ class RolePermissionSecurityTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void analyticsIsGatedToFullAdmin() throws Exception {
+        // Super Admin has FULL_ADMIN and can reach analytics
+        mockMvc.perform(get("/admin/analytics").header("Host", ADMIN_HOST)
+                        .with(user(new AppUserPrincipal(superAdmin))))
+                .andExpect(status().isOk());
+
+        // Tech Manager lacks FULL_ADMIN and must be forbidden
+        mockMvc.perform(get("/admin/analytics").header("Host", ADMIN_HOST)
+                        .with(user(new AppUserPrincipal(techManager))))
+                .andExpect(status().isForbidden());
+
+        // Student lacks admin portal access completely and must be forbidden
+        mockMvc.perform(get("/admin/analytics").header("Host", ADMIN_HOST)
+                        .with(user(new AppUserPrincipal(student))))
+                .andExpect(status().isForbidden());
+    }
+
     // ---- Portal gate: wrong portal → 403 ----
 
     @Test
