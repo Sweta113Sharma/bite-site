@@ -13,7 +13,7 @@
 
 // Bumped when the precache list changes: an existing client keeps its old list
 // until the version changes.
-const VERSION = 'v4';
+const VERSION = 'v5';
 const STATIC_CACHE = `bitesite-static-${VERSION}`;
 const PAGE_CACHE = `bitesite-pages-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
@@ -72,11 +72,26 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(request.url);
 
     if (request.method !== 'GET') {
-        // Signing out has to empty the page cache. Cached pages are keyed by URL and
-        // nothing else, so on a shared phone — which is most of them here — the next
-        // person to sign in could be handed the previous student's order page out of the
-        // cache while the network catches up. Purging on logout closes that.
-        if (url.pathname === '/logout') {
+        /* Anything that changes WHO the user is has to empty the page cache. Cached pages
+           are keyed by URL and nothing else, so on a shared phone — which here is most of
+           them — the next person could be handed the previous student's order page out of
+           the cache while the network catches up.
+
+           All three of these matter, and logout alone is not enough:
+             /logout           the tidy case, and the least common one on a shared device
+             /login            someone signs in WITHOUT the previous person having signed
+                               out, which is the normal way a shared phone changes hands
+             /api/role/switch  same person, different portal, different pages
+
+           Purging on a failed login attempt too is harmless: it costs one cache miss.
+
+           This became more pressing when navigations started falling back to the cache
+           after 2.5 seconds rather than only when the network failed outright. That is
+           the whole point of the change, but it also means a stale authenticated page is
+           reachable on a merely slow connection instead of a dead one — and slow is the
+           condition this app is built for. */
+        if (url.pathname === '/logout' || url.pathname === '/login'
+                || url.pathname === '/api/role/switch') {
             event.waitUntil(caches.delete(PAGE_CACHE));
         }
         return; // never intercept POST/PUT/DELETE — checkout, cart, order actions pass straight through
