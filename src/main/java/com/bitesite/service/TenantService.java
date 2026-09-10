@@ -3,6 +3,7 @@ package com.bitesite.service;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.tenant.Tenant;
+import com.bitesite.tenant.TenantCache;
 import com.bitesite.tenant.TenantDao;
 import com.bitesite.tenant.TenantStatus;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class TenantService {
     private final TenantDao tenantDao;
     private final FileStorageService fileStorageService;
     private final AuditService auditService;
+    private final TenantCache tenantCache;
 
     public List<Tenant> listAll() {
         return tenantDao.findAll();
@@ -34,6 +36,7 @@ public class TenantService {
     public Tenant create(String name, Long actorUserId) {
         Tenant tenant = Tenant.builder().name(name).status(TenantStatus.PENDING).build();
         Tenant saved = tenantDao.save(tenant);
+        tenantCache.invalidate(saved.getId());
         auditService.record(actorUserId, saved.getId(), "Tenant", saved.getId(), "CREATE", null, saved);
         return saved;
     }
@@ -52,6 +55,7 @@ public class TenantService {
         Tenant before = get(id);
         try {
             tenantDao.updateName(id, name);
+            tenantCache.invalidate(id);
         } catch (DuplicateKeyException e) {
             throw new BusinessException("Another college is already called “" + name + "”.");
         }
@@ -62,6 +66,8 @@ public class TenantService {
     public void setStatus(Long id, TenantStatus status, Long actorUserId) {
         Tenant before = get(id);
         tenantDao.updateStatus(id, status);
+        // Suspension has to bite on the very next request, so this is not left to a TTL.
+        tenantCache.invalidate(id);
         auditService.record(actorUserId, id, "Tenant", id, "STATUS_" + status, before.getStatus(), status);
     }
 
@@ -110,6 +116,7 @@ public class TenantService {
 
         int staff = tenantDao.findStaffUserIds(id).size();
         tenantDao.delete(id);
+        tenantCache.invalidate(id);
 
         // Recorded with a null tenant, because the tenant it would point at no longer
         // exists and the column is a foreign key. The entry still names the college.
@@ -123,6 +130,7 @@ public class TenantService {
         get(id); // 404s cleanly if the tenant doesn't exist
         String filename = fileStorageService.storeLogo(id, file);
         tenantDao.updateLogoPath(id, filename);
+        tenantCache.invalidate(id);
         auditService.record(actorUserId, id, "Tenant", id, "LOGO_UPLOAD", null, filename);
     }
 }

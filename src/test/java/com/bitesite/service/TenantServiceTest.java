@@ -3,6 +3,7 @@ package com.bitesite.service;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.tenant.Tenant;
+import com.bitesite.tenant.TenantCache;
 import com.bitesite.tenant.TenantDao;
 import com.bitesite.tenant.TenantStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +35,8 @@ class TenantServiceTest {
 
     @BeforeEach
     void setUp() {
-        tenantService = new TenantService(tenantDao, fileStorageService, auditService);
+        tenantService = new TenantService(tenantDao, fileStorageService, auditService,
+                new TenantCache(tenantDao));
     }
 
     @Test

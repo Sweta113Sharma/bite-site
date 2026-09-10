@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.session.config.SessionRepositoryCustomizer;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+import org.springframework.transaction.support.TransactionOperations;
 
 /**
  * Makes writing a session attribute idempotent.
@@ -38,6 +39,33 @@ public class SessionStoreConfig {
             VALUES (?, ?, ?) AS new
             ON DUPLICATE KEY UPDATE ATTRIBUTE_BYTES = new.ATTRIBUTE_BYTES
             """;
+
+    /**
+     * Stops Spring Session opening a transaction around every single session statement.
+     *
+     * <p>This was measured as the largest remaining cost in the app: 9 of the 14.2 database
+     * statements in an outlet queue poll, and 9 of the 18.3 in a page render, were
+     * transaction bookkeeping rather than anything to do with answering the request. Roughly
+     * 70% of the database work on a render and 80% on a poll. Against a database in a
+     * different region from the app, each of those is a round trip measured at about 48ms.
+     *
+     * <p>The bean NAME is the entire mechanism and is not arbitrary: Spring Session looks for
+     * exactly {@code springSessionTransactionOperations}. Rename it and this silently stops
+     * applying, with no error and no clue beyond the statement count going back up.
+     *
+     * <p>THE TRADE, stated because it is real. Session saves lose atomicity: a save that
+     * writes several attributes can now be interrupted part-written rather than rolling back
+     * as one unit. That is defensible for this data and not for most data. A session holds
+     * the security context and cart state, both of which are rebuilt from scratch on the next
+     * request if they are torn — nothing here is a ledger, and nothing downstream reconciles
+     * against it. An order or a payment would never be given this treatment.
+     *
+     * <p>Reverting is deleting this method.
+     */
+    @Bean
+    public TransactionOperations springSessionTransactionOperations() {
+        return TransactionOperations.withoutTransaction();
+    }
 
     @Bean
     public SessionRepositoryCustomizer<JdbcIndexedSessionRepository> sessionAttributeUpsert() {

@@ -1,7 +1,7 @@
 package com.bitesite.config;
 
 import com.bitesite.tenant.Tenant;
-import com.bitesite.tenant.TenantDao;
+import com.bitesite.tenant.TenantCache;
 import com.bitesite.tenant.TenantStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,7 +22,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @RequiredArgsConstructor
 public class TenantResolutionInterceptor implements HandlerInterceptor {
 
-    private final TenantDao tenantDao;
+    private final TenantCache tenantCache;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -37,7 +37,10 @@ public class TenantResolutionInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        Tenant tenant = tenantDao.findById(tenantId).orElse(null);
+        // Through the cache: this ran a primary-key SELECT on every authenticated request,
+        // which is a cross-region round trip in production for data that changes almost never.
+        // Suspension stays prompt because TenantService invalidates on write.
+        Tenant tenant = tenantCache.findById(tenantId).orElse(null);
         TenantContext.set(tenant);
 
         boolean tenantUsable = tenant != null && tenant.getStatus() == TenantStatus.ACTIVE;
