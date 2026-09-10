@@ -160,9 +160,11 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
 
         List<AnalyticsReport.DailyTrend> result = new ArrayList<>(allDays.size());
         for (AnalyticsReport.DailyTrend item : allDays) {
-            int heightPercent = (maxGmv.compareTo(BigDecimal.ZERO) > 0)
-                    ? item.grossGmv().multiply(new BigDecimal(100)).divide(maxGmv, 0, RoundingMode.HALF_UP).intValue()
-                    : 0;
+            int heightPercent = 0;
+            if (maxGmv.compareTo(BigDecimal.ZERO) > 0 && item.grossGmv().compareTo(BigDecimal.ZERO) > 0) {
+                int computed = item.grossGmv().multiply(new BigDecimal(100)).divide(maxGmv, 0, RoundingMode.HALF_UP).intValue();
+                heightPercent = Math.max(computed, 25);
+            }
             result.add(new AnalyticsReport.DailyTrend(
                     item.day(),
                     item.orderCount(),
@@ -213,7 +215,7 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
                 .max()
                 .orElse(0L);
 
-        // Map all standard canteen operational hours (8am to 22pm) or 24h
+        // Map all standard canteen operational hours (8am to 21pm)
         List<AnalyticsReport.HourlyDemand> result = new ArrayList<>();
         for (int h = 8; h <= 21; h++) {
             final int currentHour = h;
@@ -222,15 +224,17 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
                     .findFirst()
                     .orElse(new AnalyticsReport.HourlyDemand(currentHour, 0, BigDecimal.ZERO, 0));
 
-            int heightPercent = (maxOrders > 0)
-                    ? (int) ((matched.orderCount() * 100) / maxOrders)
-                    : 6;
+            int heightPercent = 0;
+            if (maxOrders > 0 && matched.orderCount() > 0) {
+                int computed = (int) ((matched.orderCount() * 100) / maxOrders);
+                heightPercent = Math.max(computed, 25);
+            }
 
             result.add(new AnalyticsReport.HourlyDemand(
                     currentHour,
                     matched.orderCount(),
                     matched.grossGmv(),
-                    Math.max(heightPercent, 6)
+                    heightPercent
             ));
         }
         return result;
