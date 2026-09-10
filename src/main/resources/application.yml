@@ -89,9 +89,15 @@ server:
   #
   # min-response-size guards the opposite mistake: below about a KB, the CPU and the
   # gzip header cost more than the bytes saved.
+  #
+  # BOTH JavaScript media types are listed on purpose. Tomcat 10 serves .js as
+  # text/javascript (it changed from application/javascript to follow the WHATWG
+  # spec), so a list naming only the old one silently matches nothing and ships every
+  # byte of JavaScript uncompressed — 93KB of it here, more than twice the HTML this
+  # setting was added for. It fails quietly: the response is correct, just large.
   compression:
     enabled: true
-    mime-types: text/html,text/css,text/plain,application/javascript,application/json,image/svg+xml
+    mime-types: text/html,text/css,text/plain,text/javascript,application/javascript,application/json,image/svg+xml
     min-response-size: 1024
   error:
     # Exception messages reach the error page. BusinessException messages are written to
