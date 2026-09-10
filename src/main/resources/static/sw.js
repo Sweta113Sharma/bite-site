@@ -13,7 +13,7 @@
 
 // Bumped when the precache list changes: an existing client keeps its old list
 // until the version changes.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE = `bitesite-static-${VERSION}`;
 const PAGE_CACHE = `bitesite-pages-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
@@ -62,28 +62,68 @@ function isStaticAsset(url) {
             || url.pathname.startsWith('/fonts/'));
 }
 
+// How long a navigation waits for the network before falling back to a cached copy.
+// Not a timeout in the sense of giving up: the request carries on in the background and
+// still refreshes the cache. This is only about what the student LOOKS at meanwhile.
+const NAV_NETWORK_TIMEOUT_MS = 2500;
+
 self.addEventListener('fetch', (event) => {
     const request = event.request;
+    const url = new URL(request.url);
+
     if (request.method !== 'GET') {
+        // Signing out has to empty the page cache. Cached pages are keyed by URL and
+        // nothing else, so on a shared phone — which is most of them here — the next
+        // person to sign in could be handed the previous student's order page out of the
+        // cache while the network catches up. Purging on logout closes that.
+        if (url.pathname === '/logout') {
+            event.waitUntil(caches.delete(PAGE_CACHE));
+        }
         return; // never intercept POST/PUT/DELETE — checkout, cart, order actions pass straight through
     }
 
-    const url = new URL(request.url);
+    /* Page navigations: still network-first, but no longer network-ONLY-until-it-answers.
+       The old handler awaited the network however long it took, so on a slow campus
+       connection a student stared at a blank screen for the full round trip even when a
+       perfectly good copy of that page was sitting in the cache.
 
-    // Page navigations: network-first, cache the successful response for offline fallback,
-    // and serve the offline page only when there's truly no cached copy either.
+       Now the network races a short timer. If it answers within the timeout the student
+       gets fresh content exactly as before, which on any decent connection is every time.
+       If it does not, they get the cached page immediately and the network request keeps
+       running to refresh the cache for next time.
+
+       Deliberately NOT stale-while-revalidate, which would show the cached copy first on
+       every navigation. Order status is the thing students look at this app for, and
+       showing a stale one to save 200ms on a fast connection is a bad trade. */
     if (request.mode === 'navigate') {
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    const copy = response.clone();
-                    caches.open(PAGE_CACHE).then((cache) => cache.put(request, copy));
-                    return response;
-                })
-                .catch(() =>
-                    caches.match(request).then((cached) => cached || caches.match(OFFLINE_URL))
-                )
-        );
+        event.respondWith((async () => {
+            const network = fetch(request).then((response) => {
+                const copy = response.clone();
+                caches.open(PAGE_CACHE).then((cache) => cache.put(request, copy));
+                return response;
+            });
+
+            const cached = await caches.match(request);
+            if (!cached) {
+                // Nothing to fall back to, so the network is the only answer there is.
+                try {
+                    return await network;
+                } catch (e) {
+                    return (await caches.match(OFFLINE_URL)) || Response.error();
+                }
+            }
+
+            const raced = await Promise.race([
+                network.catch(() => null),
+                new Promise((resolve) => setTimeout(() => resolve(null), NAV_NETWORK_TIMEOUT_MS))
+            ]);
+            if (raced) return raced;
+
+            // Slow or failed: show what we have and let the request finish updating the
+            // cache. waitUntil keeps the worker alive long enough for that to land.
+            event.waitUntil(network.catch(() => {}));
+            return cached;
+        })());
         return;
     }
 

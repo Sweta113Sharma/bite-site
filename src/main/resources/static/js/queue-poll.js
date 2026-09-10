@@ -160,12 +160,12 @@
         try {
             const response = await fetch('/api/orders/queue', { headers: { Accept: 'application/json' } });
             if (!response.ok) {
-                return;
+                return false;
             }
             const orders = await response.json();
             const snapshot = JSON.stringify(orders.map(o => [o.id, o.status]));
             if (snapshot === lastSnapshot) {
-                return;
+                return true;
             }
             /* Only orders that were not on the previous poll count as arrivals — a status
                change on an order already in the queue is not a new one, and chiming for it
@@ -188,10 +188,52 @@
                 emptyNotice.style.display = orders.length === 0 ? '' : 'none';
             }
             container.innerHTML = orders.map(renderOrder).join('');
+            return true;
         } catch (err) {
-            // Transient network hiccup — next poll will retry, no need to surface this.
+            // Transient network hiccup — the scheduler below backs off and retries.
+            return false;
         }
     }
 
-    setInterval(poll, POLL_INTERVAL_MS);
+    /* A self-scheduling loop rather than setInterval, for three reasons that all matter
+       on a campus connection.
+
+       A hidden tab does not need the queue. setInterval kept firing every five seconds
+       for an outlet console left open on a background tab all day, which is bandwidth
+       the canteen's connection does not have spare and database work nobody reads.
+
+       A failing request must not retry at the same rate. setInterval has no idea the
+       last call failed, so on a flaky link it queues another attempt every five seconds
+       into a connection already struggling, which is the worst thing to do to it. The
+       backoff doubles to a minute and resets the moment a poll succeeds.
+
+       And a browser that knows it is offline should not try at all. */
+    const MAX_BACKOFF_MS = 60000;
+    let backoff = 0;
+    let timer = null;
+
+    function schedule(delay) {
+        clearTimeout(timer);
+        timer = setTimeout(tick, delay);
+    }
+
+    async function tick() {
+        if (document.hidden || navigator.onLine === false) {
+            schedule(POLL_INTERVAL_MS);
+            return;
+        }
+        const ok = await poll();
+        backoff = ok ? 0 : Math.min(backoff ? backoff * 2 : POLL_INTERVAL_MS, MAX_BACKOFF_MS);
+        schedule(backoff || POLL_INTERVAL_MS);
+    }
+
+    schedule(POLL_INTERVAL_MS);
+
+    /* Coming back to the tab is exactly when the queue is most likely to be stale, and a
+       throttled background timer may not have fired for minutes. Same for regaining the
+       network: retry immediately rather than serving out the backoff we are already in. */
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') { backoff = 0; schedule(0); }
+    });
+    window.addEventListener('online', function () { backoff = 0; schedule(0); });
 })();

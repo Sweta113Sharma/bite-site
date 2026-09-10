@@ -72,26 +72,53 @@
                 // A 401/403 means the session ended. Stop rather than hammer the endpoint
                 // with requests that cannot succeed until the user signs in again.
                 if (response.status === 401 || response.status === 403) {
-                    clearInterval(timer);
+                    stopped = true;
                 }
-                return;
+                return false;
             }
             // The endpoint answers with `null` when nothing is live, which is what tells
             // the strip to disappear.
             render(await response.json());
+            return true;
         } catch (e) {
             // Offline or a dropped request: leave whatever is on screen and try again on
             // the next tick rather than blanking a strip that is probably still correct.
+            return false;
         }
     }
 
-    const timer = setInterval(refresh, POLL_INTERVAL_MS);
+    /* Self-scheduling rather than setInterval. A student on a slow connection was being
+       asked for this every fifteen seconds regardless of whether the last request had
+       failed, whether the phone was offline, or whether the tab was even in front of
+       them. The backoff doubles to two minutes on repeated failure and resets on the
+       first success, so a dead connection costs a handful of requests rather than four
+       every minute for as long as the page stays open. */
+    const MAX_BACKOFF_MS = 120000;
+    let backoff = 0;
+    let stopped = false;
+    let timer = null;
+
+    function schedule(delay) {
+        clearTimeout(timer);
+        if (!stopped) timer = setTimeout(tick, delay);
+    }
+
+    async function tick() {
+        if (document.hidden || navigator.onLine === false) {
+            schedule(POLL_INTERVAL_MS);
+            return;
+        }
+        const ok = await refresh();
+        backoff = ok ? 0 : Math.min(backoff ? backoff * 2 : POLL_INTERVAL_MS, MAX_BACKOFF_MS);
+        schedule(backoff || POLL_INTERVAL_MS);
+    }
+
+    schedule(POLL_INTERVAL_MS);
 
     // Coming back to a backgrounded tab is exactly when the strip is most likely to be
     // wrong, and a timer in a throttled tab may not have fired for minutes.
     document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') {
-            refresh();
-        }
+        if (document.visibilityState === 'visible') { backoff = 0; schedule(0); }
     });
+    window.addEventListener('online', function () { backoff = 0; schedule(0); });
 }());
