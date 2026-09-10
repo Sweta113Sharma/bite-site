@@ -326,6 +326,33 @@ public class TenantController {
         return "redirect:/admin/tenants/" + id;
     }
 
+    /** A canteen's cut and the registration its invoices are issued against. */
+    @PostMapping("/{id}/outlets/{outletId}/terms")
+    public String setCommercialTerms(@AuthenticationPrincipal AppUserPrincipal principal,
+            @PathVariable Long id, @PathVariable Long outletId,
+            @RequestParam(required = false) String commissionPercent,
+            @RequestParam(required = false) String gstin,
+            @RequestParam(required = false) String legalName,
+            RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        try {
+            // Blank means "follow the platform default", which is a different thing from
+            // a negotiated zero, so it is stored as null rather than parsed to 0.
+            java.math.BigDecimal percent = null;
+            if (commissionPercent != null && !commissionPercent.isBlank()) {
+                percent = new java.math.BigDecimal(commissionPercent.trim());
+            }
+            outletService.updateCommercialTerms(outletId, id, percent, gstin, legalName,
+                    principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("outletNotice", "Commercial terms saved.");
+        } catch (NumberFormatException e) {
+            redirectAttributes.addFlashAttribute("outletError", "Commission must be a number, or blank to use the default.");
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("outletError", e.getMessage());
+        }
+        return "redirect:/admin/tenants/" + id;
+    }
+
     @PostMapping("/{id}/outlets/{outletId}/status")
     public String setOutletActive(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
             @PathVariable Long outletId, @RequestParam boolean active, RedirectAttributes redirectAttributes) {

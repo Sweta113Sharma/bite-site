@@ -1341,3 +1341,167 @@ body.console .console-filter-empty {
     border: var(--border-w) dashed var(--color-ink-muted);
     margin-bottom: 1.25rem;
 }
+
+
+/* ============================================================
+   ADMIN SIDEBAR — permanent left-rail navigation.
+
+   The admin portal has 14+ destinations and they are still growing.
+   A horizontal strip overflows at 1280px; a vertical rail with
+   grouped sections surfaces every page, supports nesting, and
+   stays readable as the link count grows.
+
+   Activated by `console--has-sidebar` on the body, which only
+   admin templates carry. Canteen and techmgr keep the strip.
+   ============================================================ */
+
+/* ---- Layout switch ---- */
+
+/* Hide the console-nav strip when the sidebar is active (desktop). */
+body.console--has-sidebar .console-nav { display: none; }
+
+/* The sidebar layout: sidebar + content side by side. */
+.console-layout {
+    display: flex;
+    min-height: calc(100vh - 53px);  /* below the top bar */
+}
+
+/* ---- Sidebar panel ---- */
+.console-sidebar {
+    position: sticky;
+    top: 53px;  /* height of .app-chrome navbar */
+    align-self: flex-start;
+    width: 220px;
+    flex: none;
+    height: calc(100vh - 53px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    background: var(--color-surface);
+    border-right: var(--border-w) solid var(--color-ink);
+    z-index: 10;
+}
+
+.console-sidebar__nav {
+    padding: 0.5rem 0;
+}
+
+/* ---- Groups ---- */
+.console-sidebar__group {
+    padding: 0.5rem 0;
+}
+
+.console-sidebar__group + .console-sidebar__group {
+    border-top: var(--rule-w) solid var(--rule-color-strong);
+}
+
+.console-sidebar__label {
+    display: block;
+    padding: 0.35rem 1rem 0.25rem;
+    font-family: var(--font-display);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-ink-muted);
+    user-select: none;
+}
+
+/* ---- Links ---- */
+.console-sidebar__link {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 1rem;
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    border-left: 3px solid transparent;
+    transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease;
+}
+
+.console-sidebar__link .material-symbols-outlined {
+    font-size: 18px;
+    line-height: 1;
+    flex: none;
+}
+
+.console-sidebar__link:hover,
+.console-sidebar__link:focus-visible {
+    background: var(--color-surface-deep);
+    color: var(--color-ink);
+    text-decoration: none;
+    outline: none;
+}
+
+/* Active state — yellow fill + ink left border, same language as the strip. */
+.console-sidebar__link.is-active {
+    background: var(--color-accent-tint);
+    color: var(--color-ink);
+    border-left-color: var(--color-ink);
+}
+
+/* ---- Nested sub-links (e.g. Billing → Settlements, Promo Codes) ---- */
+.console-sidebar__nested {
+    padding-left: 0.5rem;
+}
+
+.console-sidebar__link--nested {
+    padding-left: 1.5rem;
+    font-size: 0.70rem;
+}
+
+.console-sidebar__link--nested .material-symbols-outlined {
+    font-size: 16px;
+}
+
+/* ---- Main content ---- */
+.console-main {
+    flex: 1 1 0%;
+    min-width: 0;  /* flex child can shrink below content size */
+}
+
+/* Spacing between top bar and content, replacing the old .app-chrome + * rule
+   which doesn't fire here because the layout wrapper sits between them. */
+body.console--has-sidebar .console-main > .container {
+    padding-top: 1.5rem;
+}
+
+/* On sidebar pages the container is already constrained by the sidebar eating
+   220px, so let it run wider than the default 1140px to use the space. */
+body.console--has-sidebar .console-main > .container {
+    max-width: 1200px;
+}
+
+/* ---- Responsive ---- */
+
+/* Below 992px: sidebar hidden, drawer takes over. */
+@media (max-width: 991.98px) {
+    .console-sidebar { display: none; }
+    .console-layout { display: block; }
+    /* Re-show the drawer button that the console scoping hides at ≥992px. */
+    body.console--has-sidebar .nav-drawer-btn { display: inline-flex; }
+    /* Content needs spacing again since the layout is now block. */
+    body.console--has-sidebar .console-main > .container {
+        padding-top: 0;
+    }
+    body.console--has-sidebar .app-chrome + .console-layout {
+        margin-top: 1.5rem;
+    }
+}
+
+/* Large screens: sidebar is generous. */
+@media (min-width: 1400px) {
+    .console-sidebar { width: 240px; }
+}
+
+/* ---- Print: hide the sidebar ---- */
+@media print {
+    .console-sidebar { display: none !important; }
+    .console-layout { display: block; }
+}
+

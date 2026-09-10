@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console console--has-sidebar">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
+<div class="container">
+    <div class="console-head">
+        <div class="console-head__text">
+            <h3 class="m-0">Promo codes</h3>
+            <p class="console-head__blurb mb-0">
+                Discounts students can type at the cart. Every one of them is paid for by somebody —
+                that is the column to read first.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" th:href="@{/admin/billing}">
+                <span class="material-symbols-outlined">sell</span>Billing
+            </a>
+            <a class="btn btn-primary" th:href="@{/admin/billing/promo-codes/new}">
+                <span class="material-symbols-outlined">add</span>New code
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}"></div>
+    <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+
+    <!--/* Said once, here, rather than left for somebody to work out from a payout report
+         three weeks later. */-->
+    <div class="alert alert-secondary">
+        <strong>Who funds a code decides who loses the money.</strong>
+        A <em>platform</em>-funded code leaves the canteen paid in full and the discount comes out of
+        your commission. A <em>canteen</em>-funded code lowers what the canteen sold for, so its
+        revenue and your commission both fall with it. Pick the wrong one and a canteen quietly
+        pays for your marketing.
+    </div>
+
+    <div th:if="${#lists.isEmpty(codes)}" class="alert alert-secondary">
+        No codes yet. A code is optional — nothing here changes what students pay until you make one.
+    </div>
+
+    <!--/* Client-side, like the console's other filters over complete lists: this is a
+         handful of campaigns, not a student body, so the whole list is already in the page. */-->
+    <div class="d-flex gap-2 mb-3 flex-wrap align-items-center" th:if="${!#lists.isEmpty(codes)}">
+        <input type="search" id="promo-search" class="form-control" style="width:auto; min-width:16rem;"
+               placeholder="Code or description" aria-label="Search codes"/>
+        <select id="promo-funder" class="form-select" style="width:auto;" aria-label="Filter by funder">
+            <option value="">Anyone funding</option>
+            <option value="PLATFORM">Platform funded</option>
+            <option value="CANTEEN">Canteen funded</option>
+        </select>
+        <select id="promo-status" class="form-select" style="width:auto;" aria-label="Filter by status">
+            <option value="">Any status</option>
+            <option value="live">Live</option>
+            <option value="off">Switched off</option>
+        </select>
+        <span class="text-muted small" id="promo-count"></span>
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(codes)}">
+        <table class="table bg-white align-middle" id="promo-table">
+            <thead>
+            <tr>
+                <th>Code</th>
+                <th>Worth</th>
+                <th>Funded by</th>
+                <th>Applies to</th>
+                <th>Runs</th>
+                <th class="text-end">Used</th>
+                <th class="text-end">Status</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="c : ${codes}"
+                th:attr="data-funder=${c.fundedBy.name()},data-status=${c.active} ? 'live' : 'off',
+                         data-text=${#strings.toLowerCase(c.code + ' ' + (c.description != null ? c.description : ''))}">
+                <td>
+                    <span class="fw-bold" th:text="${c.code}">SAVE20</span>
+                    <div class="text-muted small" th:if="${c.description != null}" th:text="${c.description}"></div>
+                </td>
+                <td>
+                    <span th:if="${c.discountType.name() == 'FLAT'}" th:text="'₹' + ${c.discountValue} + ' off'">₹0 off</span>
+                    <span th:if="${c.discountType.name() == 'PERCENT'}" th:text="${c.discountValue} + '% off'">0% off</span>
+                    <div class="text-muted small" th:if="${c.maxDiscount != null}"
+                         th:text="'up to ₹' + ${c.maxDiscount}"></div>
+                    <div class="text-muted small" th:if="${c.minOrderValue != null}"
+                         th:text="'on ₹' + ${c.minOrderValue} + '+'"></div>
+                </td>
+                <td>
+                    <span class="badge" th:classappend="${c.fundedBy.name() == 'PLATFORM'} ? 'bg-warning text-dark' : 'bg-info text-dark'"
+                          th:text="${c.fundedBy.name() == 'PLATFORM'} ? 'You' : 'Canteen'">You</span>
+                </td>
+                <td class="small">
+                    <span th:if="${c.tenantId == null}" class="text-muted">Every college</span>
+                    <span th:if="${c.tenantId != null and c.outletId == null}">One college</span>
+                    <span th:if="${c.outletId != null}">One canteen</span>
+                </td>
+                <td class="small text-muted">
+                    <span th:if="${c.validFrom == null and c.validUntil == null}">Always</span>
+                    <span th:if="${c.validFrom != null}" th:text="'from ' + ${#temporals.format(c.validFrom,'d MMM')}"></span>
+                    <span th:if="${c.validUntil != null}" th:text="'until ' + ${#temporals.format(c.validUntil,'d MMM')}"></span>
+                </td>
+                <td class="text-end">
+                    <span th:text="${c.redemptionCount}">0</span><!--
+                    /* The budget is the point of the number, so it is shown beside it. */
+                 --><span class="text-muted" th:if="${c.maxRedemptions != null}"
+                          th:text="' / ' + ${c.maxRedemptions}"></span>
+                    <div class="text-muted small" th:if="${c.maxPerUser != null}"
+                         th:text="'max ' + ${c.maxPerUser} + ' each'"></div>
+                </td>
+                <td class="text-end">
+                    <span class="badge" th:classappend="${c.active} ? 'bg-success' : 'bg-secondary'"
+                          th:text="${c.active} ? 'Live' : 'Off'">Live</span>
+                </td>
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-secondary" th:href="@{'/admin/billing/promo-codes/' + ${c.id} + '/edit'}"
+                       aria-label="Edit code"><span class="material-symbols-outlined">edit</span></a>
+
+                    <form method="post" th:action="@{'/admin/billing/promo-codes/' + ${c.id} + '/toggle'}"
+                          class="d-inline">
+                        <input type="hidden" name="active" th:value="${!c.active}"/>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                th:aria-label="${c.active} ? 'Switch off' : 'Switch on'"
+                                th:title="${c.active} ? 'Switch off' : 'Switch on'">
+                            <span class="material-symbols-outlined" th:text="${c.active} ? 'block' : 'play_circle'">block</span>
+                        </button>
+                    </form>
+
+                    <!--/* A used code cannot be deleted at all — the record of what a student
+                         was given has to outlive the campaign — so the button is only offered
+                         while there is nothing to lose. */-->
+                    <form method="post" th:if="${c.redemptionCount == 0}"
+                          th:action="@{'/admin/billing/promo-codes/' + ${c.id} + '/delete'}" class="d-inline"
+                          onsubmit="return confirm('Delete this code? It has never been used, so nothing is lost.');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete code">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script th:if="${!#lists.isEmpty(codes)}" th:inline="none">
+    // Client-side narrowing over a list that is already complete in the page.
+    (function () {
+        var search = document.getElementById('promo-search');
+        var funder = document.getElementById('promo-funder');
+        var status = document.getElementById('promo-status');
+        var count = document.getElementById('promo-count');
+        var rows = Array.prototype.slice.call(
+            document.querySelectorAll('#promo-table tbody tr'));
+
+        function apply() {
+            var q = search.value.trim().toLowerCase();
+            var shown = 0;
+            rows.forEach(function (row) {
+                var ok = (!q || row.dataset.text.indexOf(q) !== -1)
+                    && (!funder.value || row.dataset.funder === funder.value)
+                    && (!status.value || row.dataset.status === status.value);
+                row.hidden = !ok;
+                if (ok) { shown++; }
+            });
+            count.textContent = shown === rows.length
+                ? '' : shown + ' of ' + rows.length + ' codes';
+        }
+
+        [search, funder, status].forEach(function (el) {
+            el.addEventListener('input', apply);
+            el.addEventListener('change', apply);
+        });
+    })();
+</script>
+</main>
+</div>
+</body>
+</html>

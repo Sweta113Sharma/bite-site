@@ -9,6 +9,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -33,6 +34,9 @@ public class OutletDaoImpl implements OutletDao {
             .latitude(rs.getObject("latitude", java.math.BigDecimal.class))
             .longitude(rs.getObject("longitude", java.math.BigDecimal.class))
             .notice(rs.getString("notice"))
+            .commissionPercent(rs.getBigDecimal("commission_percent"))
+            .gstin(rs.getString("gstin"))
+            .legalName(rs.getString("legal_name"))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
 
@@ -59,6 +63,17 @@ public class OutletDaoImpl implements OutletDao {
     public List<Outlet> findActiveByTenantId(Long tenantId) {
         return jdbcTemplate.query(
                 "SELECT * FROM outlets WHERE tenant_id = ? AND is_active = TRUE ORDER BY name", ROW_MAPPER, tenantId);
+    }
+
+    @Override
+    public void updateCommercialTerms(Long id, Long tenantId, BigDecimal commissionPercent,
+            String gstin, String legalName) {
+        // A blank commission is stored as NULL rather than 0: they mean different things.
+        // NULL inherits the platform default; 0 is a deliberately negotiated zero cut.
+        jdbcTemplate.update(
+                "UPDATE outlets SET commission_percent = ?, gstin = ?, legal_name = ? "
+                        + "WHERE id = ? AND tenant_id = ?",
+                commissionPercent, gstin, legalName, id, tenantId);
     }
 
     @Override

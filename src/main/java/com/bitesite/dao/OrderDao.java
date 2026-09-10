@@ -2,6 +2,7 @@ package com.bitesite.dao;
 
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderStatus;
+import com.bitesite.model.Settlement;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -147,6 +148,11 @@ public interface OrderDao {
      * <p>{@code search} matches an order token or the student's email, which is what a
      * support conversation actually gives you. Null or blank means no text filter. */
     List<Order> findRecentAcrossTenants(Long tenantId, OrderStatus status, String search, int limit, int offset);
+
+    /** Per-canteen payout position since {@code from} (null for all time), optionally for
+     *  one college. Sums what each order recorded rather than recomputing from today's
+     *  rates — see {@link com.bitesite.service.SettlementService}. */
+    List<Settlement> settlementByOutlet(java.time.LocalDateTime from, Long tenantId);
 
     /** Orders still AWAITING_PAYMENT for longer than {@code timeoutMinutes} — used by the
      * expiry sweep. Takes the timeout rather than a cutoff instant for the same reason as

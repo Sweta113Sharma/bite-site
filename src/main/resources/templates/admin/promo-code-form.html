@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console console--has-sidebar">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
+<div class="container" style="max-width: 860px;">
+    <div class="console-head">
+        <div class="console-head__text">
+            <h3 class="m-0" th:text="${code.id == null} ? 'New promo code' : 'Edit promo code'">New promo code</h3>
+            <p class="console-head__blurb mb-0">
+                Everything about a campaign is set here. Nothing is fixed in the software.
+            </p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/billing/promo-codes}">
+            <span class="material-symbols-outlined">arrow_back</span>All codes
+        </a>
+    </div>
+
+    <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+
+    <!--/* An edit changes the code from here on. It cannot change an order that already
+         used it, because the discount was snapshotted onto that order — said here so
+         nobody edits a live campaign expecting either more or less than that. */-->
+    <div class="alert alert-secondary" th:if="${code.id != null and code.redemptionCount > 0}">
+        <strong th:text="'Used ' + ${code.redemptionCount} + ' time(s) already.'">Used already.</strong>
+        Changes apply to future orders only; the orders that already used this code keep the
+        discount they were given. A used code can be switched off but never deleted.
+    </div>
+
+    <form method="post" th:action="@{/admin/billing/promo-codes}">
+        <input type="hidden" name="id" th:if="${code.id != null}" th:value="${code.id}"/>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">sell</span>The code</h5>
+
+                <div class="mb-3" style="max-width: 22rem;">
+                    <label class="form-label" for="code">Code students type</label>
+                    <input type="text" id="code" name="code" class="form-control" required maxlength="32"
+                           style="text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;"
+                           th:value="${code.code}" autocomplete="off"/>
+                    <div class="form-text">
+                        Stored and matched in capitals, so it does not matter how a student types it.
+                        Letters and digits only is safest: a code is read off a poster, and O/0 and I/1
+                        are where the support messages come from.
+                    </div>
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label" for="description">Note to yourself</label>
+                    <input type="text" id="description" name="description" class="form-control" maxlength="200"
+                           th:value="${code.description}" placeholder="Freshers' week, first 200 orders"/>
+                    <div class="form-text">Only ever shown in this console. Students never see it.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">receipt_long</span>What it takes off</h5>
+
+                <div class="d-flex gap-2 align-items-end flex-wrap mb-3">
+                    <div style="width: 12rem;">
+                        <label class="form-label" for="discountType">Kind</label>
+                        <select id="discountType" name="discountType" class="form-select">
+                            <option th:each="t : ${types}" th:value="${t}" th:selected="${t == code.discountType}"
+                                    th:text="${t.name() == 'FLAT'} ? 'Flat amount off' : 'Percentage off'"></option>
+                        </select>
+                    </div>
+                    <div style="width: 12rem;">
+                        <label class="form-label" for="discountValue">Worth</label>
+                        <input type="number" id="discountValue" name="discountValue" class="form-control"
+                               step="0.01" min="0.01" required th:value="${code.discountValue}"/>
+                    </div>
+                    <div style="width: 12rem;">
+                        <label class="form-label" for="maxDiscount">Never more than</label>
+                        <input type="number" id="maxDiscount" name="maxDiscount" class="form-control"
+                               step="0.01" min="0" th:value="${code.maxDiscount}" placeholder="₹"/>
+                    </div>
+                </div>
+                <div class="form-text mb-3">
+                    A percentage <strong>must</strong> have a ceiling, and will be refused without one:
+                    without it, 50% off is 50% off an order of any size, and one large order can cost
+                    you anything. A flat amount does not need one.
+                    <br/>
+                    A discount is never bigger than the order it is used on. A ₹100 code on a ₹40 order
+                    takes ₹40 off, not ₹60 back.
+                </div>
+
+                <div style="max-width: 14rem;">
+                    <label class="form-label" for="minOrderValue">Only on orders of at least</label>
+                    <input type="number" id="minOrderValue" name="minOrderValue" class="form-control"
+                           step="0.01" min="0" th:value="${code.minOrderValue}" placeholder="₹ — leave blank for any"/>
+                    <div class="form-text">Compared against the food total, before any fee or tip.</div>
+                </div>
+            </div>
+        </div>
+
+        <!--/* The decision this whole screen exists for, given its own card and its own
+             explanation rather than a two-word label in a row of selects. */-->
+        <div class="card mb-4 border-warning">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">warning</span>Who pays for it</h5>
+
+                <div class="form-check mb-2" th:each="f : ${funders}">
+                    <input class="form-check-input" type="radio" name="fundedBy"
+                           th:id="'funded-' + ${f}" th:value="${f}"
+                           th:checked="${f == code.fundedBy}"/>
+                    <label class="form-check-label" th:for="'funded-' + ${f}">
+                        <strong th:text="${f.name() == 'PLATFORM'} ? 'You, the platform' : 'The canteen'">Who</strong>
+                        <div class="form-text mt-0" th:if="${f.name() == 'PLATFORM'}">
+                            The canteen sold at full price and is settled at full price. Your commission
+                            is taken on the full amount and the discount comes out of it. Use this for
+                            your own promotions: launch offers, referral pushes, apologies.
+                        </div>
+                        <div class="form-text mt-0" th:if="${f.name() == 'CANTEEN'}">
+                            The canteen chose to discount its own food, so its revenue really is lower
+                            and your commission falls with it. Use this only when the canteen has
+                            actually agreed to it.
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">storefront</span>Where it works</h5>
+                <p class="form-text mb-3">
+                    Leave both blank and the code works at every canteen on the platform. Pick a college
+                    to keep it there; pick a canteen as well to keep it to that one counter.
+                    A canteen-funded code should almost always name the canteen that is funding it.
+                </p>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <div style="min-width: 16rem;">
+                        <label class="form-label" for="tenantId">College</label>
+                        <select id="tenantId" name="tenantId" class="form-select">
+                            <option value="">Every college</option>
+                            <option th:each="t : ${tenants}" th:value="${t.id}"
+                                    th:selected="${t.id == code.tenantId}" th:text="${t.name}"></option>
+                        </select>
+                    </div>
+                    <div style="min-width: 16rem;">
+                        <label class="form-label" for="outletId">Canteen</label>
+                        <select id="outletId" name="outletId" class="form-select">
+                            <option value="">Every canteen in that college</option>
+                            <option th:each="o : ${outlets}" th:value="${o.id}"
+                                    th:attr="data-tenant=${o.tenantId}"
+                                    th:selected="${o.id == code.outletId}" th:text="${o.name}"></option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">history</span>When, and how often</h5>
+
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <div style="min-width: 15rem;">
+                        <label class="form-label" for="validFrom">Starts</label>
+                        <input type="datetime-local" id="validFrom" name="validFrom" class="form-control"
+                               th:value="${code.validFrom != null} ? ${#temporals.format(code.validFrom, 'yyyy-MM-dd''T''HH:mm')} : ''"/>
+                    </div>
+                    <div style="min-width: 15rem;">
+                        <label class="form-label" for="validUntil">Ends</label>
+                        <input type="datetime-local" id="validUntil" name="validUntil" class="form-control"
+                               th:value="${code.validUntil != null} ? ${#temporals.format(code.validUntil, 'yyyy-MM-dd''T''HH:mm')} : ''"/>
+                    </div>
+                </div>
+                <div class="form-text mb-3">
+                    Both ends are inclusive, and both are optional: leave them blank and the code runs
+                    until you switch it off. Times are this server's time.
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <div style="min-width: 15rem;">
+                        <label class="form-label" for="maxRedemptions">Total uses</label>
+                        <input type="number" id="maxRedemptions" name="maxRedemptions" class="form-control"
+                               min="1" step="1" th:value="${code.maxRedemptions}" placeholder="Unlimited"/>
+                    </div>
+                    <div style="min-width: 15rem;">
+                        <label class="form-label" for="maxPerUser">Uses per student</label>
+                        <input type="number" id="maxPerUser" name="maxPerUser" class="form-control"
+                               min="1" step="1" th:value="${code.maxPerUser}" placeholder="Unlimited"/>
+                    </div>
+                </div>
+                <div class="form-text">
+                    Counted from real uses, not a running tally, so nothing can drift. A use is claimed
+                    the moment a student reaches the payment screen, which is what stops two people
+                    taking the last one; if that payment then fails or is abandoned, the use is released
+                    on its own.
+                    <br/>
+                    Set uses per student to 1 for anything you do not want one person farming.
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="active" name="active" value="true"
+                           th:checked="${code.active}"/>
+                    <label class="form-check-label" for="active">
+                        <strong>Live</strong>
+                        <div class="form-text mt-0">
+                            Uncheck to stop the code being accepted without deleting it. Orders that already
+                            used it are untouched.
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <span class="material-symbols-outlined">check</span>Save code
+            </button>
+            <a class="btn btn-link" th:href="@{/admin/billing/promo-codes}">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script th:inline="none">
+    // The canteen list is loaded whole and narrowed here rather than fetched per college:
+    // a select that waits on a request to populate is worse to use than one already right.
+    (function () {
+        var college = document.getElementById('tenantId');
+        var canteen = document.getElementById('outletId');
+        var options = Array.prototype.slice.call(canteen.options);
+
+        function narrow(keepSelection) {
+            var tenant = college.value;
+            var selected = canteen.value;
+            var stillVisible = false;
+            options.forEach(function (option) {
+                if (!option.value) { return; }
+                var show = !tenant || option.dataset.tenant === tenant;
+                option.hidden = !show;
+                option.disabled = !show;
+                if (show && option.value === selected) { stillVisible = true; }
+            });
+            // Switching college must not leave a canteen from the old one silently selected.
+            if (!keepSelection || !stillVisible) { canteen.value = ''; }
+        }
+
+        college.addEventListener('change', function () { narrow(false); });
+        narrow(true);
+    })();
+</script>
+</main>
+</div>
+</body>
+</html>

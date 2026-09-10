@@ -32,6 +32,7 @@ class PickupCodeTest {
     @Mock private PaymentGateway paymentGateway;
     @Mock private AuditService auditService;
     @Mock private OrderNotifier orderNotifier;
+    @Mock private PromoCodeService promoCodeService;
 
     private OrderService orderService;
 
@@ -39,8 +40,15 @@ class PickupCodeTest {
 
     @BeforeEach
     void setUp() {
+        // A real BillingService over empty settings: every commercial control is inert by
+        // default — no commission, no platform fee, no tip — so an order's total is still
+        // exactly its food total and these tests assert what they always did.
+        BillingService billingService = new BillingService(new com.bitesite.dao.PlatformSettingsDao() {
+            public java.util.Map<String, String> findAll() { return java.util.Map.of(); }
+            public void upsert(String key, String value) { }
+        });
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService,
-                paymentGateway, auditService, orderNotifier);
+                paymentGateway, auditService, orderNotifier, billingService, promoCodeService);
     }
 
     private Order at(OrderStatus status, String code) {

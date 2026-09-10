@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/* ============================================================
+     INVOICE
+
+     The bill a student can actually read, on the page, the way every delivery app
+     shows one. Not a PDF: a PDF is a thing you download and lose, and it cannot be
+     read on a phone without pinching.
+
+     Every figure comes from what the ORDER recorded, never from current settings, so
+     reopening an old order shows the bill that was actually paid.
+
+     The seller is the canteen. It holds the registration; the platform is its agent.
+     That is why the canteen's name and GSTIN head this and the platform fee sits
+     outside the food total — the fee is the platform's own charge, not part of the
+     canteen's supply.
+     ============================================================ */-->
+
+<div th:fragment="invoice(invoice)" class="invoice">
+
+    <div class="invoice__seller">
+        <span class="invoice__seller-name" th:text="${invoice.sellerName()}">Canteen</span>
+        <span class="invoice__gstin" th:if="${invoice.sellerGstin() != null and !invoice.sellerGstin().isEmpty()}"
+              th:text="'GSTIN ' + ${invoice.sellerGstin()}">GSTIN</span>
+    </div>
+
+    <div class="invoice__lines">
+        <div class="invoice__line" th:each="l : ${invoice.lines()}">
+            <span class="invoice__line-name">
+                <span th:text="${l.name()}">Item</span>
+                <span class="invoice__qty" th:text="'× ' + ${l.quantity()}">× 1</span>
+            </span>
+            <span class="invoice__line-amount" th:text="'₹' + ${l.lineTotal()}">₹0</span>
+        </div>
+    </div>
+
+    <div class="invoice__row">
+        <span>Item total</span>
+        <span th:text="'₹' + ${invoice.foodTotal()}">₹0</span>
+    </div>
+
+    <!--/* Shown as its own line rather than folded into the item total, so the bill says
+         plainly what the offer was worth. The taxable value below is worked out after
+         this, because the tax follows what was actually paid. */-->
+    <div class="invoice__row invoice__row--discount" th:if="${invoice.hasDiscount()}">
+        <span th:text="${invoice.promoCode() != null} ? 'Discount (' + ${invoice.promoCode()} + ')' : 'Discount'">Discount</span>
+        <span th:text="'-₹' + ${invoice.discount()}">-₹0</span>
+    </div>
+
+    <!--/* Extracted from the price, never added to it: menu prices already include the
+         tax, so this says how much of what they paid was tax. Split evenly into CGST and
+         SGST because a student walking to a counter is always an intra-state supply. */-->
+    <div th:if="${invoice.showTaxBreakdown()}" class="invoice__tax">
+        <div class="invoice__row invoice__row--muted">
+            <span>Taxable value</span>
+            <span th:text="'₹' + ${invoice.taxableValue()}">₹0</span>
+        </div>
+        <div class="invoice__row invoice__row--muted">
+            <span th:text="'CGST @ ' + ${invoice.gstPercent() / 2} + '%'">CGST</span>
+            <span th:text="'₹' + ${invoice.cgst()}">₹0</span>
+        </div>
+        <div class="invoice__row invoice__row--muted">
+            <span th:text="'SGST @ ' + ${invoice.gstPercent() / 2} + '%'">SGST</span>
+            <span th:text="'₹' + ${invoice.sgst()}">₹0</span>
+        </div>
+    </div>
+    <p class="invoice__note" th:unless="${invoice.showTaxBreakdown()}" th:text="${invoice.taxNote()}">
+        Prices are inclusive of all applicable taxes.
+    </p>
+
+    <!--/* The soft launch: the price is shown with a line through it and the word FREE,
+         so the line is familiar long before it ever costs anybody anything. */-->
+    <div class="invoice__row" th:if="${invoice.feeIsFree()}">
+        <span th:text="${invoice.feeLabel()}">Platform fee</span>
+        <span>
+            <s class="invoice__struck" th:text="'₹' + ${invoice.feeStruckThrough()}">₹5</s>
+            <strong class="invoice__free">FREE</strong>
+        </span>
+    </div>
+    <div class="invoice__row"
+         th:if="${invoice.feeCharged() != null and invoice.feeCharged() > 0}">
+        <span th:text="${invoice.feeLabel()}">Platform fee</span>
+        <span th:text="'₹' + ${invoice.feeCharged()}">₹0</span>
+    </div>
+
+    <div class="invoice__row" th:if="${invoice.hasTip()}">
+        <span>Developer coffee</span>
+        <span th:text="'₹' + ${invoice.tip()}">₹0</span>
+    </div>
+
+    <div class="invoice__row invoice__row--total">
+        <span>Total paid</span>
+        <span th:text="'₹' + ${invoice.total()}">₹0</span>
+    </div>
+
+    <p class="invoice__footer" th:if="${invoice.footer() != null and !invoice.footer().isEmpty()}"
+       th:text="${invoice.footer()}">Thanks</p>
+</div>
+
+</body>
+</html>

@@ -43,7 +43,9 @@ public class CheckoutController {
     private final CartPersistence cartPersistence;
 
     @PostMapping
-    public String checkout(@AuthenticationPrincipal AppUserPrincipal principal, RedirectAttributes redirectAttributes) {
+    public String checkout(@AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam(required = false) java.math.BigDecimal tip,
+            RedirectAttributes redirectAttributes) {
         User user = principal.getUser();
         if (cart.isEmpty() || cart.getOutletId() == null) {
             return "redirect:/student/cart";
@@ -54,7 +56,8 @@ public class CheckoutController {
         }
         try {
             CheckoutResult result = orderService.checkout(
-                    user.getTenantId(), cart.getOutletId(), user.getId(), cart.getQuantities());
+                    user.getTenantId(), cart.getOutletId(), user.getId(), cart.getQuantities(),
+                    tip, cart.getPromoCode());
             cart.clear();
             // The saved copy goes with it, or the next session restores a cart the student
             // has already ordered and paid for.

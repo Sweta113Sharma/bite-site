@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body class="console">
+<body class="console console--has-sidebar">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
 <div class="container">
     <div class="console-head">
         <div class="d-flex align-items-center gap-3">
@@ -100,6 +103,31 @@
                                 </button>
                             </form>
                         </div>
+
+                        <!--/* Blank commission follows the platform default wherever it moves;
+                             a typed 0 is a negotiated free ride that survives the default
+                             changing. The GSTIN matters because the canteen is the registered
+                             seller and the student's invoice is issued in its name. */-->
+                        <details class="mt-2">
+                            <summary class="small text-muted" style="cursor:pointer;">Commercial terms</summary>
+                            <form method="post" class="mt-2"
+                                  th:action="@{/admin/tenants/{id}/outlets/{outletId}/terms(id=${tenant.id},outletId=${o.id})}">
+                                <label class="form-label small mb-1">Commission %</label>
+                                <input type="number" step="0.01" min="0" max="100" name="commissionPercent"
+                                       class="form-control form-control-sm mb-2" th:value="${o.commissionPercent}"
+                                       placeholder="blank = platform default"/>
+                                <label class="form-label small mb-1">GSTIN (blank if not registered)</label>
+                                <input type="text" name="gstin" maxlength="15"
+                                       class="form-control form-control-sm mb-2" th:value="${o.gstin}"
+                                       placeholder="15 characters" style="text-transform:uppercase;"/>
+                                <label class="form-label small mb-1">Registered name (if different)</label>
+                                <input type="text" name="legalName" maxlength="200"
+                                       class="form-control form-control-sm mb-2" th:value="${o.legalName}"/>
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                                    <span class="material-symbols-outlined">check</span>Save terms
+                                </button>
+                            </form>
+                        </details>
 
                         <!--/* Deletion is deliberately awkward: two clicks and the canteen's
                              exact name typed back. The same check runs server-side, so
@@ -260,6 +288,8 @@
             </button>
         </form>
     </details>
+</div>
+</main>
 </div>
 </body>
 </html>

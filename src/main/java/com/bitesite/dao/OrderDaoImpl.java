@@ -3,6 +3,7 @@ package com.bitesite.dao;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderItem;
 import com.bitesite.model.OrderStatus;
+import com.bitesite.model.Settlement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -34,6 +35,18 @@ public class OrderDaoImpl implements OrderDao {
             .userId(rs.getLong("user_id"))
             .tokenNo(rs.getString("token_no"))
             .totalAmount(rs.getBigDecimal("total_amount"))
+            // The terms this order was placed on. Read back for the invoice and the
+            // settlement report; never recalculated from today's settings.
+            .foodAmount(rs.getBigDecimal("food_amount"))
+            .platformFee(rs.getBigDecimal("platform_fee"))
+            .platformFeeShown(rs.getBigDecimal("platform_fee_shown"))
+            .tipAmount(rs.getBigDecimal("tip_amount"))
+            .commissionPercent(rs.getBigDecimal("commission_percent"))
+            .commissionAmount(rs.getBigDecimal("commission_amount"))
+            .gstPercent(rs.getBigDecimal("gst_percent"))
+            .promoCode(rs.getString("promo_code"))
+            .discountAmount(rs.getBigDecimal("discount_amount"))
+            .discountFundedBy(rs.getString("discount_funded_by"))
             .status(OrderStatus.valueOf(rs.getString("status")))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .paidAt(rs.getObject("paid_at", LocalDateTime.class))
@@ -55,14 +68,22 @@ public class OrderDaoImpl implements OrderDao {
             .subtotal(rs.getBigDecimal("subtotal"))
             .build();
 
+    /** Falls back rather than writing a null into a NOT NULL money column. */
+    private static java.math.BigDecimal orZero(java.math.BigDecimal value, java.math.BigDecimal fallback) {
+        return value != null ? value : fallback;
+    }
+
     @Override
     @Transactional
     public Order createOrder(Order order) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO orders (tenant_id, outlet_id, user_id, token_no, total_amount, status) "
-                            + "VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO orders (tenant_id, outlet_id, user_id, token_no, total_amount, status, "
+                            + "food_amount, platform_fee, platform_fee_shown, tip_amount, "
+                            + "commission_percent, commission_amount, gst_percent, "
+                            + "promo_code, discount_amount, discount_funded_by) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, order.getTenantId());
             ps.setLong(2, order.getOutletId());
@@ -70,6 +91,17 @@ public class OrderDaoImpl implements OrderDao {
             ps.setString(4, order.getTokenNo());
             ps.setBigDecimal(5, order.getTotalAmount());
             ps.setString(6, order.getStatus().name());
+            // Written once, at the only moment the terms are known to be current.
+            ps.setBigDecimal(7, orZero(order.getFoodAmount(), order.getTotalAmount()));
+            ps.setBigDecimal(8, orZero(order.getPlatformFee(), java.math.BigDecimal.ZERO));
+            ps.setBigDecimal(9, orZero(order.getPlatformFeeShown(), java.math.BigDecimal.ZERO));
+            ps.setBigDecimal(10, orZero(order.getTipAmount(), java.math.BigDecimal.ZERO));
+            ps.setBigDecimal(11, order.getCommissionPercent());
+            ps.setBigDecimal(12, order.getCommissionAmount());
+            ps.setBigDecimal(13, order.getGstPercent());
+            ps.setString(14, order.getPromoCode());
+            ps.setBigDecimal(15, orZero(order.getDiscountAmount(), java.math.BigDecimal.ZERO));
+            ps.setString(16, order.getDiscountFundedBy());
             return ps;
         }, keyHolder);
         long orderId = keyHolder.getKey().longValue();
@@ -287,6 +319,69 @@ public class OrderDaoImpl implements OrderDao {
         // Same screen, same template, two different answers depending on what was typed.
         attachItems(orders);
         return orders;
+    }
+
+    /**
+     * The payout query. Groups by canteen and sums what each order recorded.
+     *
+     * <p>Only PAID, PREPARING, READY_FOR_PICKUP and COMPLETED count: those are the states
+     * where money was taken and kept. An abandoned, expired or refunded order moved no
+     * money to this canteen and must not inflate a payout.
+     *
+     * <p>food_amount rather than total_amount, because total includes the platform's own
+     * fee and the student's tip — neither of which is the canteen's, and neither of which
+     * the commission is taken on.
+     */
+    @Override
+    public List<Settlement> settlementByOutlet(java.time.LocalDateTime from, Long tenantId) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT o.outlet_id, ou.name AS outlet_name, o.tenant_id, t.name AS college_name,
+                       COUNT(*) AS order_count,
+                       -- The canteen's actual revenue. A discount IT funded really did
+                       -- lower what it sold for; one the PLATFORM funded did not, and the
+                       -- canteen must still be settled on the full amount.
+                       COALESCE(SUM(o.food_amount - CASE WHEN o.discount_funded_by = 'CANTEEN'
+                                                         THEN o.discount_amount ELSE 0 END), 0) AS food_total,
+                       COALESCE(SUM(CASE WHEN o.discount_funded_by = 'PLATFORM'
+                                         THEN o.discount_amount ELSE 0 END), 0) AS platform_discounts,
+                       COALESCE(SUM(o.commission_amount), 0) AS commission,
+                       COALESCE(SUM(o.platform_fee), 0)      AS platform_fees,
+                       COALESCE(SUM(o.tip_amount), 0)        AS tips,
+                       COALESCE(SUM(o.total_amount), 0)      AS collected
+                FROM orders o
+                JOIN outlets ou ON ou.id = o.outlet_id
+                JOIN tenants t  ON t.id  = o.tenant_id
+                WHERE o.status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED')
+                """);
+        List<Object> args = new ArrayList<>();
+        if (from != null) {
+            sql.append(" AND o.created_at >= ?");
+            args.add(from);
+        }
+        if (tenantId != null) {
+            sql.append(" AND o.tenant_id = ?");
+            args.add(tenantId);
+        }
+        sql.append(" GROUP BY o.outlet_id, ou.name, o.tenant_id, t.name ORDER BY food_total DESC");
+
+        return jdbcTemplate.query(sql.toString(), (rs, i) -> {
+            java.math.BigDecimal food = rs.getBigDecimal("food_total");
+            java.math.BigDecimal commission = rs.getBigDecimal("commission");
+            return new Settlement(
+                    rs.getLong("outlet_id"),
+                    rs.getString("outlet_name"),
+                    rs.getLong("tenant_id"),
+                    rs.getString("college_name"),
+                    rs.getInt("order_count"),
+                    food,
+                    commission,
+                    // What the platform owes: the canteen's gross less the platform's cut.
+                    food.subtract(commission),
+                    rs.getBigDecimal("platform_fees"),
+                    rs.getBigDecimal("tips"),
+                    rs.getBigDecimal("platform_discounts"),
+                    rs.getBigDecimal("collected"));
+        }, args.toArray());
     }
 
     @Override

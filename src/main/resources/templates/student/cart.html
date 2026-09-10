@@ -14,6 +14,8 @@
     </div>
 
     <div class="alert alert-danger" th:if="${cartError}" th:text="${cartError}"></div>
+    <div class="alert alert-danger" th:if="${promoError}" th:text="${promoError}"></div>
+    <div class="alert alert-success" th:if="${promoApplied}" th:text="${promoApplied}"></div>
 
     <!--/* A cart can sit open for a while, and in that time the canteen can sell out or
          close. Saying so here beats letting the Pay button be the thing that finds out. */-->
@@ -85,11 +87,60 @@
             </div>
         </div>
 
+        <!--/* An offer only exists if somebody can find it. A code applied on a poster and
+             then hunted for behind a "more options" link is a support message waiting to
+             happen, so the field is simply here, in its own section, always. */-->
+        <p class="section-label">Offers</p>
+        <div class="promo">
+            <div th:if="${appliedCode != null}" class="promo__applied">
+                <span class="material-symbols-outlined promo__tick">check_circle</span>
+                <div class="promo__applied-text">
+                    <strong th:text="${appliedCode}">CODE</strong>
+                    <span th:text="'₹' + ${discount} + ' off this order'">₹0 off</span>
+                </div>
+                <form method="post" th:action="@{/student/cart/promo/remove}" class="m-0">
+                    <button type="submit" class="btn btn-link promo__remove">Remove</button>
+                </form>
+            </div>
+            <form th:unless="${appliedCode != null}" method="post" th:action="@{/student/cart/promo}"
+                  class="promo__form">
+                <input type="text" name="code" class="form-control promo__input"
+                       placeholder="Have a code?" autocomplete="off" autocapitalize="characters"
+                       maxlength="32" required/>
+                <button type="submit" class="btn btn-outline-primary">Apply</button>
+            </form>
+        </div>
+
         <p class="section-label">Summary</p>
         <dl class="cart-summary">
             <div class="cart-summary__row">
-                <dt>Total</dt>
+                <dt>Item total</dt>
                 <dd th:text="'₹' + ${total}">₹0</dd>
+            </div>
+            <div class="cart-summary__row cart-summary__row--discount"
+                 th:if="${discount != null and discount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                <dt th:text="'Discount (' + ${appliedCode} + ')'">Discount</dt>
+                <dd th:text="'-₹' + ${discount}">-₹0</dd>
+            </div>
+            <!--/* The platform fee shown before payment, not sprung at the last screen.
+                 While it is free it is shown struck through with the word FREE, which is
+                 the whole point of the soft launch: the line becomes familiar long before
+                 it ever costs anybody anything. */-->
+            <div class="cart-summary__row" th:if="${billing != null and billing.showFreeFee()}">
+                <dt th:text="${billing.platformFeeLabel()}">Platform fee</dt>
+                <dd>
+                    <s class="promo__struck" th:text="'₹' + ${billing.platformFeeAmount()}">₹5</s>
+                    <strong class="promo__free">FREE</strong>
+                </dd>
+            </div>
+            <div class="cart-summary__row"
+                 th:if="${billing != null and billing.feeCharged().compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                <dt th:text="${billing.platformFeeLabel()}">Platform fee</dt>
+                <dd th:text="'₹' + ${billing.feeCharged()}">₹0</dd>
+            </div>
+            <div class="cart-summary__row cart-summary__row--total">
+                <dt>To pay</dt>
+                <dd th:text="'₹' + ${payable.add(billing != null ? billing.feeCharged() : T(java.math.BigDecimal).ZERO)}">₹0</dd>
             </div>
         </dl>
 
@@ -104,15 +155,36 @@
     <div class="sticky-pay-inner">
         <div class="sticky-pay-total">
             <small>To Pay</small>
-            <span th:text="'₹' + ${total}">0</span>
+            <span th:text="'₹' + ${payable.add(billing != null ? billing.feeCharged() : T(java.math.BigDecimal).ZERO)}">0</span>
         </div>
-        <form method="post" th:action="@{/student/checkout}" class="m-0">
+        <!--/* The tip rides along on the checkout form as a hidden field. It is only ever
+             one of the amounts the panel offers — the server re-checks, so a hand-edited
+             value cannot decide what somebody is charged. */-->
+        <form method="post" th:action="@{/student/checkout}" class="m-0" id="checkout-form"
+              th:attr="data-tip-prompt=${billing != null and billing.tipEnabled() and !#lists.isEmpty(billing.tipAmounts())} ? 'true' : null">
+            <input type="hidden" name="tip" id="checkout-tip" value=""/>
             <button type="submit" class="btn btn-primary btn-lg px-4 d-flex align-items-center gap-2">
                 Proceed to Pay <span class="material-symbols-outlined">arrow_forward</span>
             </button>
         </form>
     </div>
 </div>
+
+
+<!--/* Entirely optional, and it says so. Declining is a plain, equally reachable button
+     rather than a greyed-out afterthought: a "no" that is harder to press than a "yes"
+     is not really a choice. Every word here is set in the billing panel. */-->
+<dialog id="tip-dialog" class="tip-dialog"
+        th:if="${billing != null and billing.tipEnabled() and !#lists.isEmpty(billing.tipAmounts())}">
+    <h5 class="tip-dialog__title" th:text="${billing.tipTitle()}">Buy the developer a coffee</h5>
+    <p class="tip-dialog__message" th:text="${billing.tipMessage()}">Optional.</p>
+    <div class="tip-dialog__amounts">
+        <button type="button" class="btn btn-outline-primary tip-dialog__amount"
+                th:each="a : ${billing.tipAmounts()}" th:attr="data-amount=${a}"
+                th:text="'₹' + ${a}">₹5</button>
+    </div>
+    <button type="button" class="btn btn-link tip-dialog__skip" data-tip-skip>No thanks, continue</button>
+</dialog>
 
 </body>
 </html>

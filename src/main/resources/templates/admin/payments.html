@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body class="console">
+<body class="console console--has-sidebar">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
 <div class="container">
     <div class="console-head">
         <h3 class="m-0">Payments</h3>
@@ -71,6 +74,8 @@
     <div th:replace="~{fragments/pager :: pager(${paged},
             @{/admin/payments(page=${paged != null ? paged.page - 1 : 0},status=${selectedStatus})},
             @{/admin/payments(page=${paged != null ? paged.page + 1 : 0},status=${selectedStatus})})}"></div>
+</div>
+</main>
 </div>
 </body>
 </html>

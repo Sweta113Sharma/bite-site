@@ -4,6 +4,7 @@ import com.bitesite.dao.OrderDao;
 import com.bitesite.dao.PaymentDao;
 import com.bitesite.dto.CheckoutResult;
 import com.bitesite.dto.GatewayOrder;
+import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.InvalidOrderStateException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.MenuItem;
@@ -54,6 +55,8 @@ public class OrderService {
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
     private final OrderNotifier orderNotifier;
+    private final BillingService billingService;
+    private final PromoCodeService promoCodeService;
 
     /**
      * Builds the order from the cart (re-pricing every line from the database, never
@@ -63,6 +66,27 @@ public class OrderService {
      * transaction open.
      */
     public CheckoutResult checkout(Long tenantId, Long outletId, Long userId, Map<Long, Integer> cartQuantities) {
+        return checkout(tenantId, outletId, userId, cartQuantities, null, null);
+    }
+
+    /**
+     * @param requestedTip the voluntary contribution the student chose, or null. Validated
+     *                     against the amounts the panel offers — see
+     *                     {@link BillingService#acceptableTip}.
+     */
+    public CheckoutResult checkout(Long tenantId, Long outletId, Long userId,
+            Map<Long, Integer> cartQuantities, BigDecimal requestedTip) {
+        return checkout(tenantId, outletId, userId, cartQuantities, requestedTip, null);
+    }
+
+    /**
+     * @param promoCode the code the student applied, or null. Re-validated here rather
+     *                  than trusted from the session: the cart page priced it against a
+     *                  cart that may since have changed, and the code may since have run
+     *                  out. This is the only pricing of it that counts.
+     */
+    public CheckoutResult checkout(Long tenantId, Long outletId, Long userId,
+            Map<Long, Integer> cartQuantities, BigDecimal requestedTip, String promoCode) {
         if (cartQuantities.isEmpty()) {
             throw new InvalidOrderStateException("Your cart is empty.");
         }
@@ -107,20 +131,60 @@ public class OrderService {
                     .build());
         }
 
+        // The one moment the commercial terms are known to be current. Everything computed
+        // here is written onto the order and never recalculated: a commission renegotiated
+        // next month must not restate what this canteen is owed for this order, and the
+        // end of the free-fee period must not change a bill somebody already paid.
+        // requireOutletOpen above already proved this outlet exists and is trading.
+        Outlet sellingOutlet = outletService.get(outletId, tenantId);
+
+        // Priced against the total just computed from the database, not against whatever
+        // the cart page showed. If the code has since expired, run out, or stopped covering
+        // this cart, the checkout is refused with the reason rather than quietly charging
+        // full price — a student who was shown ₹80 must never be charged ₹100 instead.
+        PromoCodeService.Applied applied = null;
+        if (promoCode != null && !promoCode.isBlank()) {
+            try {
+                applied = promoCodeService.validate(promoCode, userId, tenantId, outletId, total);
+            } catch (BusinessException e) {
+                throw new InvalidOrderStateException(e.getMessage());
+            }
+        }
+
+        BillingService.Charges charges = billingService.charges(total, sellingOutlet, requestedTip,
+                applied == null ? null : applied.discount(),
+                applied == null ? null : applied.code().getFundedBy().name());
+
         Order order = Order.builder()
                 .tenantId(tenantId)
                 .outletId(outletId)
                 .userId(userId)
+                .foodAmount(charges.foodAmount())
+                .promoCode(applied == null ? null : applied.code().getCode())
+                .discountAmount(charges.discount())
+                .discountFundedBy(charges.discountFundedBy())
+                .platformFee(charges.platformFee())
+                .platformFeeShown(charges.platformFeeShown())
+                .tipAmount(charges.tip())
+                .commissionPercent(charges.commissionPercent())
+                .commissionAmount(charges.commissionAmount())
+                .gstPercent(charges.gstPercent())
                 .tokenNo(generateUniqueToken(tenantId))
-                .totalAmount(total)
+                .totalAmount(charges.total())
                 .status(OrderStatus.AWAITING_PAYMENT)
                 .items(orderItems)
                 .build();
         Order saved = orderDao.createOrder(order);
 
+        // After the order row exists, because the redemption points at it. The unique
+        // constraint on order_id is what actually stops one order redeeming twice.
+        if (applied != null) {
+            promoCodeService.redeem(applied.code(), saved.getId(), userId, applied.discount());
+        }
+
         GatewayOrder gatewayOrder;
         try {
-            gatewayOrder = paymentGateway.createOrder(total, saved.getTokenNo());
+            gatewayOrder = paymentGateway.createOrder(charges.total(), saved.getTokenNo());
         } catch (RuntimeException e) {
             orderDao.updateStatus(saved.getId(), tenantId, OrderStatus.PAYMENT_FAILED);
             throw e;
@@ -130,7 +194,7 @@ public class OrderService {
                 .tenantId(tenantId)
                 .orderId(saved.getId())
                 .razorpayOrderId(gatewayOrder.gatewayOrderId())
-                .amount(total)
+                .amount(charges.total())
                 .status(PaymentStatus.CREATED)
                 .build();
         try {

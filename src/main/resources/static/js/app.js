@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFormBusyStates();
     initRouteProgress();
     initImageLoadingStates();
+    initTipPrompt();
 });
 
 /* ============================================================
@@ -1776,5 +1777,62 @@ function initImageLoadingStates() {
         img.addEventListener('load', done, { once: true });
         // A broken photo must not shimmer for ever; the alt text is the fallback.
         img.addEventListener('error', done, { once: true });
+    });
+}
+
+/* ============================================================
+   DEVELOPER COFFEE — the optional contribution at checkout
+   ============================================================ */
+
+/**
+ * Intercepts checkout once, to ask whether the student wants to chip in.
+ *
+ * <p>Deliberately shaped so that declining is as easy as accepting: "No thanks, continue"
+ * is a real button in the same dialog, not a greyed-out corner. A prompt whose refusal is
+ * harder to press than its acceptance is not offering a choice, and this money is meant to
+ * be given rather than extracted.
+ *
+ * <p>The amount only ever comes from the buttons the panel rendered, and the server checks
+ * it again against the configured list — a hand-edited hidden field cannot decide what
+ * somebody is charged.
+ *
+ * <p>Falls through untouched when the dialog is absent, when the browser has no dialog
+ * support, or once a choice has been made, so checkout can never be blocked by this.
+ */
+function initTipPrompt() {
+    const form = document.getElementById('checkout-form');
+    const dialog = document.getElementById('tip-dialog');
+    const field = document.getElementById('checkout-tip');
+    if (!form || !dialog || !field || form.dataset.tipPrompt !== 'true'
+            || typeof dialog.showModal !== 'function') {
+        return;
+    }
+
+    let answered = false;
+
+    function proceed(amount) {
+        answered = true;
+        field.value = amount || '';
+        if (dialog.open) dialog.close();
+        // requestSubmit rather than submit(): it runs the form's own validation and fires
+        // the submit event, which is what the busy-state guard listens for.
+        form.requestSubmit();
+    }
+
+    form.addEventListener('submit', (event) => {
+        if (answered) return;
+        event.preventDefault();
+        dialog.showModal();
+    });
+
+    dialog.querySelectorAll('.tip-dialog__amount').forEach((button) => {
+        button.addEventListener('click', () => proceed(button.dataset.amount));
+    });
+    dialog.querySelector('[data-tip-skip]')?.addEventListener('click', () => proceed(null));
+
+    // Escape, or clicking the backdrop, means no — and must still let them pay.
+    dialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        proceed(null);
     });
 }

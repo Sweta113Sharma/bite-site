@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body class="console">
+<body class="console console--has-sidebar">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
 <div class="container" style="max-width: 480px;">
     <div class="console-head">
         <h3 class="console-head__title" th:text="${pageTitle}">Add a lead</h3>
@@ -34,6 +37,8 @@
         </div>
         <button type="submit" class="btn btn-primary w-100"><span class="material-symbols-outlined">add</span>Add lead</button>
     </form>
+</div>
+</main>
 </div>
 </body>
 </html>

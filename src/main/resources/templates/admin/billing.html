@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console console--has-sidebar">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
+<div class="container" style="max-width: 860px;">
+    <div class="console-head">
+        <div class="console-head__text">
+            <h3 class="m-0">Billing settings</h3>
+            <p class="console-head__blurb mb-0">
+                What the platform charges, what it keeps, and what the invoice says.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" th:href="@{/admin/billing/promo-codes}">
+                <span class="material-symbols-outlined">celebration</span>Promo codes
+            </a>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/billing/settlements}">
+                <span class="material-symbols-outlined">bar_chart</span>Settlements
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}"></div>
+
+    <!--/* The single most important thing about this screen, said before anything is
+         changed rather than discovered afterwards. */-->
+    <div class="alert alert-secondary">
+        <strong>These terms apply to new orders only.</strong> Every order records the rates it
+        was placed under, so changing anything here never restates a bill a student already paid
+        or a payout a canteen is already owed.
+    </div>
+
+    <form method="post" th:action="@{/admin/billing}">
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">sell</span>Platform cut</h5>
+                <p class="form-text mb-3">
+                    Your commission on food, taken from what the canteen is owed. Set per canteen on
+                    each college's page; this is the default for any canteen that has not negotiated
+                    its own, so changing it moves everyone who never did and nobody who did.
+                </p>
+                <div class="d-flex gap-2 align-items-center" style="max-width: 20rem;">
+                    <input type="number" step="0.01" min="0" max="100" class="form-control"
+                           th:name="${T(com.bitesite.model.BillingSettings).COMMISSION_PERCENT}"
+                           th:value="${settings.commissionPercent()}" aria-label="Default commission percent"/>
+                    <span class="text-muted">% of food</span>
+                </div>
+                <p class="form-text mb-0">
+                    Not taken on the platform fee (that is already yours) or on tips (never the canteen's).
+                </p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">receipt_long</span>Platform fee</h5>
+                <p class="form-text mb-3">A flat amount added to every order, charged to the student.</p>
+
+                <div class="d-flex gap-2 align-items-center mb-3" style="max-width: 20rem;">
+                    <span class="text-muted">₹</span>
+                    <input type="number" step="0.01" min="0" class="form-control"
+                           th:name="${T(com.bitesite.model.BillingSettings).FEE_AMOUNT}"
+                           th:value="${settings.platformFeeAmount()}" aria-label="Platform fee amount"/>
+                    <span class="text-muted">per order</span>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="fee-charge"
+                           th:name="${T(com.bitesite.model.BillingSettings).FEE_CHARGE}"
+                           th:checked="${settings.chargePlatformFee()}"/>
+                    <label class="form-check-label" for="fee-charge">
+                        <strong>Actually charge it.</strong> Off means students pay nothing extra.
+                    </label>
+                </div>
+
+                <!--/* The soft-launch control: show the price, charge nothing, let people get
+                     used to the line being there before it ever costs them anything. */-->
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="fee-free"
+                           th:name="${T(com.bitesite.model.BillingSettings).FEE_SHOW_WHEN_FREE}"
+                           th:checked="${settings.showFeeWhenFree()}"/>
+                    <label class="form-check-label" for="fee-free">
+                        While not charging, still show it on the invoice <strong>struck through, marked FREE</strong>
+                    </label>
+                </div>
+
+                <label class="form-label small mb-1">What the invoice calls it</label>
+                <input type="text" class="form-control" style="max-width: 24rem;" maxlength="60"
+                       th:name="${T(com.bitesite.model.BillingSettings).FEE_LABEL}"
+                       th:value="${settings.platformFeeLabel()}"/>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">assignment</span>Tax on the invoice</h5>
+                <!--/* The canteen is the registered seller and the platform is its agent, so
+                     the invoice is issued in the canteen's name against its GSTIN. Printing
+                     a tax line when nobody is remitting that tax is misrepresentation, so
+                     this stays off until a real registration is on file. */-->
+                <p class="form-text mb-3">
+                    Menu prices are treated as tax-inclusive: the breakdown shows how much of the price
+                    was tax, it never adds anything on top. The invoice is issued in the canteen's name
+                    against its GSTIN, set on each canteen. Leave the breakdown off until a real
+                    registration is on file.
+                </p>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="gst-show"
+                           th:name="${T(com.bitesite.model.BillingSettings).GST_SHOW}"
+                           th:checked="${settings.showGstBreakdown()}"/>
+                    <label class="form-check-label" for="gst-show">
+                        Show a CGST/SGST breakdown on invoices
+                    </label>
+                </div>
+
+                <div class="d-flex gap-2 align-items-center mb-3" style="max-width: 20rem;">
+                    <input type="number" step="0.01" min="0" max="100" class="form-control"
+                           th:name="${T(com.bitesite.model.BillingSettings).GST_PERCENT}"
+                           th:value="${settings.gstPercent()}" aria-label="GST percent"/>
+                    <span class="text-muted">% GST, inclusive</span>
+                </div>
+
+                <label class="form-label small mb-1">Line shown when the breakdown is off</label>
+                <input type="text" class="form-control" maxlength="200"
+                       th:name="${T(com.bitesite.model.BillingSettings).GST_NOTE}"
+                       th:value="${settings.gstNote()}"/>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">local_fire_department</span>Developer coffee</h5>
+                <p class="form-text mb-3">
+                    An optional contribution offered at checkout. It goes to you, never to the canteen,
+                    and is not included in any payout. Students can always decline.
+                </p>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="tip-enabled"
+                           th:name="${T(com.bitesite.model.BillingSettings).TIP_ENABLED}"
+                           th:checked="${settings.tipEnabled()}"/>
+                    <label class="form-check-label" for="tip-enabled">Ask at checkout</label>
+                </div>
+
+                <label class="form-label small mb-1">Amounts offered (comma separated, rupees)</label>
+                <input type="text" class="form-control mb-3" style="max-width: 20rem;" maxlength="60"
+                       th:name="${T(com.bitesite.model.BillingSettings).TIP_AMOUNTS}"
+                       th:value="${#strings.listJoin(settings.tipAmounts(), ',')}"/>
+                <p class="form-text mb-3">
+                    Only these amounts are accepted, so a hand-edited form cannot decide what somebody
+                    is charged.
+                </p>
+
+                <label class="form-label small mb-1">Heading</label>
+                <input type="text" class="form-control mb-3" maxlength="80"
+                       th:name="${T(com.bitesite.model.BillingSettings).TIP_TITLE}"
+                       th:value="${settings.tipTitle()}"/>
+
+                <label class="form-label small mb-1">Message</label>
+                <textarea class="form-control" rows="2" maxlength="300"
+                          th:name="${T(com.bitesite.model.BillingSettings).TIP_MESSAGE}"
+                          th:text="${settings.tipMessage()}"></textarea>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">edit</span>Invoice footer</h5>
+                <input type="text" class="form-control" maxlength="200"
+                       th:name="${T(com.bitesite.model.BillingSettings).INVOICE_FOOTER}"
+                       th:value="${settings.invoiceFooter()}"/>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <span class="material-symbols-outlined">check</span>Save settings
+        </button>
+    </form>
+</div>
+</main>
+</div>
+</body>
+</html>

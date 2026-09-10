@@ -567,6 +567,60 @@ h5 .material-symbols-outlined.is-filled {
 }
 .cart-summary dt { color: var(--color-ink-muted); font-weight: 600; }
 .cart-summary dd { margin: 0; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; }
+/* A saving should look like a saving. Same weight as the total, in the success colour,
+   because it is the one number on this screen a student actually wants to read. */
+.cart-summary__row--discount dt,
+.cart-summary__row--discount dd { color: var(--color-success, #1a7f45); }
+.cart-summary__row--total {
+    border-top: 2px solid var(--color-ink);
+    margin-top: 6px;
+    padding-top: 10px;
+}
+.cart-summary__row--total dt { color: var(--color-ink); font-weight: 800; }
+.cart-summary__row--total dd { font-size: 1.3rem; }
+
+/* Offers */
+.promo {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 14px 16px;
+    margin-bottom: 1.25rem;
+}
+.promo__form {
+    display: flex;
+    gap: 8px;
+}
+/* Codes are read off a poster and typed in capitals; letter-spacing makes an O and a 0
+   distinguishable while typing rather than after the code is refused. */
+.promo__input {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+.promo__applied {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.promo__tick { color: var(--color-success, #1a7f45); }
+.promo__applied-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    flex: 1;
+}
+.promo__applied-text span {
+    font-size: 0.85rem;
+    color: var(--color-ink-muted);
+}
+.promo__remove {
+    color: var(--color-danger);
+    padding: 0;
+    font-weight: 700;
+}
+.promo__struck { color: var(--color-ink-muted); font-weight: 500; margin-right: 6px; }
+.promo__free { color: var(--color-success, #1a7f45); letter-spacing: 0.04em; }
 
 /* Sticky pay bar */
 .sticky-pay-bar {

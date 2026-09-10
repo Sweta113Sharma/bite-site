@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console console--has-sidebar">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
+<div class="container">
+    <div class="console-head">
+        <div class="console-head__text">
+            <h3 class="m-0">Settlements</h3>
+            <p class="console-head__blurb mb-0">
+                What each canteen earned, what you kept, and what you owe them.
+            </p>
+        </div>
+        <a class="btn btn-outline-secondary me-2" th:href="@{/admin/billing/promo-codes}">
+            <span class="material-symbols-outlined">celebration</span>Promo codes
+        </a>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/billing}">
+            <span class="material-symbols-outlined">tune</span>Billing settings
+        </a>
+    </div>
+
+    <form method="get" th:action="@{/admin/billing/settlements}" class="d-flex gap-2 mb-3 flex-wrap">
+        <select name="period" class="form-select" style="width:auto;" onchange="this.form.submit()"
+                aria-label="Period">
+            <option th:each="p : ${periods}" th:value="${p}" th:selected="${p == selectedPeriod}"
+                    th:text="${p.label}"></option>
+        </select>
+        <select name="tenantId" class="form-select" style="width:auto;" onchange="this.form.submit()"
+                aria-label="College">
+            <option value="">All colleges</option>
+            <option th:each="t : ${tenants}" th:value="${t.id}"
+                    th:selected="${t.id == selectedTenantId}" th:text="${t.name}"></option>
+        </select>
+    </form>
+
+    <!--/* Money lands in one gateway account, so this is a payout ledger and not an
+         invoice: the platform is holding the canteen's money and owes them the rest. */-->
+    <div class="alert alert-secondary">
+        All payments settle into the platform's account, so <strong>net payable</strong> is what you
+        owe each canteen for the period. Commission is summed from the rate each order was actually
+        placed under, not recalculated from today's rate.
+    </div>
+
+    <div th:if="${#lists.isEmpty(rows)}" class="alert alert-secondary">
+        No paid orders in this period.
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(rows)}">
+        <table class="table bg-white align-middle">
+            <thead>
+            <tr>
+                <th>Canteen</th><th>College</th><th class="text-end">Orders</th>
+                <th class="text-end">Food</th><th class="text-end">Commission</th>
+                <th class="text-end">Net payable</th>
+                <th class="text-end">Platform fees</th><th class="text-end">Tips</th>
+                <th class="text-end">You funded</th>
+                <th class="text-end">Collected</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${rows}">
+                <td class="fw-bold" th:text="${r.outletName()}">Canteen</td>
+                <td class="small text-muted" th:text="${r.collegeName()}">College</td>
+                <td class="text-end" th:text="${r.orderCount()}">0</td>
+                <td class="text-end" th:text="'₹' + ${r.foodTotal()}">₹0</td>
+                <td class="text-end">
+                    <span th:text="'₹' + ${r.commission()}">₹0</span>
+                    <!--/* The blended rate actually charged, which differs from the canteen's
+                         current rate whenever it changed partway through the period. */-->
+                    <div class="text-muted small" th:if="${r.commission() > 0}"
+                         th:text="${r.effectivePercent()} + '%'">0%</div>
+                </td>
+                <td class="text-end fw-bold" th:text="'₹' + ${r.netPayable()}">₹0</td>
+                <td class="text-end small text-muted" th:text="'₹' + ${r.platformFees()}">₹0</td>
+                <td class="text-end small text-muted" th:text="'₹' + ${r.tips()}">₹0</td>
+                <!--/* Discounts the platform paid for. The canteen was settled on the full
+                     amount, so this came straight out of the margin above it. */-->
+                <td class="text-end small"
+                    th:classappend="${r.platformDiscounts() > 0} ? 'text-danger' : 'text-muted'"
+                    th:text="'-₹' + ${r.platformDiscounts()}">₹0</td>
+                <td class="text-end" th:text="'₹' + ${r.collected()}">₹0</td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr class="fw-bold">
+                <td colspan="3">Total</td>
+                <td class="text-end" th:text="'₹' + ${totals.food}">₹0</td>
+                <td class="text-end" th:text="'₹' + ${totals.commission}">₹0</td>
+                <td class="text-end" th:text="'₹' + ${totals.netPayable}">₹0</td>
+                <td class="text-end" th:text="'₹' + ${totals.fees}">₹0</td>
+                <td class="text-end" th:text="'₹' + ${totals.tips}">₹0</td>
+                <td class="text-end" th:text="'-₹' + ${totals.platformDiscounts}">₹0</td>
+                <td class="text-end" th:text="'₹' + ${totals.collected}">₹0</td>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <p class="form-text" th:if="${!#lists.isEmpty(rows)}">
+        Collected is everything that moved through the gateway: food, platform fees and tips.
+        Only fees and tips are yours to keep outright; the rest less commission belongs to the canteens.
+        <br/>
+        Food is what the canteen actually sold for, so a discount the canteen funded has already
+        been taken off it. "You funded" is the other kind: the canteen was paid in full and that
+        discount came out of your commission, so your real margin for the period is
+        commission less this column.
+    </p>
+</div>
+</main>
+</div>
+</body>
+</html>

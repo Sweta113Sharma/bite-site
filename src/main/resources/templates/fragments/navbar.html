@@ -158,6 +158,9 @@
             <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/accounts}"
                th:classappend="${currentPath != null and #strings.startsWith(currentPath,'/admin/accounts')} ? 'is-active'">
                 <span class="material-symbols-outlined">group</span>All accounts</a>
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/billing}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath,'/admin/billing')} ? 'is-active'">
+                <span class="material-symbols-outlined">sell</span>Billing</a>
 
             <!--/* Tech manager */-->
             <a sec:authorize="hasRole('TECH_MANAGER')" class="console-nav__link" th:href="@{/techmgr}"
@@ -391,6 +394,97 @@
         <span>Account</span>
     </a>
 </nav>
+
+<!--/* ============================================================
+     ADMIN SIDEBAR — permanent left-rail navigation for admin pages.
+
+     Replaces the console-nav strip for the admin portal. The strip
+     works fine for canteen (7 links) and techmgr (2 links), but the
+     admin portal has 14+ destinations and still growing. A vertical
+     rail with grouped sections surfaces every page, supports nesting
+     (Billing → Settlements, Promo Codes), and stays readable as
+     the link count grows.
+
+     The sidebar is always visible on desktop (≥992px) and hidden on
+     mobile, where the nav drawer continues to serve. The body class
+     `console--has-sidebar` triggers the layout switch in CSS.
+     ============================================================ */-->
+<aside th:fragment="adminSidebar"
+       sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')"
+       class="console-sidebar" id="console-sidebar">
+    <nav class="console-sidebar__nav" aria-label="Admin navigation">
+
+        <!--/* Platform */-->
+        <div class="console-sidebar__group">
+            <span class="console-sidebar__label">Platform</span>
+            <a class="console-sidebar__link" th:href="@{/admin}"
+               th:attr="data-match-exact=true"
+               th:classappend="${currentPath != null and currentPath == '/admin'} ? 'is-active'">
+                <span class="material-symbols-outlined">home</span>Overview</a>
+            <a class="console-sidebar__link" th:href="@{/admin/tenants}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/tenants')} ? 'is-active'">
+                <span class="material-symbols-outlined">apartment</span>Colleges</a>
+            <a class="console-sidebar__link" th:href="@{/admin/onboarding}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/onboarding')} ? 'is-active'">
+                <span class="material-symbols-outlined">filter_alt</span>Pipeline</a>
+            <a class="console-sidebar__link" th:href="@{/admin/outlets}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/outlets')} ? 'is-active'">
+                <span class="material-symbols-outlined">storefront</span>Canteens</a>
+        </div>
+
+        <!--/* Money */-->
+        <div class="console-sidebar__group">
+            <span class="console-sidebar__label">Money</span>
+            <a class="console-sidebar__link" th:href="@{/admin/orders}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/orders')} ? 'is-active'">
+                <span class="material-symbols-outlined">receipt_long</span>Orders</a>
+            <a class="console-sidebar__link" th:href="@{/admin/payments}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/payments')} ? 'is-active'">
+                <span class="material-symbols-outlined">credit_card</span>Payments</a>
+            <!--/* Billing parent with nested sub-pages */-->
+            <a class="console-sidebar__link" th:href="@{/admin/billing}"
+               th:classappend="${currentPath != null and currentPath == '/admin/billing'} ? 'is-active'">
+                <span class="material-symbols-outlined">sell</span>Billing</a>
+            <div class="console-sidebar__nested">
+                <a class="console-sidebar__link console-sidebar__link--nested" th:href="@{/admin/billing/settlements}"
+                   th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/billing/settlements')} ? 'is-active'">
+                    <span class="material-symbols-outlined">bar_chart</span>Settlements</a>
+                <a class="console-sidebar__link console-sidebar__link--nested" th:href="@{/admin/billing/promo-codes}"
+                   th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/billing/promo-codes')} ? 'is-active'">
+                    <span class="material-symbols-outlined">celebration</span>Promo codes</a>
+            </div>
+        </div>
+
+        <!--/* Oversight */-->
+        <div class="console-sidebar__group">
+            <span class="console-sidebar__label">Oversight</span>
+            <a class="console-sidebar__link" th:href="@{/admin/support}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/support')} ? 'is-active'">
+                <span class="material-symbols-outlined">support_agent</span>Support</a>
+            <a class="console-sidebar__link" th:href="@{/admin/grievances}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/grievances')} ? 'is-active'">
+                <span class="material-symbols-outlined">flag</span>Grievances</a>
+            <a class="console-sidebar__link" th:href="@{/admin/dpdp}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/dpdp')} ? 'is-active'">
+                <span class="material-symbols-outlined">privacy_tip</span>Data requests</a>
+            <a class="console-sidebar__link" th:href="@{/admin/audit-log}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/audit-log')} ? 'is-active'">
+                <span class="material-symbols-outlined">history</span>Audit log</a>
+        </div>
+
+        <!--/* Accounts */-->
+        <div class="console-sidebar__group">
+            <span class="console-sidebar__label">Accounts</span>
+            <a class="console-sidebar__link" th:href="@{/admin/users}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/users')} ? 'is-active'">
+                <span class="material-symbols-outlined">manage_accounts</span>Platform users</a>
+            <a class="console-sidebar__link" th:href="@{/admin/accounts}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/accounts')} ? 'is-active'">
+                <span class="material-symbols-outlined">group</span>All accounts</a>
+        </div>
+
+    </nav>
+</aside>
 
 </body>
 </html>

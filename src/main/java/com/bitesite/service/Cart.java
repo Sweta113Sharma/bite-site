@@ -53,6 +53,8 @@ public class Cart {
         private static final long serialVersionUID = 1L;
         Long outletId;
         boolean hydrated;
+        /** Only the text of the code. What it is worth is decided at checkout, every time. */
+        String promoCode;
         final Map<Long, Integer> quantities = new LinkedHashMap<>();
     }
 
@@ -88,6 +90,24 @@ public class Cart {
         return state().hydrated;
     }
 
+    /**
+     * The code the student typed, or null.
+     *
+     * <p>Deliberately the text and nothing else. Holding the discount here would mean a
+     * number that decides money living in a session the student can outlast: they could
+     * apply a code to a ₹500 cart, empty it down to ₹40, and still carry the ₹100. The
+     * code is re-priced against the real cart on every render and again at checkout.
+     */
+    public String getPromoCode() {
+        return state().promoCode;
+    }
+
+    public void setPromoCode(String code) {
+        State state = state();
+        state.promoCode = code;
+        save(state);
+    }
+
     public void setHydrated(boolean hydrated) {
         State state = state();
         state.hydrated = hydrated;
@@ -98,6 +118,8 @@ public class Cart {
         State state = state();
         if (!Objects.equals(state.outletId, outletId)) {
             state.quantities.clear();
+            // A code may have been scoped to the canteen being left behind.
+            state.promoCode = null;
             state.outletId = outletId;
             save(state);
         }
@@ -138,6 +160,7 @@ public class Cart {
         State state = state();
         state.quantities.clear();
         state.outletId = null;
+        state.promoCode = null;
         save(state);
     }
 }

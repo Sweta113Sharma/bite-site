@@ -9,6 +9,8 @@ import com.bitesite.model.MenuItem;
 import com.bitesite.model.User;
 import com.bitesite.service.OrderService;
 import com.bitesite.service.MenuService;
+import com.bitesite.service.OutletService;
+import com.bitesite.service.BillingService;
 import com.bitesite.service.Cart;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,6 +31,8 @@ public class OrderHistoryController {
 
     private final OrderService orderService;
     private final MenuService menuService;
+    private final BillingService billingService;
+    private final OutletService outletService;
     private final Cart cart;
 
     @GetMapping
@@ -55,6 +59,10 @@ public class OrderHistoryController {
         // cancelled order, and it lives on the payment, not the order. Absent for an order
         // that never reached the gateway, so the page has to cope with null either way.
         model.addAttribute("payment", orderService.findPaymentForOrder(orderId, user.getTenantId()).orElse(null));
+        // Built from what this order recorded, so an old order shows the bill that was
+        // actually paid rather than what today's settings would produce.
+        model.addAttribute("invoice", billingService.invoiceFor(order, order.getItems(),
+                outletService.get(order.getOutletId(), user.getTenantId()), billingService.settings()));
         // Drives the countdown on the cancel button. Zero for anything past the window or
         // never paid, which is exactly when the button should not be offered.
         model.addAttribute("cancelSecondsLeft", orderService.selfCancelSecondsLeft(orderId, user.getTenantId()));

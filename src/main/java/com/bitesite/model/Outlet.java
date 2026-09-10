@@ -49,6 +49,16 @@ public class Outlet {
      * kind of thing. Distinct from pausing orders, which actually blocks checkout. */
     private String notice;
 
+    // ---- commercial terms ----
+    /** This canteen's negotiated cut. Null inherits the platform default, so moving the
+     *  default moves everyone who never negotiated and nobody who did. */
+    private BigDecimal commissionPercent;
+
+    /** The canteen is the registered seller; the student's invoice is issued in its name
+     *  and against this registration, with the platform acting as its agent. */
+    private String gstin;
+    private String legalName;
+
     private LocalDateTime createdAt;
 
     /** True only when both hours are set and now falls inside them. Used for display; it

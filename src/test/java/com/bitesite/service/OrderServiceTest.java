@@ -4,10 +4,12 @@ import com.bitesite.dao.OrderDao;
 import com.bitesite.dao.PaymentDao;
 import com.bitesite.dto.CheckoutResult;
 import com.bitesite.dto.GatewayOrder;
+import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.InvalidOrderStateException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.MenuItem;
 import com.bitesite.model.Order;
+import com.bitesite.model.PromoCode;
 import com.bitesite.model.OrderStatus;
 import com.bitesite.model.Outlet;
 import com.bitesite.model.Payment;
@@ -45,6 +47,7 @@ class OrderServiceTest {
     @Mock private PaymentGateway paymentGateway;
     @Mock private AuditService auditService;
     @Mock private OrderNotifier orderNotifier;
+    @Mock private PromoCodeService promoCodeService;
 
     private OrderService orderService;
 
@@ -54,8 +57,15 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
+        // A real BillingService over empty settings: every commercial control is inert by
+        // default — no commission, no platform fee, no tip — so an order's total is still
+        // exactly its food total and these tests assert what they always did.
+        BillingService billingService = new BillingService(new com.bitesite.dao.PlatformSettingsDao() {
+            public java.util.Map<String, String> findAll() { return java.util.Map.of(); }
+            public void upsert(String key, String value) { }
+        });
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService, paymentGateway,
-                auditService, orderNotifier);
+                auditService, orderNotifier, billingService, promoCodeService);
     }
 
     private MenuItem availableItem(long id, String name, BigDecimal price) {
@@ -607,4 +617,120 @@ class OrderServiceTest {
         // Nothing cheerful sent about an order that is not happening.
         verifyNoInteractions(orderNotifier);
     }
+
+    // ---- promo codes at checkout --------------------------------------------
+
+    /**
+     * The code is priced here, not in the session, and what it was worth is frozen onto
+     * the order. Editing or deleting the code afterwards must not restate this bill.
+     */
+    @Test
+    void checkoutSnapshotsWhatTheCodeWasWorthAndWhoFundedIt() {
+        outletIsOpen();
+        when(menuService.get(5L, TENANT_ID)).thenReturn(availableItem(5L, "Samosa", new BigDecimal("50.00")));
+        when(orderDao.existsTokenForTenantToday(eq(TENANT_ID), any())).thenReturn(false);
+
+        PromoCode code = PromoCode.builder().id(7L).code("SAVE20")
+                .discountType(PromoCode.Type.FLAT).discountValue(new BigDecimal("20"))
+                .fundedBy(PromoCode.Funder.PLATFORM).active(true).build();
+        when(promoCodeService.validate("SAVE20", USER_ID, TENANT_ID, OUTLET_ID, new BigDecimal("100.00")))
+                .thenReturn(new PromoCodeService.Applied(code, new BigDecimal("20.00")));
+
+        ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
+        when(orderDao.createOrder(orderCaptor.capture())).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            o.setId(42L);
+            return o;
+        });
+        when(paymentGateway.createOrder(any(), any()))
+                .thenReturn(new GatewayOrder("razorpay_order_1", "key_test", 8000, "INR"));
+
+        Map<Long, Integer> cart = new LinkedHashMap<>();
+        cart.put(5L, 2);
+
+        orderService.checkout(TENANT_ID, OUTLET_ID, USER_ID, cart, null, "SAVE20");
+
+        Order created = orderCaptor.getValue();
+        assertThat(created.getFoodAmount()).isEqualByComparingTo("100.00");
+        assertThat(created.getDiscountAmount()).isEqualByComparingTo("20.00");
+        assertThat(created.getDiscountFundedBy()).isEqualTo("PLATFORM");
+        assertThat(created.getPromoCode()).isEqualTo("SAVE20");
+        assertThat(created.getTotalAmount()).isEqualByComparingTo("80.00");
+        // The gateway is asked for the discounted amount, not the menu price.
+        verify(paymentGateway).createOrder(argThat(a -> a.compareTo(new BigDecimal("80.00")) == 0), any());
+    }
+
+    /** The redemption points at the order, so it can only be written once that row exists. */
+    @Test
+    void theRedemptionIsRecordedAgainstTheOrderThatUsedIt() {
+        outletIsOpen();
+        when(menuService.get(5L, TENANT_ID)).thenReturn(availableItem(5L, "Samosa", new BigDecimal("50.00")));
+        when(orderDao.existsTokenForTenantToday(eq(TENANT_ID), any())).thenReturn(false);
+
+        PromoCode code = PromoCode.builder().id(7L).code("SAVE20")
+                .discountType(PromoCode.Type.FLAT).discountValue(new BigDecimal("20"))
+                .fundedBy(PromoCode.Funder.CANTEEN).active(true).build();
+        when(promoCodeService.validate(any(), any(), any(), any(), any()))
+                .thenReturn(new PromoCodeService.Applied(code, new BigDecimal("20.00")));
+        when(orderDao.createOrder(any())).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            o.setId(42L);
+            return o;
+        });
+        when(paymentGateway.createOrder(any(), any()))
+                .thenReturn(new GatewayOrder("razorpay_order_1", "key_test", 3000, "INR"));
+
+        Map<Long, Integer> cart = new LinkedHashMap<>();
+        cart.put(5L, 1);
+
+        orderService.checkout(TENANT_ID, OUTLET_ID, USER_ID, cart, null, "SAVE20");
+
+        verify(promoCodeService).redeem(same(code), eq(42L), eq(USER_ID),
+                argThat(d -> d.compareTo(new BigDecimal("20.00")) == 0));
+    }
+
+    /**
+     * A code that has run out between the cart page and the pay button must stop the
+     * checkout, not quietly charge full price. The student was shown ₹80; charging them
+     * ₹100 because somebody else took the last redemption is the worst possible outcome.
+     */
+    @Test
+    void aCodeThatStoppedApplyingRefusesTheCheckoutRatherThanChargingFullPrice() {
+        outletIsOpen();
+        when(menuService.get(5L, TENANT_ID)).thenReturn(availableItem(5L, "Samosa", new BigDecimal("50.00")));
+        when(promoCodeService.validate(any(), any(), any(), any(), any()))
+                .thenThrow(new BusinessException("That code has been fully claimed."));
+
+        Map<Long, Integer> cart = new LinkedHashMap<>();
+        cart.put(5L, 1);
+
+        assertThatThrownBy(() -> orderService.checkout(TENANT_ID, OUTLET_ID, USER_ID, cart, null, "SAVE20"))
+                .isInstanceOf(InvalidOrderStateException.class)
+                .hasMessageContaining("fully claimed");
+        verify(orderDao, never()).createOrder(any());
+        verify(paymentGateway, never()).createOrder(any(), any());
+    }
+
+    /** No code means the promo path is never touched at all. */
+    @Test
+    void aCheckoutWithoutACodeNeverConsultsThePromoService() {
+        outletIsOpen();
+        when(menuService.get(5L, TENANT_ID)).thenReturn(availableItem(5L, "Samosa", new BigDecimal("50.00")));
+        when(orderDao.existsTokenForTenantToday(eq(TENANT_ID), any())).thenReturn(false);
+        when(orderDao.createOrder(any())).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            o.setId(42L);
+            return o;
+        });
+        when(paymentGateway.createOrder(any(), any()))
+                .thenReturn(new GatewayOrder("razorpay_order_1", "key_test", 5000, "INR"));
+
+        Map<Long, Integer> cart = new LinkedHashMap<>();
+        cart.put(5L, 1);
+
+        orderService.checkout(TENANT_ID, OUTLET_ID, USER_ID, cart, null, "   ");
+
+        verifyNoInteractions(promoCodeService);
+    }
+
 }

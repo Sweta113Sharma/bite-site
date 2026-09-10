@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -99,6 +100,34 @@ public class OutletService {
         outletDao.updateAcceptingOrders(id, tenantId, acceptingOrders);
         auditService.record(actorUserId, tenantId, "Outlet", id,
                 acceptingOrders ? "RESUME_ORDERS" : "PAUSE_ORDERS", before.isAcceptingOrders(), acceptingOrders);
+    }
+
+    /**
+     * A canteen's commercial terms: its cut, and the registration the student's invoice is
+     * issued against.
+     *
+     * <p>A blank commission is stored as null rather than zero, because the two mean
+     * different things: null follows the platform default wherever it moves, zero is a
+     * deliberately negotiated free ride that must survive the default changing.
+     *
+     * <p>Audited — this decides what the canteen is paid.
+     */
+    public void updateCommercialTerms(Long id, Long tenantId, BigDecimal commissionPercent,
+            String gstin, String legalName, Long actorUserId) {
+        Outlet before = get(id, tenantId);
+        if (commissionPercent != null
+                && (commissionPercent.compareTo(BigDecimal.ZERO) < 0
+                    || commissionPercent.compareTo(new BigDecimal("100")) > 0)) {
+            throw new BusinessException("Commission must be between 0 and 100 percent.");
+        }
+        String cleanedGstin = gstin == null || gstin.isBlank() ? null : gstin.trim().toUpperCase();
+        if (cleanedGstin != null && cleanedGstin.length() != 15) {
+            throw new BusinessException("A GSTIN is 15 characters. Leave it blank if the canteen is not registered.");
+        }
+        outletDao.updateCommercialTerms(id, tenantId, commissionPercent, cleanedGstin,
+                legalName == null || legalName.isBlank() ? null : legalName.trim());
+        auditService.record(actorUserId, tenantId, "Outlet", id, "COMMERCIAL_TERMS",
+                before.getCommissionPercent(), commissionPercent);
     }
 
     /**

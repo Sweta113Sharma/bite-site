@@ -757,3 +757,147 @@
 .list-group-item-action:hover {
     background: var(--color-primary-tint);
 }
+
+/* ============================================================
+   INVOICE
+   The bill on the page, not a PDF. Sized for a phone held at a
+   counter, which is where it will actually be read.
+   ============================================================ */
+
+.invoice {
+    background: var(--color-surface);
+    border: var(--border-w) solid var(--color-ink);
+    padding: 1rem 1.1rem;
+}
+
+.invoice__seller {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: var(--border-w) dashed var(--color-ink-muted);
+}
+
+.invoice__seller-name {
+    font-weight: 700;
+}
+
+.invoice__gstin {
+    font-size: 0.75rem;
+    color: var(--color-ink-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.invoice__line,
+.invoice__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.28rem 0;
+    font-size: 0.92rem;
+}
+
+.invoice__line-amount,
+.invoice__row > span:last-child {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.invoice__qty {
+    color: var(--color-ink-muted);
+    font-size: 0.82rem;
+    margin-left: 0.35rem;
+}
+
+.invoice__lines {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: var(--border-w) dashed var(--color-ink-muted);
+}
+
+.invoice__row--muted {
+    color: var(--color-ink-muted);
+    font-size: 0.82rem;
+}
+
+.invoice__row--discount {
+    color: var(--color-success, #1d7a3c);
+    font-weight: 600;
+}
+
+.invoice__tax {
+    padding: 0.25rem 0 0.5rem;
+}
+
+.invoice__row--total {
+    margin-top: 0.5rem;
+    padding-top: 0.6rem;
+    border-top: var(--border-w) solid var(--color-ink);
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+/* The point of the soft launch: the number is legible, and plainly not being charged. */
+.invoice__struck {
+    color: var(--color-ink-muted);
+    margin-right: 0.4rem;
+}
+
+.invoice__free {
+    color: var(--color-success, #1d7a3c);
+    letter-spacing: 0.03em;
+}
+
+.invoice__note,
+.invoice__footer {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+    margin: 0.5rem 0 0;
+}
+
+/* ============================================================
+   DEVELOPER COFFEE DIALOG
+   ============================================================ */
+
+.tip-dialog {
+    border: var(--border-w) solid var(--color-ink);
+    background: var(--color-surface);
+    padding: 1.5rem;
+    max-width: 22rem;
+    width: calc(100vw - 2.5rem);
+}
+
+.tip-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.tip-dialog__title {
+    margin: 0 0 0.4rem;
+    font-family: var(--font-display);
+}
+
+.tip-dialog__message {
+    font-size: 0.88rem;
+    color: var(--color-ink-muted);
+    margin-bottom: 1rem;
+}
+
+.tip-dialog__amounts {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.tip-dialog__amount {
+    flex: 1 1 4.5rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Declining is a full-width, plainly legible button, not a greyed-out corner. */
+.tip-dialog__skip {
+    display: block;
+    width: 100%;
+    text-align: center;
+    color: var(--color-ink-muted);
+}

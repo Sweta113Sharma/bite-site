@@ -142,25 +142,12 @@
         </div>
     </div>
 
-    <!--/* Order Items Card */-->
-    <div class="card mb-4">
-        <div class="card-body p-0">
-            <h6 class="card-title p-3 mb-0 border-bottom text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.04em; color: var(--color-ink-muted);">Order Summary</h6>
-            <div class="list-group list-group-flush">
-                <div class="list-group-item d-flex justify-content-between align-items-center p-3" th:each="item : ${order.items}">
-                    <div>
-                        <div class="fw-bold" th:text="${item.itemNameSnapshot}">Item Name</div>
-                        <div class="text-muted small">Qty: <span th:text="${item.quantity}">1</span></div>
-                    </div>
-                    <div class="fw-bold" th:text="'₹' + ${item.subtotal}">₹0</div>
-                </div>
-                <div class="list-group-item bg-light d-flex justify-content-between align-items-center p-3">
-                    <span class="fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.04em; color: var(--color-ink-muted);"
-                          th:text="${order.paidAt != null} ? 'Total Paid' : 'Order Total'">Total</span>
-                    <strong class="fs-5" th:text="'₹' + ${order.totalAmount}">₹0</strong>
-                </div>
-            </div>
-        </div>
+    <!--/* The bill, itemised, on the page. Replaces a bare "Order Summary" that showed
+         line totals and one number, with no way to see what was tax, what was a fee, or
+         why the total was what it was. Rendered from what this order recorded, so it is
+         the bill that was actually paid and not a re-derivation from today's settings. */-->
+    <div class="mb-4" th:if="${invoice != null}">
+        <div th:replace="~{fragments/invoice :: invoice(${invoice})}"></div>
     </div>
 
     <div class="alert alert-danger" th:if="${paymentError}" th:text="${paymentError}"></div>

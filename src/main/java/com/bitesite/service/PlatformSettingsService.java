@@ -1,6 +1,7 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.PlatformSettingsDao;
+import com.bitesite.model.BillingSettings;
 import com.bitesite.model.GrievanceOfficer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,23 @@ public class PlatformSettingsService {
      * <p>tenantId is null on the audit row — the platform is not a tenant, and audit_log
      * allows it.
      */
+    /**
+     * Saves the platform's commercial settings.
+     *
+     * <p>Audited as one change with the whole before and after, because these decide what
+     * students are charged and what canteens are owed. "Who set the commission to 8% and
+     * when" is a question that will eventually be asked, and the audit row is the answer.
+     *
+     * <p>Only affects orders placed after it. Existing orders carry their own terms — see
+     * {@link BillingService}.
+     */
+    public void saveBillingSettings(Map<String, String> values, Long actorUserId) {
+        BillingSettings before = BillingSettings.from(platformSettingsDao.findAll());
+        values.forEach(platformSettingsDao::upsert);
+        BillingSettings after = BillingSettings.from(platformSettingsDao.findAll());
+        auditService.record(actorUserId, null, "BillingSettings", null, "UPDATE", before, after);
+    }
+
     public void saveGrievanceOfficer(GrievanceOfficer officer, Long actorUserId) {
         GrievanceOfficer before = getGrievanceOfficer();
         platformSettingsDao.upsert(GrievanceOfficer.KEY_NAME, officer.name());

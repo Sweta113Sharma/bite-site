@@ -7,8 +7,11 @@ import com.bitesite.model.Outlet;
 import com.bitesite.model.User;
 import com.bitesite.service.Cart;
 import com.bitesite.service.CartPersistence;
+import com.bitesite.service.BillingService;
 import com.bitesite.service.MenuService;
 import com.bitesite.service.OutletService;
+import com.bitesite.service.PromoCodeService;
+import com.bitesite.exception.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -40,6 +44,8 @@ public class CartController {
     private final CartPersistence cartPersistence;
     private final OutletService outletService;
     private final ObjectMapper objectMapper;
+    private final BillingService billingService;
+    private final PromoCodeService promoCodeService;
 
     @GetMapping
     public String view(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
@@ -52,6 +58,10 @@ public class CartController {
         // One roll-up for the whole cart rather than one per line.
         Map<Long, Integer> soldToday = outlet == null
                 ? Map.of() : menuService.soldToday(user.getTenantId(), outlet.getId());
+
+        // Drives the optional contribution dialog; everything about it, including whether
+        // it appears at all, is set from the billing panel.
+        model.addAttribute("billing", billingService.settings());
 
         List<CartLine> lines = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
@@ -71,12 +81,73 @@ public class CartController {
             warnings.add(outlet.getName() + " has paused new orders for now.");
         }
 
+        // Re-priced against the cart as it stands now, every render. The session holds
+        // only the text of the code, so a code applied to a large cart cannot survive that
+        // cart being emptied down below its minimum — and one that has since expired or run
+        // out is dropped here rather than at the pay button.
+        BigDecimal discount = BigDecimal.ZERO;
+        if (cart.getPromoCode() != null && outlet != null) {
+            try {
+                discount = promoCodeService
+                        .validate(cart.getPromoCode(), user.getId(), user.getTenantId(), outlet.getId(), total)
+                        .discount();
+                model.addAttribute("appliedCode", cart.getPromoCode());
+            } catch (BusinessException e) {
+                warnings.add(cart.getPromoCode() + " was removed: " + uncapitalise(e.getMessage()));
+                cart.setPromoCode(null);
+            }
+        }
+
         model.addAttribute("lines", lines);
         model.addAttribute("total", total);
+        model.addAttribute("discount", discount);
+        model.addAttribute("payable", total.subtract(discount));
         model.addAttribute("outlet", outlet);
         model.addAttribute("cartWarnings", warnings);
         model.addAttribute("pageTitle", "Cart");
         return "student/cart";
+    }
+
+    /** "That code has expired" reads badly after a colon; "that code has expired" does not. */
+    private static String uncapitalise(String message) {
+        return message == null || message.isEmpty()
+                ? "" : Character.toLowerCase(message.charAt(0)) + message.substring(1);
+    }
+
+    /**
+     * Applies a code to the cart.
+     *
+     * <p>Validated here purely so the student finds out now instead of at the pay button;
+     * only the text is kept, and checkout validates it again for real.
+     */
+    @PostMapping("/promo")
+    public String applyPromo(@AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam String code, RedirectAttributes redirectAttributes) {
+        User user = principal.getUser();
+        if (cart.isEmpty() || cart.getOutletId() == null) {
+            return "redirect:/student/cart";
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (Map.Entry<Long, Integer> entry : cart.getQuantities().entrySet()) {
+            MenuItem item = menuService.get(entry.getKey(), user.getTenantId());
+            total = total.add(item.effectivePrice().multiply(BigDecimal.valueOf(entry.getValue())));
+        }
+        try {
+            PromoCodeService.Applied applied = promoCodeService
+                    .validate(code, user.getId(), user.getTenantId(), cart.getOutletId(), total);
+            cart.setPromoCode(applied.code().getCode());
+            redirectAttributes.addFlashAttribute("promoApplied",
+                    "₹" + applied.discount() + " off with " + applied.code().getCode() + ".");
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("promoError", e.getMessage());
+        }
+        return "redirect:/student/cart";
+    }
+
+    @PostMapping("/promo/remove")
+    public String removePromo() {
+        cart.setPromoCode(null);
+        return "redirect:/student/cart";
     }
 
     private void addWarningIfBlocked(List<String> warnings, MenuItem item, int quantity) {

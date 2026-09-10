@@ -2,6 +2,7 @@ package com.bitesite.dao;
 
 import com.bitesite.model.Outlet;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,11 @@ public interface OutletDao {
      * — the same contract as the two cross-tenant finders on OrderDao and PaymentDao.
      */
     List<Outlet> findAllAcrossTenants();
+
+    /** Kept off {@link #save} so a partially-populated Outlet can never blank a canteen's
+     *  negotiated commission or its tax registration. */
+    void updateCommercialTerms(Long id, Long tenantId, BigDecimal commissionPercent,
+            String gstin, String legalName);
 
     List<Outlet> findActiveByTenantId(Long tenantId);
 
