@@ -185,6 +185,17 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    public List<Order> findTerminalByUserId(Long userId, Long tenantId, int limit, int offset) {
+        List<Order> orders = jdbcTemplate.query(
+                "SELECT * FROM orders WHERE user_id = ? AND tenant_id = ? "
+                        + "AND status IN ('COMPLETED','EXPIRED','CANCELLED') "
+                        + "ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                ORDER_ROW_MAPPER, userId, tenantId, limit, offset);
+        attachItems(orders);
+        return orders;
+    }
+
+    @Override
     public List<Order> findByUserId(Long userId, Long tenantId) {
         List<Order> orders = jdbcTemplate.query(
                 "SELECT * FROM orders WHERE user_id = ? AND tenant_id = ? ORDER BY created_at DESC",
@@ -246,10 +257,38 @@ public class OrderDaoImpl implements OrderDao {
                 tenantId, outletId, days);
     }
 
+    /**
+     * Loads the lines for a page of orders in ONE query rather than one per order.
+     *
+     * <p>This was a loop issuing a select per order, which is the classic N+1 and was the
+     * single worst thing on {@code /student/orders}: that page had no LIMIT either, so a
+     * student with two hundred orders in their history cost two hundred and one queries.
+     * Against a database in a different region from the app, each is a network round trip.
+     *
+     * <p>Every caller benefits, not just the history page — the kitchen queue, the admin
+     * order list and the outlet history all attach items the same way.
+     *
+     * <p>The IN list is built from the page's own size, which is bounded by every caller
+     * (each either pages or takes an explicit limit), so this cannot grow into the
+     * placeholder ceiling. Ordered by id so lines render in the order they were added
+     * rather than whatever the storage engine returns.
+     */
     private void attachItems(List<Order> orders) {
+        if (orders.isEmpty()) {
+            return;
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(orders.size(), "?"));
+        Object[] ids = orders.stream().map(Order::getId).toArray();
+
+        Map<Long, List<OrderItem>> byOrderId = new HashMap<>();
+        for (OrderItem item : jdbcTemplate.query(
+                "SELECT * FROM order_items WHERE order_id IN (" + placeholders + ") ORDER BY id",
+                ITEM_ROW_MAPPER, ids)) {
+            byOrderId.computeIfAbsent(item.getOrderId(), k -> new ArrayList<>()).add(item);
+        }
         for (Order order : orders) {
-            order.setItems(
-                    jdbcTemplate.query("SELECT * FROM order_items WHERE order_id = ?", ITEM_ROW_MAPPER, order.getId()));
+            // Empty list, never null: templates iterate this without a null check.
+            order.setItems(byOrderId.getOrDefault(order.getId(), List.of()));
         }
     }
 

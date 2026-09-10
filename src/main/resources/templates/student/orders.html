@@ -92,6 +92,26 @@
             </form>
         </div>
     </div>
+
+    <!--/* Paged rather than the whole history. This screen used to render every order the
+         student had ever placed, and load each one's items with its own query, so it grew
+         without limit on a product people use every day.
+
+         Links rather than a script: on the campus connections this runs on, a page that
+         needs JavaScript to show the rest of a list is a page that shows nothing when the
+         JavaScript is the request that failed. */-->
+    <nav class="d-flex justify-content-between align-items-center gap-2 mt-3"
+         th:if="${paged != null and (paged.hasNext() or paged.hasPrev())}" aria-label="Order history pages">
+        <a class="btn btn-outline-secondary" th:if="${paged.hasPrev()}"
+           th:href="@{/student/orders(page=${paged.page() - 1})}">
+            <span class="material-symbols-outlined">arrow_back</span>Newer
+        </a>
+        <span th:unless="${paged.hasPrev()}"></span>
+        <a class="btn btn-outline-secondary" th:if="${paged.hasNext()}"
+           th:href="@{/student/orders(page=${paged.page() + 1})}">
+            Show more<span class="material-symbols-outlined">arrow_forward</span>
+        </a>
+    </nav>
 </div>
 </body>
 </html>

@@ -1,6 +1,7 @@
 package com.bitesite.controller.student;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.dto.Paged;
 import com.bitesite.exception.InvalidOrderStateException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Order;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -35,17 +37,28 @@ public class OrderHistoryController {
     private final OutletService outletService;
     private final Cart cart;
 
+    /** Finished orders shown per page. Small on purpose: this is a phone screen on campus
+     * data, and the overwhelmingly common case is wanting the last order or two. */
+    private static final int HISTORY_PAGE_SIZE = 10;
+
     @GetMapping
-    public String history(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
+    public String history(@AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam(defaultValue = "0") int page, Model model) {
         User user = principal.getUser();
         // The screen shows two groups. Active ones arrive via GlobalModelAttributes
         // (they are needed on every customer page for the strip); this supplies only the
         // finished ones, so nothing is listed twice.
-        List<Order> past = orderService.historyForUser(user.getId(), user.getTenantId()).stream()
-                .filter(o -> o.getStatus().isTerminal())
-                .toList();
-        model.addAttribute("orders", past);
-        model.addAttribute("pastOrders", past);
+        //
+        // Paged, and filtered to terminal statuses in SQL. This used to load every order the
+        // student had ever placed and filter them in Java, then attach each one's items with
+        // its own query — so the cost of opening this screen grew forever on a product people
+        // use daily.
+        Paged<Order> paged = orderService.finishedOrdersPage(
+                user.getId(), user.getTenantId(), page, HISTORY_PAGE_SIZE);
+
+        model.addAttribute("orders", paged.items());
+        model.addAttribute("pastOrders", paged.items());
+        model.addAttribute("paged", paged);
         model.addAttribute("pageTitle", "My orders");
         return "student/orders";
     }

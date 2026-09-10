@@ -3,6 +3,7 @@ package com.bitesite.service;
 import com.bitesite.dao.OrderDao;
 import com.bitesite.dao.PaymentDao;
 import com.bitesite.dto.CheckoutResult;
+import com.bitesite.dto.Paged;
 import com.bitesite.dto.GatewayOrder;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.InvalidOrderStateException;
@@ -263,6 +264,19 @@ public class OrderService {
 
     public List<Order> historyForUser(Long userId, Long tenantId) {
         return orderDao.findByUserId(userId, tenantId);
+    }
+
+    /**
+     * One page of finished orders for the student's own history screen.
+     *
+     * <p>Asks for one row more than the page needs so {@link Paged} can tell whether a
+     * "show more" is warranted without counting the whole history.
+     */
+    public Paged<Order> finishedOrdersPage(Long userId, Long tenantId, int page, int size) {
+        int safePage = Math.max(0, page);
+        return Paged.of(
+                orderDao.findTerminalByUserId(userId, tenantId, size + 1, Paged.offsetFor(safePage, size)),
+                safePage, size);
     }
 
     /**

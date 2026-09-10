@@ -55,6 +55,21 @@ public interface OrderDao {
     List<Order> findByUserId(Long userId, Long tenantId);
 
     /**
+     * One page of a student's finished orders, newest first.
+     *
+     * <p>Replaces loading their entire history and filtering it in Java.
+     * {@link #findByUserId} had no LIMIT, so the cost of this screen grew with every order
+     * a student ever placed — on a product people use daily, forever.
+     *
+     * <p>Terminal statuses are filtered in SQL rather than after loading, or the page size
+     * would be a page of *all* orders that happens to contain some finished ones.
+     *
+     * @param limit ask for one more than the page needs; {@code Paged.of} uses the extra
+     *              row to tell whether there is a next page without a second COUNT(*)
+     */
+    List<Order> findTerminalByUserId(Long userId, Long tenantId, int limit, int offset);
+
+    /**
      * A student's orders that are not finished. Read on every customer page render for
      * the active-order strip, so it filters in SQL rather than loading the full history
      * and discarding most of it.
