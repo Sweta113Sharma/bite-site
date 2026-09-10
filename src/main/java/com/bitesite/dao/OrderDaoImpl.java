@@ -107,12 +107,39 @@ public class OrderDaoImpl implements OrderDao {
         long orderId = keyHolder.getKey().longValue();
         order.setId(orderId);
 
-        for (OrderItem item : order.getItems()) {
-            jdbcTemplate.update(
+        /* One round trip for the whole cart, not one per line.
+           This was a loop of single inserts, so a five-item cart cost five round trips on
+           the checkout path — the most latency-sensitive moment in the product, with money
+           moving and the student watching. Against a database in another region that is
+           five times ~48ms of pure waiting for no reason.
+
+           batchUpdate alone would not have helped: without rewriteBatchedStatements=true on
+           the connection, Connector/J still sends each statement separately and the batch is
+           only an API convenience. That flag is set in application.yml, and this is the code
+           that makes it worth having. Neither batch site in this app asks for generated keys,
+           which is the case where rewriting batches misbehaves. */
+        List<OrderItem> items = order.getItems();
+        if (!items.isEmpty()) {
+            jdbcTemplate.batchUpdate(
                     "INSERT INTO order_items (order_id, menu_item_id, item_name_snapshot, quantity, unit_price, subtotal) "
                             + "VALUES (?, ?, ?, ?, ?, ?)",
-                    orderId, item.getMenuItemId(), item.getItemNameSnapshot(), item.getQuantity(),
-                    item.getUnitPrice(), item.getSubtotal());
+                    new org.springframework.jdbc.core.BatchPreparedStatementSetter() {
+                        @Override
+                        public void setValues(java.sql.PreparedStatement ps, int i) throws java.sql.SQLException {
+                            OrderItem item = items.get(i);
+                            ps.setLong(1, orderId);
+                            ps.setLong(2, item.getMenuItemId());
+                            ps.setString(3, item.getItemNameSnapshot());
+                            ps.setInt(4, item.getQuantity());
+                            ps.setBigDecimal(5, item.getUnitPrice());
+                            ps.setBigDecimal(6, item.getSubtotal());
+                        }
+
+                        @Override
+                        public int getBatchSize() {
+                            return items.size();
+                        }
+                    });
         }
         return findByIdAndTenantId(orderId, order.getTenantId()).orElseThrow();
     }
