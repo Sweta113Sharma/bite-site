@@ -420,6 +420,19 @@ class OrderServiceTest {
         verify(orderDao).isWithinSelfCancelWindow(42L, TENANT_ID, 45);
     }
 
+    /**
+     * Starting the window uses the same configured number as the two halves that read it.
+     * A different number here would let the anchor be set after the kitchen already had it.
+     */
+    @Test
+    void startingTheWindowUsesTheConfiguredNumberToo() {
+        platformSettings.put(OrderSettings.SELF_CANCEL_WINDOW, "45");
+
+        orderService.startCancelWindow(42L, TENANT_ID);
+
+        verify(orderDao).startCancelWindow(42L, TENANT_ID, 45);
+    }
+
     /** Zero is a real setting, not a missing one: cancellation off, kitchen sees everything. */
     @Test
     void aZeroWindowSwitchesCancellationOffRatherThanFallingBackToTheDefault() {

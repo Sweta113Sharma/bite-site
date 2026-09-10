@@ -130,6 +130,11 @@ public class CheckoutController {
             redirectAttributes.addFlashAttribute("paymentError", "We couldn't verify that payment — please retry.");
             return "redirect:/student/checkout/" + orderId;
         }
+        // The student's window starts HERE, not when the money was captured. The webhook
+        // has very often already marked this order paid while they were still on Razorpay's
+        // success screen, and measuring from that stamp handed them a countdown that was
+        // part spent before the page rendered.
+        orderService.startCancelWindow(orderId, user.getTenantId());
         // Money has just left a student's account and the old redirect said nothing at
         // all — they landed on the order page and had to work out from the badge whether
         // it had worked. This is the most anxious moment in the product; it should be the

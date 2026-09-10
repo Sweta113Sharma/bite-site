@@ -32,6 +32,15 @@ public interface OrderDao {
      * database's {@code NOW()} keeps one clock in play and removes any skew between the app
      * server and MySQL from a decision about refunding money.
      */
+    /**
+     * Starts the cancellation window now, at the moment the student is actually shown their
+     * confirmation, rather than leaving it running from whenever the gateway captured the
+     * money. Idempotent, and refuses once the window has already elapsed.
+     *
+     * @return true if the anchor was set, false if it was already set or it is too late
+     */
+    boolean startCancelWindow(Long orderId, Long tenantId, int windowSeconds);
+
     boolean isWithinSelfCancelWindow(Long orderId, Long tenantId, int windowSeconds);
 
     /**

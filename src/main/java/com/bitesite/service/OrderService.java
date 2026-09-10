@@ -304,6 +304,22 @@ public class OrderService {
         return orderDao.findKitchenQueue(tenantId, outletId, selfCancelWindowSeconds());
     }
 
+    /**
+     * Starts the student's cancellation window, called when they are handed their
+     * confirmation rather than when Razorpay captured the money.
+     *
+     * <p>Those are not the same moment. Razorpay confirms twice — a server-to-server
+     * webhook and the browser's own callback — and the webhook usually lands first, while
+     * the student is still watching a success animation on the payment sheet. Anchoring on
+     * capture spent part of their window before the screen had even rendered.
+     *
+     * <p>Deliberately not called from {@link #confirmPayment}: that runs for the webhook
+     * too, and the webhook is precisely the path where nobody has been shown anything yet.
+     */
+    public void startCancelWindow(Long orderId, Long tenantId) {
+        orderDao.startCancelWindow(orderId, tenantId, selfCancelWindowSeconds());
+    }
+
     /** Seconds left on the student's own cancellation window, 0 once it has shut. */
     public int selfCancelSecondsLeft(Long orderId, Long tenantId) {
         return orderDao.selfCancelSecondsLeft(orderId, tenantId, selfCancelWindowSeconds());

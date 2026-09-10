@@ -126,6 +126,12 @@ class OrderCancelWindowFlowTest {
                 seconds, paidOrder.getId());
     }
 
+    /** Back to the state of an order whose student has not been shown the confirmation yet. */
+    private void clearAnchor() {
+        jdbcTemplate.update("UPDATE orders SET cancel_window_starts_at = NULL WHERE id = ?",
+                paidOrder.getId());
+    }
+
     private boolean kitchenCanSeeTheOrder(int window) {
         return orderDao.findKitchenQueue(tenant.getId(), outlet.getId(), window).stream()
                 .anyMatch(o -> o.getId().equals(paidOrder.getId()));
@@ -212,6 +218,7 @@ class OrderCancelWindowFlowTest {
     @Test
     void cancellableAndKitchenVisibleAreExactComplementsAcrossTheBoundary() {
         paidSecondsAgo(25);
+        clearAnchor();
 
         // Window not yet reached at 30s: the student still owns it, the kitchen cannot see it.
         assertThat(orderDao.isWithinSelfCancelWindow(paidOrder.getId(), tenant.getId(), 30)).isTrue();
@@ -227,10 +234,73 @@ class OrderCancelWindowFlowTest {
         assertThat(kitchenCanSeeTheOrder(25)).isTrue();
     }
 
+    // ---- where the window is measured from ----
+
+    /**
+     * The bug this was reported for. Razorpay's webhook marks the order paid while the
+     * student is still on the payment sheet, so by the time their browser calls back, part
+     * of the window is already spent. Starting it at the callback gives them the whole
+     * window from the moment they are actually shown the confirmation.
+     */
+    @Test
+    void theWindowRunsFromTheConfirmationTheStudentSawNotFromCapture() {
+        paidSecondsAgo(12);
+        clearAnchor();
+
+        // Measured from capture, most of the window is already gone.
+        assertThat(orderDao.selfCancelSecondsLeft(paidOrder.getId(), tenant.getId(), 20))
+                .isBetween(7, 8);
+
+        assertThat(orderDao.startCancelWindow(paidOrder.getId(), tenant.getId(), 20)).isTrue();
+
+        // Measured from the confirmation, they have all of it.
+        assertThat(orderDao.selfCancelSecondsLeft(paidOrder.getId(), tenant.getId(), 20))
+                .isBetween(19, 20);
+        assertThat(kitchenCanSeeTheOrder(20)).isFalse();
+    }
+
+    /** A repeated callback must not become a way to keep the kitchen waiting indefinitely. */
+    @Test
+    void startingTheWindowTwiceDoesNothingTheSecondTime() {
+        paidSecondsAgo(2);
+        clearAnchor();
+
+        assertThat(orderDao.startCancelWindow(paidOrder.getId(), tenant.getId(), 20)).isTrue();
+        assertThat(orderDao.startCancelWindow(paidOrder.getId(), tenant.getId(), 20)).isFalse();
+    }
+
+    /**
+     * The invariant that keeps the counter sane: an order the kitchen has already been shown
+     * can never disappear off the queue again. A student whose device comes back long after
+     * the window elapsed is simply too late.
+     */
+    @Test
+    void anOrderTheKitchenAlreadyHasIsNeverPulledBack() {
+        paidSecondsAgo(90);
+        clearAnchor();
+        assertThat(kitchenCanSeeTheOrder(20)).isTrue();
+
+        assertThat(orderDao.startCancelWindow(paidOrder.getId(), tenant.getId(), 20)).isFalse();
+
+        assertThat(kitchenCanSeeTheOrder(20)).isTrue();
+        assertThat(orderDao.isWithinSelfCancelWindow(paidOrder.getId(), tenant.getId(), 20)).isFalse();
+    }
+
+    /** A student who never comes back must not strand the order: it falls back to paid_at. */
+    @Test
+    void anOrderWhoseStudentNeverReturnsStillReachesTheKitchen() {
+        paidSecondsAgo(30);
+        clearAnchor();
+
+        assertThat(orderDao.selfCancelSecondsLeft(paidOrder.getId(), tenant.getId(), 20)).isZero();
+        assertThat(kitchenCanSeeTheOrder(20)).isTrue();
+    }
+
     /** Zero is the off switch: nothing is ever cancellable, everything is immediately cookable. */
     @Test
     void aZeroWindowHandsEveryOrderStraightToTheKitchen() {
         paidSecondsAgo(0);
+        clearAnchor();
 
         assertThat(orderDao.isWithinSelfCancelWindow(paidOrder.getId(), tenant.getId(), 0)).isFalse();
         assertThat(kitchenCanSeeTheOrder(0)).isTrue();
@@ -240,10 +310,12 @@ class OrderCancelWindowFlowTest {
     @Test
     void theCountdownReflectsTheConfiguredWindowAndFloorsAtZero() {
         paidSecondsAgo(5);
+        clearAnchor();
         assertThat(orderDao.selfCancelSecondsLeft(paidOrder.getId(), tenant.getId(), 20))
                 .isBetween(14, 15);
 
         paidSecondsAgo(90);
+        clearAnchor();
         assertThat(orderDao.selfCancelSecondsLeft(paidOrder.getId(), tenant.getId(), 20)).isZero();
     }
 }

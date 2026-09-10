@@ -138,7 +138,7 @@ public class OrderDaoImpl implements OrderDao {
                         // rather than hidden forever — a visible order the kitchen can act on
                         // beats one that silently never arrives.
                         + "AND (status <> 'PAID' OR paid_at IS NULL "
-                        + "     OR TIMESTAMPDIFF(SECOND, paid_at, NOW()) >= ?) "
+                        + "     OR TIMESTAMPDIFF(SECOND, COALESCE(cancel_window_starts_at, paid_at), NOW()) >= ?) "
                         + "ORDER BY created_at ASC",
                 ORDER_ROW_MAPPER, tenantId, outletId, selfCancelWindowSeconds);
         attachItems(orders);
@@ -148,7 +148,8 @@ public class OrderDaoImpl implements OrderDao {
     @Override
     public int selfCancelSecondsLeft(Long orderId, Long tenantId, int windowSeconds) {
         List<Integer> left = jdbcTemplate.query(
-                "SELECT GREATEST(0, ? - TIMESTAMPDIFF(SECOND, paid_at, NOW())) FROM orders "
+                "SELECT GREATEST(0, ? - TIMESTAMPDIFF(SECOND, "
+                        + "COALESCE(cancel_window_starts_at, paid_at), NOW())) FROM orders "
                         + "WHERE id = ? AND tenant_id = ? AND status = 'PAID' AND paid_at IS NOT NULL",
                 (rs, n) -> rs.getInt(1), windowSeconds, orderId, tenantId);
         // Empty for anything not currently a paid order, which is the same as no time left.
@@ -156,10 +157,29 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    public boolean startCancelWindow(Long orderId, Long tenantId, int windowSeconds) {
+        // Set once and only while the order is still hidden from the kitchen. Both
+        // conditions matter. IS NULL makes a repeated callback a no-op instead of a way to
+        // keep extending the window. The TIMESTAMPDIFF guard means the anchor can only ever
+        // move forward while nobody has been shown the order, so an order that has already
+        // surfaced on the outlet queue can never vanish off it again. A student whose
+        // device comes back after the window has already elapsed is simply too late, which
+        // is what they would have been anyway.
+        int updated = jdbcTemplate.update(
+                "UPDATE orders SET cancel_window_starts_at = CURRENT_TIMESTAMP "
+                        + "WHERE id = ? AND tenant_id = ? AND status = 'PAID' "
+                        + "AND cancel_window_starts_at IS NULL AND paid_at IS NOT NULL "
+                        + "AND TIMESTAMPDIFF(SECOND, paid_at, NOW()) < ?",
+                orderId, tenantId, windowSeconds);
+        return updated > 0;
+    }
+
+    @Override
     public boolean isWithinSelfCancelWindow(Long orderId, Long tenantId, int windowSeconds) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM orders WHERE id = ? AND tenant_id = ? AND status = 'PAID' "
-                        + "AND paid_at IS NOT NULL AND TIMESTAMPDIFF(SECOND, paid_at, NOW()) < ?",
+                        + "AND paid_at IS NOT NULL "
+                        + "AND TIMESTAMPDIFF(SECOND, COALESCE(cancel_window_starts_at, paid_at), NOW()) < ?",
                 Integer.class, orderId, tenantId, windowSeconds);
         return count != null && count > 0;
     }
