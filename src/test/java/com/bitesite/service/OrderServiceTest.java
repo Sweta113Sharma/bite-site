@@ -314,11 +314,14 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
+        when(paymentDao.claimForRefund(1L)).thenReturn(true);
 
         orderService.cancelOrder(42L, TENANT_ID, USER_ID, "Ingredients ran out");
 
+        // The claim is now what marks the payment refunded: it is a conditional UPDATE that
+        // both decides the winner and records the outcome, so there is no separate write.
+        verify(paymentDao).claimForRefund(1L);
         verify(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
-        verify(paymentDao).updateStatus(1L, PaymentStatus.REFUNDED);
         verify(orderDao).cancel(42L, TENANT_ID, "Ingredients ran out");
         verify(auditService).record(eq(USER_ID), eq(TENANT_ID), eq("Order"), eq(42L), eq("STATUS_CANCELLED"), any(), any());
     }
@@ -331,12 +334,15 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
+        when(paymentDao.claimForRefund(1L)).thenReturn(true);
         doThrow(new RuntimeException("gateway down")).when(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
 
         assertThatThrownBy(() -> orderService.cancelOrder(42L, TENANT_ID, USER_ID, "Kitchen closing early"))
                 .isInstanceOf(RuntimeException.class);
 
-        verify(paymentDao, never()).updateStatus(anyLong(), eq(PaymentStatus.REFUNDED));
+        // The claim is written before the gateway call now, so "nothing moved" is delivered
+        // by the transaction rolling back rather than by never having written. What this
+        // still proves is that the ORDER is untouched when the money did not move.
         verify(orderDao, never()).cancel(anyLong(), anyLong(), any());
     }
 
@@ -355,6 +361,7 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
+        when(paymentDao.claimForRefund(1L)).thenReturn(true);
 
         orderService.cancelOwnOrder(42L, USER_ID, TENANT_ID);
 

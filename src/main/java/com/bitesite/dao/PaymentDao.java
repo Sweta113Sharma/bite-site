@@ -28,6 +28,21 @@ public interface PaymentDao {
 
     void markVerified(Long id, String razorpayPaymentId, String razorpaySignature, PaymentStatus status);
 
+    /**
+     * Claims this payment for refunding, atomically. Returns true only for the caller that
+     * won; everyone else gets false and must not touch the gateway.
+     *
+     * <p>The claim is a conditional UPDATE, so the check and the act are one statement and
+     * the database decides the winner. Reading the status and then refunding is
+     * check-then-act with a network call as the act, and it double-refunded: eight
+     * simultaneous cancels of one order asked Razorpay to refund it four times.
+     *
+     * <p>No constraint can catch this after the fact, unlike the order token or the pickup
+     * code. The money leaves at the gateway before anything local changes, so exclusivity
+     * has to be established BEFORE the call rather than detected after it.
+     */
+    boolean claimForRefund(Long id);
+
     void updateStatus(Long id, PaymentStatus status);
 
     /** Marks a captured payment as needing a human — see V22. */

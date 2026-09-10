@@ -128,6 +128,18 @@ public class PaymentDaoImpl implements PaymentDao {
         return value == null ? 0L : value;
     }
 
+
+    @Override
+    public boolean claimForRefund(Long id) {
+        // CAPTURED in the WHERE clause is the whole mechanism: the first caller flips the
+        // row and every later one matches nothing. Inside cancelOrder's transaction this
+        // also takes a row lock, so a second cancel waits for the first to finish rather
+        // than racing it, and then finds the payment already refunded.
+        return jdbcTemplate.update(
+                "UPDATE payments SET status = ? WHERE id = ? AND status = ?",
+                PaymentStatus.REFUNDED.name(), id, PaymentStatus.CAPTURED.name()) == 1;
+    }
+
     @Override
     public void updateStatus(Long id, PaymentStatus status) {
         jdbcTemplate.update("UPDATE payments SET status = ? WHERE id = ?", status.name(), id);

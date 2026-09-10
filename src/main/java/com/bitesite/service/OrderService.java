@@ -631,8 +631,26 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.PAID) {
             Payment payment = getPaymentForOrder(orderId, tenantId);
             if (payment.getStatus() == PaymentStatus.CAPTURED) {
+                /* Claim the refund before calling the gateway, not after.
+                   This used to read the status, see CAPTURED, and refund — check-then-act
+                   with a network call as the act. Eight simultaneous cancels of one order
+                   asked Razorpay to refund it FOUR times, which is real money leaving four
+                   times over. No constraint can catch that afterwards: the money is gone
+                   before anything local changes, so the exclusivity has to happen first.
+
+                   claimForRefund is a conditional UPDATE, so the database picks exactly one
+                   winner. Everyone else is refused here rather than at the counter.
+
+                   This does invert the old ordering, which deliberately moved money before
+                   touching our database so a failed refund could never leave an order
+                   cancelled but unpaid. That guarantee still holds, by rollback instead of
+                   by ordering: this method is transactional, so if the gateway throws, the
+                   claim is undone with everything else and the payment is CAPTURED again. */
+                if (!paymentDao.claimForRefund(payment.getId())) {
+                    throw new InvalidOrderStateException(
+                            "This order is already being cancelled and refunded.");
+                }
                 paymentGateway.refund(payment.getRazorpayPaymentId(), payment.getAmount());
-                paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
             }
         }
 
