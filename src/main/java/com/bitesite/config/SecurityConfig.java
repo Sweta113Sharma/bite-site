@@ -33,10 +33,13 @@ public class SecurityConfig {
      */
     private static final String CONTENT_SECURITY_POLICY = String.join("; ",
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+            // jsDelivr, fonts.googleapis.com and fonts.gstatic.com are gone from all three
+            // of these: Bootstrap and Archivo are served from our own origin now, so the
+            // only third party left anywhere in the policy is Razorpay, which has to be.
+            "script-src 'self' 'unsafe-inline' "
                     + "https://checkout.razorpay.com https://cdn.razorpay.com",
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
-            "font-src 'self' data: https://fonts.gstatic.com",
+            "style-src 'self' 'unsafe-inline'",
+            "font-src 'self' data:",
             "img-src 'self' data: blob: https://res.cloudinary.com",
             "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com",
             "frame-src https://api.razorpay.com https://checkout.razorpay.com",

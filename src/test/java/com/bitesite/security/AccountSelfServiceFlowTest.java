@@ -1220,10 +1220,23 @@ class AccountSelfServiceFlowTest {
                 .contains("https://checkout.razorpay.com")
                 .contains("https://api.razorpay.com")
                 .contains("frame-src");
+        // Bootstrap and Archivo used to be render-blocking third-party requests and the
+        // policy had to name their origins. They are served from our own origin now, so
+        // 'self' covers them and those entries are gone. Asserting their ABSENCE is the
+        // point: an allowance nothing uses is a widening of the policy for free, and if a
+        // CDN link ever comes back this should be a deliberate edit rather than a silent
+        // one.
         assertThat(policy)
-                .as("Bootstrap and the fonts are render-blocking; blocking them blanks the app")
-                .contains("https://cdn.jsdelivr.net")
-                .contains("https://fonts.gstatic.com");
+                .as("Bootstrap and Archivo are same-origin now, so 'self' has to cover them")
+                .contains("style-src 'self'")
+                .contains("font-src 'self'");
+        assertThat(policy)
+                .as("no third party should be allow-listed for styles, fonts or scripts "
+                        + "except Razorpay — these were dropped when Bootstrap and Archivo "
+                        + "were self-hosted")
+                .doesNotContain("https://cdn.jsdelivr.net")
+                .doesNotContain("https://fonts.googleapis.com")
+                .doesNotContain("https://fonts.gstatic.com");
         assertThat(policy)
                 .as("menu photos are served from Cloudinary in production")
                 .contains("https://res.cloudinary.com");
