@@ -43,12 +43,16 @@ class PickupCodeTest {
         // A real BillingService over empty settings: every commercial control is inert by
         // default — no commission, no platform fee, no tip — so an order's total is still
         // exactly its food total and these tests assert what they always did.
-        BillingService billingService = new BillingService(new com.bitesite.dao.PlatformSettingsDao() {
+        // Empty settings also leave the cancellation window at its default, which nothing
+        // in this class exercises — pickup codes are issued well after that window shuts.
+        com.bitesite.dao.PlatformSettingsDao settingsDao = new com.bitesite.dao.PlatformSettingsDao() {
             public java.util.Map<String, String> findAll() { return java.util.Map.of(); }
             public void upsert(String key, String value) { }
-        });
+        };
+        BillingService billingService = new BillingService(settingsDao);
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService,
-                paymentGateway, auditService, orderNotifier, billingService, promoCodeService);
+                paymentGateway, auditService, orderNotifier, billingService, promoCodeService,
+                new PlatformSettingsService(settingsDao, auditService));
     }
 
     private Order at(OrderStatus status, String code) {

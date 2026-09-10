@@ -3,6 +3,7 @@ package com.bitesite.service;
 import com.bitesite.dao.PlatformSettingsDao;
 import com.bitesite.model.BillingSettings;
 import com.bitesite.model.GrievanceOfficer;
+import com.bitesite.model.OrderSettings;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -57,6 +58,35 @@ public class PlatformSettingsService {
         values.forEach(platformSettingsDao::upsert);
         BillingSettings after = BillingSettings.from(platformSettingsDao.findAll());
         auditService.record(actorUserId, null, "BillingSettings", null, "UPDATE", before, after);
+    }
+
+    public OrderSettings getOrderSettings() {
+        return OrderSettings.from(platformSettingsDao.findAll());
+    }
+
+    /**
+     * Saves how long a student may undo their own order.
+     *
+     * <p>Clamped here rather than trusted from the form, because this number is also how
+     * long the kitchen is kept from seeing a paid order: a stray digit would leave students
+     * waiting on food nobody had been told to cook. The caller is told what was actually
+     * stored, so a clamped value is visible rather than silent.
+     *
+     * <p>Audited like the billing terms. It decides whether a refund is owed, so "who
+     * shortened the window, and when" is a question a disputed order will eventually ask.
+     *
+     * <p>Read fresh on every order, so a change takes effect immediately — including on
+     * orders already paid for and still inside the old window. See the admin screen.
+     *
+     * @return the window as stored, after clamping
+     */
+    public int saveSelfCancelWindow(int requestedSeconds, Long actorUserId) {
+        OrderSettings before = getOrderSettings();
+        int seconds = OrderSettings.clampWindow(requestedSeconds);
+        platformSettingsDao.upsert(OrderSettings.SELF_CANCEL_WINDOW, String.valueOf(seconds));
+        OrderSettings after = getOrderSettings();
+        auditService.record(actorUserId, null, "OrderSettings", null, "UPDATE", before, after);
+        return after.selfCancelWindowSeconds();
     }
 
     public void saveGrievanceOfficer(GrievanceOfficer officer, Long actorUserId) {

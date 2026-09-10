@@ -40,14 +40,6 @@ public class OrderService {
     private static final int MAX_REASON_LENGTH = 200;
     private static final int PICKUP_CODE_ATTEMPTS = 10;
 
-    /**
-     * How long a student may cancel their own order after paying, and equally how long the
-     * kitchen is kept from seeing it. One number governs both halves deliberately: if the
-     * two ever drifted apart there would be a stretch where an order is both cancellable
-     * and being cooked. Public because the order screen counts down against it.
-     */
-    public static final int SELF_CANCEL_WINDOW_SECONDS = 20;
-
     private final OrderDao orderDao;
     private final PaymentDao paymentDao;
     private final MenuService menuService;
@@ -57,6 +49,7 @@ public class OrderService {
     private final OrderNotifier orderNotifier;
     private final BillingService billingService;
     private final PromoCodeService promoCodeService;
+    private final PlatformSettingsService platformSettingsService;
 
     /**
      * Builds the order from the cart (re-pricing every line from the database, never
@@ -293,13 +286,32 @@ public class OrderService {
                 .toList();
     }
 
+    /**
+     * How long a student may cancel their own order after paying, and equally how long the
+     * kitchen is kept from seeing it. One number governs both halves deliberately: if the
+     * two ever drifted apart there would be a stretch where an order is both cancellable
+     * and being cooked.
+     *
+     * <p>Read fresh on every call rather than held, so that changing it in the admin console
+     * takes effect on the next order instead of on the next restart. Every caller below
+     * passes the same value to both halves, which is what keeps them complementary.
+     */
+    public int selfCancelWindowSeconds() {
+        return platformSettingsService.getOrderSettings().selfCancelWindowSeconds();
+    }
+
     public List<Order> kitchenQueue(Long tenantId, Long outletId) {
-        return orderDao.findKitchenQueue(tenantId, outletId, SELF_CANCEL_WINDOW_SECONDS);
+        return orderDao.findKitchenQueue(tenantId, outletId, selfCancelWindowSeconds());
+    }
+
+    /** Seconds left on the student's own cancellation window, 0 once it has shut. */
+    public int selfCancelSecondsLeft(Long orderId, Long tenantId) {
+        return orderDao.selfCancelSecondsLeft(orderId, tenantId, selfCancelWindowSeconds());
     }
 
     /**
-     * Cancels a student's own order, but only in the first
-     * {@value #SELF_CANCEL_WINDOW_SECONDS} seconds after payment.
+     * Cancels a student's own order, but only inside the window set in the admin console
+     * (see {@link #selfCancelWindowSeconds()}).
      *
      * <p>The window is short on purpose. It exists for the misclick, not as a way to back
      * out of a queue, and the kitchen does not see the order at all until it shuts (see
@@ -312,16 +324,11 @@ public class OrderService {
      * moment, whoever commits first wins and the student is told plainly that it is too
      * late, instead of a refund being issued for food already on the grill.
      */
-    /** Seconds left on the student's own cancellation window, 0 once it has shut. */
-    public int selfCancelSecondsLeft(Long orderId, Long tenantId) {
-        return orderDao.selfCancelSecondsLeft(orderId, tenantId, SELF_CANCEL_WINDOW_SECONDS);
-    }
-
     @Transactional
     public void cancelOwnOrder(Long orderId, Long userId, Long tenantId) {
         // Ownership first: getForUser reports someone else's order as simply not found.
         Order order = getForUser(orderId, userId, tenantId);
-        if (!orderDao.isWithinSelfCancelWindow(orderId, tenantId, SELF_CANCEL_WINDOW_SECONDS)) {
+        if (!orderDao.isWithinSelfCancelWindow(orderId, tenantId, selfCancelWindowSeconds())) {
             throw new InvalidOrderStateException(
                     "The cancellation window for order " + order.getTokenNo() + " has closed.");
         }

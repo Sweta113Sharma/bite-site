@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console console--has-sidebar">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
+<div class="container" style="max-width: 860px;">
+    <div class="console-head">
+        <div class="console-head__text">
+            <h3 class="m-0">Order settings</h3>
+            <p class="console-head__blurb mb-0">
+                How orders behave once they are paid for.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" th:href="@{/admin/orders}">
+                <span class="material-symbols-outlined">receipt_long</span>All orders
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-success" th:if="${notice}" th:text="${notice}"></div>
+    <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+
+    <form method="post" th:action="@{/admin/orders/settings}">
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><span class="material-symbols-outlined">undo</span>Cancellation window</h5>
+                <p class="form-text mb-3">
+                    How long a student has to undo a misclicked order and get an automatic refund.
+                </p>
+
+                <div class="d-flex gap-2 align-items-center mb-3" style="max-width: 20rem;">
+                    <input type="number" step="1" min="0" th:max="${maxWindow}" class="form-control"
+                           name="selfCancelWindowSeconds"
+                           th:value="${settings.selfCancelWindowSeconds()}"
+                           aria-label="Cancellation window in seconds"/>
+                    <span class="text-muted">seconds</span>
+                </div>
+
+                <!--/* The single most surprising thing about this number, said on the screen
+                     that sets it rather than discovered from the kitchen. */-->
+                <div class="alert alert-secondary mb-3">
+                    <strong>This is also how long the canteen does not see the order.</strong>
+                    One number governs both halves on purpose. The outlet queue only shows a paid
+                    order once the window has closed, so staff can never start cooking something a
+                    student is still able to cancel out from under them.
+                </div>
+
+                <p class="form-text mb-1">
+                    <strong>Set it to 0</strong> to switch cancellation off entirely. Students get no
+                    cancel button and the kitchen sees every order the moment it is paid for.
+                </p>
+                <p class="form-text mb-1">
+                    The default is <span th:text="${defaultWindow}">20</span> seconds, and the most
+                    you can set is <span th:text="${maxWindow}">300</span>. Longer than that and a
+                    student is waiting on food nobody has been told to cook yet.
+                </p>
+                <p class="form-text mb-0">
+                    Staff can still cancel and refund any order from the outlet portal at any time.
+                    This setting only governs what the student can do for themselves.
+                </p>
+            </div>
+        </div>
+
+        <!--/* Changing this moves orders that are already in flight, which is not obvious.
+             Worth saying before the button, not after. */-->
+        <div class="alert alert-warning">
+            <strong>Takes effect immediately, including on orders already placed.</strong>
+            Shortening the window can close it on an order still counting down, and hand that order
+            straight to the kitchen. Lengthening it can pull a paid order back out of the outlet
+            queue. An order the kitchen has already started is never affected either way: once it is
+            being prepared it can no longer be cancelled by the student at all.
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <span class="material-symbols-outlined">check</span>Save settings
+        </button>
+    </form>
+</div>
+</main>
+</div>
+</body>
+</html>

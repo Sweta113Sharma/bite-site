@@ -2,6 +2,7 @@ package com.bitesite.service;
 
 import com.bitesite.dao.OrderDao;
 import com.bitesite.dao.PaymentDao;
+import com.bitesite.dao.PlatformSettingsDao;
 import com.bitesite.dto.CheckoutResult;
 import com.bitesite.dto.GatewayOrder;
 import com.bitesite.exception.BusinessException;
@@ -10,6 +11,7 @@ import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.MenuItem;
 import com.bitesite.model.Order;
 import com.bitesite.model.PromoCode;
+import com.bitesite.model.OrderSettings;
 import com.bitesite.model.OrderStatus;
 import com.bitesite.model.Outlet;
 import com.bitesite.model.Payment;
@@ -51,21 +53,33 @@ class OrderServiceTest {
 
     private OrderService orderService;
 
+    /**
+     * One in-memory platform_settings table behind both settings-reading services. Real
+     * services over a fake table rather than mocks, so a test that changes a setting
+     * exercises the same parse-and-clamp path production does.
+     */
+    private final Map<String, String> platformSettings = new LinkedHashMap<>();
+
     private static final Long TENANT_ID = 1L;
     private static final Long OUTLET_ID = 10L;
     private static final Long USER_ID = 100L;
 
     @BeforeEach
     void setUp() {
+        platformSettings.clear();
+        PlatformSettingsDao settingsDao = new PlatformSettingsDao() {
+            public Map<String, String> findAll() { return platformSettings; }
+            public void upsert(String key, String value) { platformSettings.put(key, value); }
+        };
         // A real BillingService over empty settings: every commercial control is inert by
         // default — no commission, no platform fee, no tip — so an order's total is still
-        // exactly its food total and these tests assert what they always did.
-        BillingService billingService = new BillingService(new com.bitesite.dao.PlatformSettingsDao() {
-            public java.util.Map<String, String> findAll() { return java.util.Map.of(); }
-            public void upsert(String key, String value) { }
-        });
+        // exactly its food total and these tests assert what they always did. The same
+        // emptiness leaves the cancellation window at its compiled-in default.
+        BillingService billingService = new BillingService(settingsDao);
+        PlatformSettingsService platformSettingsService =
+                new PlatformSettingsService(settingsDao, auditService);
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService, paymentGateway,
-                auditService, orderNotifier, billingService, promoCodeService);
+                auditService, orderNotifier, billingService, promoCodeService, platformSettingsService);
     }
 
     private MenuItem availableItem(long id, String name, BigDecimal price) {
@@ -326,7 +340,7 @@ class OrderServiceTest {
         verify(orderDao, never()).cancel(anyLong(), anyLong(), any());
     }
 
-    /* ---- the student's own 20-second cancellation window ---------------------------- */
+    /* ---- the student's own cancellation window ---------------------------- */
 
     private Order paidOrderOwnedBy(long userId) {
         return Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(userId)
@@ -336,7 +350,7 @@ class OrderServiceTest {
     @Test
     void aStudentCancellingInsideTheWindowIsRefunded() {
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paidOrderOwnedBy(USER_ID)));
-        when(orderDao.isWithinSelfCancelWindow(42L, TENANT_ID, OrderService.SELF_CANCEL_WINDOW_SECONDS))
+        when(orderDao.isWithinSelfCancelWindow(42L, TENANT_ID, OrderSettings.DEFAULT_SELF_CANCEL_WINDOW_SECONDS))
                 .thenReturn(true);
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
@@ -352,7 +366,7 @@ class OrderServiceTest {
     @Test
     void aStudentCancellingAfterTheWindowIsRefusedAndNothingIsRefunded() {
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paidOrderOwnedBy(USER_ID)));
-        when(orderDao.isWithinSelfCancelWindow(42L, TENANT_ID, OrderService.SELF_CANCEL_WINDOW_SECONDS))
+        when(orderDao.isWithinSelfCancelWindow(42L, TENANT_ID, OrderSettings.DEFAULT_SELF_CANCEL_WINDOW_SECONDS))
                 .thenReturn(false);
 
         assertThatThrownBy(() -> orderService.cancelOwnOrder(42L, USER_ID, TENANT_ID))
@@ -384,7 +398,61 @@ class OrderServiceTest {
     void theKitchenQueueWithholdsOrdersForExactlyTheCancelWindow() {
         orderService.kitchenQueue(TENANT_ID, OUTLET_ID);
 
-        verify(orderDao).findKitchenQueue(TENANT_ID, OUTLET_ID, OrderService.SELF_CANCEL_WINDOW_SECONDS);
+        verify(orderDao).findKitchenQueue(TENANT_ID, OUTLET_ID, OrderSettings.DEFAULT_SELF_CANCEL_WINDOW_SECONDS);
+    }
+
+    /**
+     * The window is set from the admin console, and both halves have to move together. If
+     * the queue and the cancel check ever read different numbers there would be a stretch
+     * where an order is simultaneously cancellable and on the kitchen screen.
+     */
+    @Test
+    void bothHalvesOfTheWindowFollowTheAdminSetting() {
+        platformSettings.put(OrderSettings.SELF_CANCEL_WINDOW, "45");
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(paidOrderOwnedBy(USER_ID)));
+        when(orderDao.isWithinSelfCancelWindow(42L, TENANT_ID, 45)).thenReturn(false);
+
+        orderService.kitchenQueue(TENANT_ID, OUTLET_ID);
+        assertThatThrownBy(() -> orderService.cancelOwnOrder(42L, USER_ID, TENANT_ID))
+                .isInstanceOf(InvalidOrderStateException.class);
+
+        verify(orderDao).findKitchenQueue(TENANT_ID, OUTLET_ID, 45);
+        verify(orderDao).isWithinSelfCancelWindow(42L, TENANT_ID, 45);
+    }
+
+    /** Zero is a real setting, not a missing one: cancellation off, kitchen sees everything. */
+    @Test
+    void aZeroWindowSwitchesCancellationOffRatherThanFallingBackToTheDefault() {
+        platformSettings.put(OrderSettings.SELF_CANCEL_WINDOW, "0");
+
+        orderService.kitchenQueue(TENANT_ID, OUTLET_ID);
+
+        verify(orderDao).findKitchenQueue(TENANT_ID, OUTLET_ID, 0);
+    }
+
+    /**
+     * A stray digit must not blind the kitchen for hours. The window is clamped on the way
+     * in and again on the way out, so even a row written around the admin form is bounded.
+     */
+    @Test
+    void anOversizedStoredWindowIsClampedBeforeTheKitchenEverSeesIt() {
+        platformSettings.put(OrderSettings.SELF_CANCEL_WINDOW, "99999");
+
+        orderService.kitchenQueue(TENANT_ID, OUTLET_ID);
+
+        verify(orderDao).findKitchenQueue(TENANT_ID, OUTLET_ID,
+                OrderSettings.MAX_SELF_CANCEL_WINDOW_SECONDS);
+    }
+
+    /** A corrupted row behaves as the platform did before this was configurable, not as "off". */
+    @Test
+    void anUnparseableStoredWindowFallsBackToTheDefault() {
+        platformSettings.put(OrderSettings.SELF_CANCEL_WINDOW, "twenty");
+
+        orderService.kitchenQueue(TENANT_ID, OUTLET_ID);
+
+        verify(orderDao).findKitchenQueue(TENANT_ID, OUTLET_ID,
+                OrderSettings.DEFAULT_SELF_CANCEL_WINDOW_SECONDS);
     }
 
     @Test
