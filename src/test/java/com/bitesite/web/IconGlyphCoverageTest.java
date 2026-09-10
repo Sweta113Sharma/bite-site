@@ -135,6 +135,33 @@ class IconGlyphCoverageTest {
     }
 
     /**
+     * The manifest is a contract about names, and a contract about names cannot notice that
+     * the font behind it was never actually subset. It did not: the shipped .woff2 carried
+     * 5,514 outlined glyphs for the 64 icons this app draws, and every student paid 377KB
+     * for it on their first visit while every name-level assertion above stayed green.
+     *
+     * <p>Size is a crude proxy for glyph count, but it is the one a build can check without
+     * a font parser, and the failure it catches is not subtle: a full Material Symbols
+     * variable font is over forty times the ceiling below. The subset step grows this file
+     * by roughly 130 bytes per icon added, so the headroom here is several hundred more
+     * icons before it needs revisiting.
+     */
+    @Test
+    void theFontIsActuallySubsetAndNotTheFullIconSet() throws IOException {
+        long bytes = Files.size(Path.of("src/main/resources/static/fonts/material-symbols-outlined.woff2"));
+
+        assertThat(bytes)
+                .as("the icon font should be the subset built from material-symbols.glyphs.txt. "
+                        + "If this jumped, the full Material Symbols font was probably copied over "
+                        + "the subset — re-run scripts/subset-icon-font.sh")
+                .isLessThan(64_000L);
+
+        assertThat(bytes)
+                .as("the font should not be empty or truncated")
+                .isGreaterThan(2_000L);
+    }
+
+    /**
      * The other direction is not a failure, only waste — every extra glyph is bytes on
      * every first page load. Kept as a warning rather than an assertion because the
      * extraction above is pattern-based and could miss a reference; failing the build on
