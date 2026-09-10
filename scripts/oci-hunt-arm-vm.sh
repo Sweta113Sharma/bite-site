@@ -22,6 +22,8 @@
 #   * Backs off with jitter. Every free-tier hunter on the internet polls on the minute;
 #     jitter avoids arriving in the same thundering herd, and backoff avoids the API
 #     rate limits that would lock us out entirely.
+#   * Cycles through every fault domain, plus unspecified placement. One AD in this
+#     region, but three fault domains, and capacity is per fault domain.
 #   * Stops the instant it succeeds, and prints how to reach the machine.
 #
 # USAGE
@@ -92,7 +94,30 @@ IMAGE=$(oci_ compute image list --compartment-id "$TENANCY" \
 for v in AD SUBNET IMAGE; do
     [ -n "${!v}" ] && [ "${!v}" != "null" ] || { say "FATAL: could not resolve $v"; exit 1; }
 done
+# ap-hyderabad-1 has exactly one availability domain, so there is no AD to rotate
+# through — but that one AD has three FAULT domains, and capacity is tracked per fault
+# domain. Asking without naming one lets Oracle place it, and Oracle placing it is not
+# the same as Oracle trying all three. The hunt cycles through "unspecified" plus each
+# fault domain by name, so a host with room in FD-3 is not missed for the whole night
+# because the default placement kept landing in FD-1.
+#
+# This does NOT increase the request rate: it varies WHERE each attempt asks for, not
+# how often it asks. The rate limiter counts calls, and the count is unchanged.
+# Built with a read loop rather than mapfile: macOS ships bash 3.2, where mapfile does
+# not exist, and the failure is silent — an empty array, no rotation, and a hunt that
+# looks like it is covering three fault domains while only ever asking for one.
+PLACEMENTS=("")
+FD_COUNT=0
+while IFS= read -r fd; do
+    [ -n "$fd" ] || continue
+    PLACEMENTS+=("$fd")
+    FD_COUNT=$((FD_COUNT + 1))
+done < <(oci_ iam fault-domain list --compartment-id "$TENANCY" \
+        --availability-domain "$AD" --query 'data[].name' --raw-output 2>/dev/null \
+        | grep -oE 'FAULT-DOMAIN-[0-9]+')
+
 say "AD=$AD"
+say "fault domains=$FD_COUNT (cycling ${#PLACEMENTS[@]} placements incl. unspecified)"
 say "subnet=${SUBNET: -12}  image=${IMAGE: -12}"
 say "hunting for ${OCPUS} OCPU / ${MEM} GB as '$NAME' — Ctrl-C to stop"
 
@@ -105,9 +130,18 @@ while :; do
     [ "$MAX_ATTEMPTS" -gt 0 ] && [ "$attempt" -gt "$MAX_ATTEMPTS" ] && {
         say "gave up after $MAX_ATTEMPTS attempts"; exit 2; }
 
+    # Rotate placement per attempt. Index cycles 0..n-1 across the placement list.
+    FD="${PLACEMENTS[$(( (attempt - 1) % ${#PLACEMENTS[@]} ))]}"
+    # Expanded with the ${arr[@]+...} guard: this script runs under `set -u`, and bash
+    # 3.2 (which is what macOS ships) treats "${empty[@]}" as an unbound variable and
+    # aborts. That is not theoretical — it killed this hunt on attempt 1.
+    FD_ARGS=()
+    [ -n "$FD" ] && FD_ARGS=(--fault-domain "$FD")
+
     out=$(oci_ compute instance launch \
             --compartment-id "$TENANCY" \
             --availability-domain "$AD" \
+            ${FD_ARGS[@]+"${FD_ARGS[@]}"} \
             --shape VM.Standard.A1.Flex \
             --shape-config "{\"ocpus\":$OCPUS,\"memoryInGBs\":$MEM}" \
             --subnet-id "$SUBNET" \
@@ -135,8 +169,8 @@ while :; do
         # Oracle answered, so whatever the network was doing, it is over.
         timeouts=0
         sleep_for=$(( MIN_SLEEP + RANDOM % (MAX_SLEEP - MIN_SLEEP + 1) ))
-        printf '%s  attempt %-5d no capacity, retrying in %ss\n' \
-            "$(date '+%H:%M:%S')" "$attempt" "$sleep_for" | tee -a "$LOG"
+        printf '%s  attempt %-5d no capacity in %-16s retrying in %ss\n' \
+            "$(date '+%H:%M:%S')" "$attempt" "${FD:-<unspecified>}" "$sleep_for" | tee -a "$LOG"
         sleep "$sleep_for"
         continue
     fi
