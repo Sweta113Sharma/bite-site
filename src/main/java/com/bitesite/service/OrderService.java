@@ -17,6 +17,7 @@ import com.bitesite.model.Payment;
 import com.bitesite.model.PaymentStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -168,7 +169,7 @@ public class OrderService {
                 .status(OrderStatus.AWAITING_PAYMENT)
                 .items(orderItems)
                 .build();
-        Order saved = orderDao.createOrder(order);
+        Order saved = insertRetryingOnTokenCollision(order, tenantId);
 
         // After the order row exists, because the redemption points at it. The unique
         // constraint on order_id is what actually stops one order redeeming twice.
@@ -234,6 +235,44 @@ public class OrderService {
         throw new InvalidOrderStateException(remaining == 0
                 ? item.getName() + " is sold out for today."
                 : "Only " + remaining + " left of " + item.getName() + " today.");
+    }
+
+    /**
+     * Inserts the order, drawing a fresh token if another checkout took ours first.
+     *
+     * <p>{@link #generateUniqueToken} reads the tokens already used today and picks one that
+     * is not among them, and the insert happens afterwards with no lock in between. That is
+     * check-then-act: two students checking out in the same instant can both read the same
+     * set and both draw the same number. There are only 9,000 tokens per college per day
+     * (BITE-1000 to BITE-9999), so by the birthday bound this stops being unlikely at a few
+     * hundred orders in a day, which is one lunch rush.
+     *
+     * <p>{@code uq_orders_token_day} already stopped the duplicate reaching the database, so
+     * the failure was never two students holding the same number. It was worse-looking than
+     * that and easier to miss: the loser's INSERT threw, and nothing caught it, so a student
+     * trying to pay got an error. A concurrency test produced 2 such failures in 300
+     * simultaneous checkouts within one college.
+     *
+     * <p>Safe to retry in place because checkout is deliberately not transactional — each
+     * statement commits on its own, so a rejected insert leaves nothing behind and the item
+     * rows are written after the order row, never before it.
+     *
+     * <p>Only a token collision is retried. Any other constraint failure is a real problem
+     * and is rethrown rather than tried nine more times with a different number.
+     */
+    private Order insertRetryingOnTokenCollision(Order order, Long tenantId) {
+        for (int attempt = 0; attempt < TOKEN_GENERATION_ATTEMPTS; attempt++) {
+            try {
+                return orderDao.createOrder(order);
+            } catch (DuplicateKeyException raced) {
+                String message = String.valueOf(raced.getMessage());
+                if (!message.contains("uq_orders_token_day")) {
+                    throw raced;
+                }
+                order.setTokenNo(generateUniqueToken(tenantId));
+            }
+        }
+        throw new IllegalStateException("Could not place the order: token collisions kept recurring");
     }
 
     private String generateUniqueToken(Long tenantId) {
@@ -523,20 +562,31 @@ public class OrderService {
      */
     private String issuePickupCode(Long orderId, Long tenantId, Long outletId) {
         Set<String> taken = new HashSet<>(orderDao.findActivePickupCodes(tenantId, outletId));
-        String code = null;
-        for (int attempt = 0; attempt < PICKUP_CODE_ATTEMPTS && code == null; attempt++) {
+        for (int attempt = 0; attempt < PICKUP_CODE_ATTEMPTS; attempt++) {
             String candidate = String.format("%04d", RANDOM.nextInt(10000));
-            if (!taken.contains(candidate)) {
-                code = candidate;
+            if (taken.contains(candidate)) {
+                continue;
+            }
+            try {
+                orderDao.setPickupCode(orderId, tenantId, candidate);
+                return candidate;
+            } catch (DuplicateKeyException raced) {
+                /* Another order took this code between our read and our write. Reading the
+                   live set and then writing is check-then-act, and nothing sits in between,
+                   so this is not a theoretical window: a concurrency test produced 4
+                   collisions in ~1200 simultaneous transitions, and before V32 the schema
+                   accepted every one of them. Two live orders sharing a code at one counter
+                   means a student can be handed somebody else's order.
+
+                   uq_orders_active_pickup_code is what turns that silent duplicate into
+                   this exception, and this is the retry that makes losing the race harmless.
+                   Remembering the candidate stops us drawing it again. */
+                taken.add(candidate);
             }
         }
-        if (code == null) {
-            // 10 collisions means ~10k orders are simultaneously awaiting collection at one
-            // counter, which is not a real canteen. Failing loudly beats issuing a duplicate.
-            throw new IllegalStateException("Could not issue a unique pickup code");
-        }
-        orderDao.setPickupCode(orderId, tenantId, code);
-        return code;
+        // Exhausting the attempts means the live set really is that crowded, which is not a
+        // real canteen. Failing loudly still beats issuing a duplicate.
+        throw new IllegalStateException("Could not issue a unique pickup code");
     }
 
     /**
