@@ -69,9 +69,16 @@
         COMPLETED: 'bg-success'
     };
 
+    /* Icon names and button classes here must match canteen/queue.html exactly — see the
+       note further down about this renderer replacing the whole queue body. They did not:
+       these were Phosphor classes (ph-cooking-pot, ph-bell-simple-ringing) left behind when
+       Phosphor was removed from the product, and nothing has defined them since. The server
+       drew the icons correctly on page load and this renderer wiped them five seconds later
+       on the first poll, which is a good deal harder to notice than a page that is wrong
+       from the start. */
     const NEXT_ACTION = {
-        PAID: { label: 'Start preparing', next: 'PREPARING', btnClass: 'btn-warning', icon: 'ph-cooking-pot' },
-        PREPARING: { label: 'Mark ready', next: 'READY_FOR_PICKUP', btnClass: 'btn-primary', icon: 'ph-bell-simple-ringing' }
+        PAID: { label: 'Start preparing', next: 'PREPARING', btnClass: 'btn-warning', icon: 'skillet' },
+        PREPARING: { label: 'Mark ready', next: 'READY_FOR_PICKUP', btnClass: 'btn-primary', icon: 'notifications_active' }
         // READY_FOR_PICKUP is absent on purpose: handover needs the student's pickup
         // code, so it renders a form below rather than a one-click status button.
     };
@@ -98,7 +105,7 @@
             <form method="post" action="/canteen/queue/${order.id}/status">
                 <input type="hidden" name="newStatus" value="${action.next}"/>
                 <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
-                <button type="submit" class="btn btn-sm ${action.btnClass} w-100"><i class="ph ${action.icon}"></i>${action.label}</button>
+                <button type="submit" class="btn btn-sm ${action.btnClass} w-100"><span class="material-symbols-outlined">${action.icon}</span>${action.label}</button>
             </form>` : '';
         // Kept in step with canteen/queue.html by hand: this renderer replaces the whole
         // queue body every poll, so anything only present in the Thymeleaf version would

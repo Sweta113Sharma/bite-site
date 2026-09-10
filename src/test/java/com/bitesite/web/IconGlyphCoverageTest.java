@@ -54,6 +54,26 @@ class IconGlyphCoverageTest {
     /** CSS pseudo-element icons, e.g. .deal-card-add::before { content: 'add'; } */
     private static final Pattern CSS_CONTENT = Pattern.compile("content: '([a-z_]+)'");
 
+    /**
+     * Icon names written from JavaScript, which is the gap that actually bit.
+     *
+     * <p>{@code password-toggle.js} swaps the eye between {@code visibility} and
+     * {@code visibility_off} by assigning textContent, and neither the markup nor the CSS
+     * ever mentions the second one. So the manifest never listed it, the subset never
+     * included it, and clicking "show password" rendered the literal word
+     * "visibility_off" inside the button. Every assertion in this class passed throughout,
+     * because every assertion was looking at templates and stylesheets.
+     *
+     * <p>Narrow on purpose: only textContent written to something named like an icon, and
+     * only showToast's icon argument. A broad sweep of every quoted lowercase string in the
+     * JavaScript would fail this build on words that are not icons at all.
+     */
+    private static final Pattern JS_TEXT_CONTENT = Pattern.compile(
+            "(?:glyph|symbol|icon)\\w*\\.textContent\\s*=\\s*([^;]+);");
+    private static final Pattern JS_TOAST_ICON = Pattern.compile(
+            "showToast\\([^,)]+,\\s*'([a-z_]+)'");
+    private static final Pattern QUOTED_NAME = Pattern.compile("'([a-z][a-z_]*)'");
+
     private static Set<String> referencedIcons() throws IOException {
         Set<String> icons = new LinkedHashSet<>();
         Path resources = Path.of("src/main/resources");
@@ -63,10 +83,29 @@ class IconGlyphCoverageTest {
                 String name = f.getFileName().toString();
                 boolean template = name.endsWith(".html");
                 boolean stylesheet = name.endsWith(".css");
-                if (!template && !stylesheet) {
+                // .js was not scanned at all until an icon written only from JavaScript
+                // (visibility_off) went missing from the font without a single assertion
+                // here noticing.
+                boolean script = name.endsWith(".js");
+                if (!template && !stylesheet && !script) {
                     continue;
                 }
                 String text = Files.readString(f, StandardCharsets.UTF_8);
+
+                if (script) {
+                    Matcher js = JS_TEXT_CONTENT.matcher(text);
+                    while (js.find()) {
+                        Matcher q = QUOTED_NAME.matcher(js.group(1));
+                        while (q.find()) {
+                            icons.add(q.group(1));
+                        }
+                    }
+                    js = JS_TOAST_ICON.matcher(text);
+                    while (js.find()) {
+                        icons.add(js.group(1));
+                    }
+                    continue;
+                }
 
                 if (stylesheet) {
                     Matcher m = CSS_CONTENT.matcher(text);

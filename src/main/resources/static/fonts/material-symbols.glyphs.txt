@@ -61,4 +61,5 @@ tune
 undo
 upload
 visibility
+visibility_off
 warning
