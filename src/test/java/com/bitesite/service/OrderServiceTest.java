@@ -50,6 +50,7 @@ class OrderServiceTest {
     @Mock private AuditService auditService;
     @Mock private OrderNotifier orderNotifier;
     @Mock private PromoCodeService promoCodeService;
+    @Mock private RefundLedger refundLedger;
 
     private OrderService orderService;
 
@@ -79,7 +80,7 @@ class OrderServiceTest {
         PlatformSettingsService platformSettingsService =
                 new PlatformSettingsService(settingsDao, auditService);
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService, paymentGateway,
-                auditService, orderNotifier, billingService, promoCodeService, platformSettingsService);
+                auditService, orderNotifier, billingService, promoCodeService, platformSettingsService, refundLedger);
     }
 
     private MenuItem availableItem(long id, String name, BigDecimal price) {
@@ -314,14 +315,15 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
-        when(paymentDao.claimForRefund(1L)).thenReturn(true);
+        when(refundLedger.claim(1L)).thenReturn(true);
 
         orderService.cancelOrder(42L, TENANT_ID, USER_ID, "Ingredients ran out");
 
-        // The claim is now what marks the payment refunded: it is a conditional UPDATE that
-        // both decides the winner and records the outcome, so there is no separate write.
-        verify(paymentDao).claimForRefund(1L);
+        // The claim moves CAPTURED -> REFUND_PENDING and commits separately; the gateway call
+        // then settles it to REFUNDED. Both halves matter, so both are asserted.
+        verify(refundLedger).claim(1L);
         verify(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
+        verify(paymentDao).updateStatus(1L, PaymentStatus.REFUNDED);
         verify(orderDao).cancel(42L, TENANT_ID, "Ingredients ran out");
         verify(auditService).record(eq(USER_ID), eq(TENANT_ID), eq("Order"), eq(42L), eq("STATUS_CANCELLED"), any(), any());
     }
@@ -334,15 +336,16 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
-        when(paymentDao.claimForRefund(1L)).thenReturn(true);
+        when(refundLedger.claim(1L)).thenReturn(true);
         doThrow(new RuntimeException("gateway down")).when(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
 
         assertThatThrownBy(() -> orderService.cancelOrder(42L, TENANT_ID, USER_ID, "Kitchen closing early"))
                 .isInstanceOf(RuntimeException.class);
 
-        // The claim is written before the gateway call now, so "nothing moved" is delivered
-        // by the transaction rolling back rather than by never having written. What this
-        // still proves is that the ORDER is untouched when the money did not move.
+        // A failed gateway call must NOT settle the payment to REFUNDED, must flag the
+        // unknown outcome, and must leave the order alone.
+        verify(paymentDao, never()).updateStatus(anyLong(), eq(PaymentStatus.REFUNDED));
+        verify(refundLedger).recordUnresolved(eq(1L), contains("outcome unknown"));
         verify(orderDao, never()).cancel(anyLong(), anyLong(), any());
     }
 
@@ -361,7 +364,7 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
-        when(paymentDao.claimForRefund(1L)).thenReturn(true);
+        when(refundLedger.claim(1L)).thenReturn(true);
 
         orderService.cancelOwnOrder(42L, USER_ID, TENANT_ID);
 
@@ -506,6 +509,7 @@ class OrderServiceTest {
         // the state machine, so cancelOrder can never refund this order.
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(orderInStatus(OrderStatus.PREPARING)));
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(paymentInStatus(PaymentStatus.CAPTURED)));
+        when(refundLedger.claim(anyLong())).thenReturn(true);
 
         orderService.refundOrder(42L, TENANT_ID, USER_ID, "outlet closed early");
 
@@ -521,6 +525,7 @@ class OrderServiceTest {
         // order keeps its status and only the payment changes.
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(orderInStatus(OrderStatus.COMPLETED)));
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(paymentInStatus(PaymentStatus.CAPTURED)));
+        when(refundLedger.claim(anyLong())).thenReturn(true);
 
         orderService.refundOrder(42L, TENANT_ID, USER_ID, "goodwill");
 
@@ -554,6 +559,7 @@ class OrderServiceTest {
     void refundOrderChangesNothingWhenTheGatewayFails() {
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(orderInStatus(OrderStatus.PREPARING)));
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(paymentInStatus(PaymentStatus.CAPTURED)));
+        when(refundLedger.claim(anyLong())).thenReturn(true);
         doThrow(new RuntimeException("gateway down")).when(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
 
         assertThatThrownBy(() -> orderService.refundOrder(42L, TENANT_ID, USER_ID, "outlet closed"))

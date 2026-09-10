@@ -52,7 +52,8 @@ class PickupCodeTest {
         BillingService billingService = new BillingService(settingsDao);
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService,
                 paymentGateway, auditService, orderNotifier, billingService, promoCodeService,
-                new PlatformSettingsService(settingsDao, auditService));
+                new PlatformSettingsService(settingsDao, auditService),
+                new RefundLedger(paymentDao));
     }
 
     private Order at(OrderStatus status, String code) {

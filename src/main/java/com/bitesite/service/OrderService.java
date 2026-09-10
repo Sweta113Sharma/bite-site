@@ -52,6 +52,7 @@ public class OrderService {
     private final BillingService billingService;
     private final PromoCodeService promoCodeService;
     private final PlatformSettingsService platformSettingsService;
+    private final RefundLedger refundLedger;
 
     /**
      * Builds the order from the cart (re-pricing every line from the database, never
@@ -379,6 +380,33 @@ public class OrderService {
     }
 
     /**
+     * Calls the gateway for a payment already claimed via {@link RefundLedger}, and records
+     * the outcome truthfully.
+     *
+     * <p>The claim is committed before this runs, so the money can only be asked for once
+     * however many cancels arrive. What this adds is the other half: a refund is a network
+     * call that can succeed while reporting failure, so an exception here does NOT mean the
+     * money stayed put. It means we do not know.
+     *
+     * <p>So the payment is left in REFUND_PENDING and flagged for reconciliation rather than
+     * rolled back to CAPTURED. Rolling back would erase the only evidence that we ever asked,
+     * and the next cancel would refund it again. Flagged and stuck is recoverable by a human
+     * with the Razorpay dashboard; a silent second refund is not recoverable at all.
+     */
+    private void refundThroughGateway(Payment payment) {
+        try {
+            paymentGateway.refund(payment.getRazorpayPaymentId(), payment.getAmount());
+        } catch (RuntimeException gatewayFailed) {
+            refundLedger.recordUnresolved(payment.getId(),
+                    "Refund attempted, outcome unknown: " + gatewayFailed.getMessage());
+            log.error("Refund outcome unknown for payment {} — left REFUND_PENDING and flagged",
+                    payment.getId(), gatewayFailed);
+            throw gatewayFailed;
+        }
+        paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
+    }
+
+    /**
      * Cancels a student's own order, but only inside the window set in the admin console
      * (see {@link #selfCancelWindowSeconds()}).
      *
@@ -393,7 +421,17 @@ public class OrderService {
      * moment, whoever commits first wins and the student is told plainly that it is too
      * late, instead of a refund being issued for food already on the grill.
      */
-    @Transactional
+    /* Deliberately NOT @Transactional. A refund is a network call to Razorpay, and holding
+       a transaction across it holds a database connection across it too. Worse, the refund
+       claim has to commit BEFORE the call (see RefundLedger), which inside an outer
+       transaction means a second connection per concurrent cancel — with a pool of 10 in
+       production, ten simultaneous cancels would wait on each other until the 10s connection
+       timeout. That is not theoretical: it deadlocked the test pool of 4 immediately.
+
+       Nothing here needs atomicity across the gateway call. The claim is a single atomic
+       UPDATE and is what makes the refund exclusive; the local writes that follow are
+       independent, and if one fails the payment is already REFUNDED, which is visible and
+       recoverable rather than silently repeatable. */
     public void cancelOwnOrder(Long orderId, Long userId, Long tenantId) {
         // Ownership first: getForUser reports someone else's order as simply not found.
         Order order = getForUser(orderId, userId, tenantId);
@@ -620,7 +658,17 @@ public class OrderService {
      * failed. Orders that never reached PAID (AWAITING_PAYMENT, PAYMENT_FAILED) have nothing
      * captured, so those are cancelled directly with no refund call.
      */
-    @Transactional
+    /* Deliberately NOT @Transactional. A refund is a network call to Razorpay, and holding
+       a transaction across it holds a database connection across it too. Worse, the refund
+       claim has to commit BEFORE the call (see RefundLedger), which inside an outer
+       transaction means a second connection per concurrent cancel — with a pool of 10 in
+       production, ten simultaneous cancels would wait on each other until the 10s connection
+       timeout. That is not theoretical: it deadlocked the test pool of 4 immediately.
+
+       Nothing here needs atomicity across the gateway call. The claim is a single atomic
+       UPDATE and is what makes the refund exclusive; the local writes that follow are
+       independent, and if one fails the payment is already REFUNDED, which is visible and
+       recoverable rather than silently repeatable. */
     public void cancelOrder(Long orderId, Long tenantId, Long actorUserId, String reason) {
         Order order = getForTenant(orderId, tenantId);
         if (!order.getStatus().canTransitionTo(OrderStatus.CANCELLED)) {
@@ -630,6 +678,17 @@ public class OrderService {
 
         if (order.getStatus() == OrderStatus.PAID) {
             Payment payment = getPaymentForOrder(orderId, tenantId);
+            /* An earlier refund attempt whose outcome we never learned. Cancelling anyway
+               would quietly close the order while the student may or may not have their
+               money back, and the two possibilities need different actions. Refuse until a
+               human has settled it against Razorpay from the reconciliation screen.
+               Without this the CAPTURED check below simply skipped the refund and cancelled
+               the order regardless, which is the worst of the available behaviours. */
+            if (payment.getStatus() == PaymentStatus.REFUND_PENDING) {
+                throw new InvalidOrderStateException(
+                        "A refund for this order was attempted and its outcome is unresolved. "
+                                + "It needs reconciling before the order can be cancelled.");
+            }
             if (payment.getStatus() == PaymentStatus.CAPTURED) {
                 /* Claim the refund before calling the gateway, not after.
                    This used to read the status, see CAPTURED, and refund — check-then-act
@@ -646,11 +705,11 @@ public class OrderService {
                    cancelled but unpaid. That guarantee still holds, by rollback instead of
                    by ordering: this method is transactional, so if the gateway throws, the
                    claim is undone with everything else and the payment is CAPTURED again. */
-                if (!paymentDao.claimForRefund(payment.getId())) {
+                if (!refundLedger.claim(payment.getId())) {
                     throw new InvalidOrderStateException(
                             "This order is already being cancelled and refunded.");
                 }
-                paymentGateway.refund(payment.getRazorpayPaymentId(), payment.getAmount());
+                refundThroughGateway(payment);
             }
         }
 
@@ -694,7 +753,17 @@ public class OrderService {
      * <p>Gateway first, as in {@link #cancelOrder}: nothing in our database moves until
      * the money is actually on its way back.
      */
-    @Transactional
+    /* Deliberately NOT @Transactional. A refund is a network call to Razorpay, and holding
+       a transaction across it holds a database connection across it too. Worse, the refund
+       claim has to commit BEFORE the call (see RefundLedger), which inside an outer
+       transaction means a second connection per concurrent cancel — with a pool of 10 in
+       production, ten simultaneous cancels would wait on each other until the 10s connection
+       timeout. That is not theoretical: it deadlocked the test pool of 4 immediately.
+
+       Nothing here needs atomicity across the gateway call. The claim is a single atomic
+       UPDATE and is what makes the refund exclusive; the local writes that follow are
+       independent, and if one fails the payment is already REFUNDED, which is visible and
+       recoverable rather than silently repeatable. */
     public void refundOrder(Long orderId, Long tenantId, Long actorUserId, String reason) {
         Order order = getForTenant(orderId, tenantId);
         Payment payment = getPaymentForOrder(orderId, tenantId);
@@ -707,8 +776,13 @@ public class OrderService {
                     "Only a captured payment can be refunded; this one is " + payment.getStatus() + ".");
         }
 
-        paymentGateway.refund(payment.getRazorpayPaymentId(), payment.getAmount());
-        paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
+        // Same claim as the cancel path. Two admins pressing refund on the same order is
+        // every bit as real as two cancels, and this path had no protection at all.
+        if (!refundLedger.claim(payment.getId())) {
+            throw new InvalidOrderStateException(
+                    "A refund for this payment is already in progress or unresolved.");
+        }
+        refundThroughGateway(payment);
         auditService.record(actorUserId, tenantId, "Payment", payment.getId(), "REFUND_MANUAL",
                 PaymentStatus.CAPTURED, PaymentStatus.REFUNDED);
 

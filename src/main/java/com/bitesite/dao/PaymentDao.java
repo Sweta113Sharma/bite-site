@@ -29,7 +29,7 @@ public interface PaymentDao {
     void markVerified(Long id, String razorpayPaymentId, String razorpaySignature, PaymentStatus status);
 
     /**
-     * Claims this payment for refunding, atomically. Returns true only for the caller that
+     * Moves CAPTURED to REFUND_PENDING, atomically. Returns true only for the caller that
      * won; everyone else gets false and must not touch the gateway.
      *
      * <p>The claim is a conditional UPDATE, so the check and the act are one statement and

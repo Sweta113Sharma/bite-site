@@ -137,7 +137,7 @@ public class PaymentDaoImpl implements PaymentDao {
         // than racing it, and then finds the payment already refunded.
         return jdbcTemplate.update(
                 "UPDATE payments SET status = ? WHERE id = ? AND status = ?",
-                PaymentStatus.REFUNDED.name(), id, PaymentStatus.CAPTURED.name()) == 1;
+                PaymentStatus.REFUND_PENDING.name(), id, PaymentStatus.CAPTURED.name()) == 1;
     }
 
     @Override

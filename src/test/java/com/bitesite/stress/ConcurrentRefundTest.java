@@ -18,6 +18,7 @@ import com.bitesite.tenant.Tenant;
 import com.bitesite.tenant.TenantDao;
 import com.bitesite.tenant.TenantStatus;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +68,7 @@ class ConcurrentRefundTest {
     private static final int CONCURRENT_CANCELS = 8;
 
     static final AtomicInteger refundCalls = new AtomicInteger();
+    static volatile boolean gatewayTimesOut = false;
 
     @TestConfiguration
     static class CountingGateway {
@@ -92,6 +94,12 @@ class ConcurrentRefundTest {
                 @Override
                 public void refund(String gatewayPaymentId, BigDecimal amount) {
                     refundCalls.incrementAndGet();
+                    if (gatewayTimesOut) {
+                        // Razorpay processed it; we never heard back. The dangerous case.
+                        throw new com.bitesite.exception.PaymentGatewayException(
+                                "Could not process the refund — please try again.",
+                                new RuntimeException("read timed out"));
+                    }
                     try {
                         // Widens the check-then-act window to something a test can rely on.
                         Thread.sleep(150);
@@ -112,6 +120,8 @@ class ConcurrentRefundTest {
 
     private Long tenantId;
     private Long orderId;
+    private Long secondOutletId;
+    private Long studentId;
 
     @BeforeAll
     void seedOnePaidOrder() {
@@ -121,9 +131,12 @@ class ConcurrentRefundTest {
         tenantId = tenant.getId();
         Outlet outlet = outletDao.save(Outlet.builder().tenantId(tenantId)
                 .name("Refund Canteen").active(true).build());
+        secondOutletId = outletDao.save(Outlet.builder().tenantId(tenantId)
+                .name("Refund Canteen 2").active(true).build()).getId();
         User student = userDao.save(User.builder().tenantId(tenantId).name("Refund Student")
                 .email("refund-" + runId + "@test.local").passwordHash("x")
                 .role(Role.USER).activeRole(Role.USER).active(true).build());
+        studentId = student.getId();
 
         Order order = orderDao.createOrder(Order.builder()
                 .tenantId(tenantId).outletId(outlet.getId()).userId(student.getId())
@@ -135,6 +148,13 @@ class ConcurrentRefundTest {
         paymentDao.save(Payment.builder().tenantId(tenantId).orderId(orderId)
                 .razorpayOrderId("rp_order_" + runId).razorpayPaymentId("rp_pay_" + runId)
                 .amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build());
+    }
+
+    /** The counter is static because the stub gateway is a bean; reset it per test or one
+     *  test's refunds are counted against the next one's assertions. */
+    @BeforeEach
+    void resetCounter() {
+        refundCalls.set(0);
     }
 
     @Test
@@ -175,5 +195,60 @@ class ConcurrentRefundTest {
         assertThat(after.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
         assertThat(orderDao.findByIdAndTenantId(orderId, tenantId).orElseThrow().getStatus())
                 .isEqualTo(OrderStatus.CANCELLED);
+    }
+
+    /**
+     * The failure that actually costs money: the gateway succeeded and told us it did not.
+     *
+     * <p>A timeout must never return the payment to CAPTURED, because the money may well be
+     * gone. If it did, the next cancel would claim cleanly and refund it a second time — the
+     * exact bug this whole change exists to prevent, reached by a different door.
+     */
+    @Test
+    void aRefundThatTimesOutIsLeftFlaggedAndCannotBeRefundedAgain() throws Exception {
+        // A second order, so the first test's state is untouched.
+        Order order = orderDao.createOrder(Order.builder()
+                .tenantId(tenantId).outletId(secondOutletId).userId(studentId)
+                .tokenNo("TO-" + UUID.randomUUID().toString().substring(0, 6))
+                .totalAmount(new BigDecimal("60.00"))
+                .status(OrderStatus.PAID).items(List.of()).build());
+        orderDao.updateStatus(order.getId(), tenantId, OrderStatus.PAID);
+        paymentDao.save(Payment.builder().tenantId(tenantId).orderId(order.getId())
+                .razorpayOrderId("rp_o_" + UUID.randomUUID()).razorpayPaymentId("rp_p_" + UUID.randomUUID())
+                .amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build());
+
+        gatewayTimesOut = true;
+        int before = refundCalls.get();
+        try {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                    () -> orderService.cancelOrder(order.getId(), tenantId, null, "timeout case"))
+                    .isInstanceOf(RuntimeException.class);
+
+            Payment stuck = paymentDao.findByOrderId(order.getId(), tenantId).orElseThrow();
+            assertThat(stuck.getStatus())
+                    .as("a timed-out refund must NOT fall back to CAPTURED: the money may be gone, "
+                            + "and CAPTURED invites a second refund")
+                    .isEqualTo(PaymentStatus.REFUND_PENDING);
+            assertThat(stuck.isNeedsReconciliation())
+                    .as("an unknown outcome has to be visible to a human, not just logged")
+                    .isTrue();
+
+            // The order stays live, because we do not know the money moved.
+            assertThat(orderDao.findByIdAndTenantId(order.getId(), tenantId).orElseThrow().getStatus())
+                    .isEqualTo(OrderStatus.PAID);
+
+            // And a second attempt must not reach the gateway at all.
+            int afterFirst = refundCalls.get();
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                    () -> orderService.cancelOrder(order.getId(), tenantId, null, "second try"))
+                    .isInstanceOf(RuntimeException.class);
+            assertThat(refundCalls.get())
+                    .as("the gateway must not be asked a second time for a payment whose first "
+                            + "outcome is unresolved")
+                    .isEqualTo(afterFirst);
+        } finally {
+            gatewayTimesOut = false;
+        }
+        assertThat(refundCalls.get() - before).isEqualTo(1);
     }
 }
