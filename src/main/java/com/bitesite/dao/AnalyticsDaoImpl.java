@@ -135,26 +135,40 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
                 0
         ), args.toArray());
 
-        if (list.isEmpty()) {
-            return list;
+        java.util.Map<LocalDate, AnalyticsReport.DailyTrend> map = new java.util.HashMap<>();
+        for (AnalyticsReport.DailyTrend row : list) {
+            map.put(row.day(), row);
         }
 
-        BigDecimal maxGmv = list.stream()
+        List<AnalyticsReport.DailyTrend> allDays = new ArrayList<>();
+        LocalDate cur = filter.getFromDate();
+        LocalDate end = filter.getToDate();
+        while (!cur.isAfter(end)) {
+            AnalyticsReport.DailyTrend matched = map.get(cur);
+            if (matched != null) {
+                allDays.add(matched);
+            } else {
+                allDays.add(new AnalyticsReport.DailyTrend(cur, 0, BigDecimal.ZERO, BigDecimal.ZERO, 0));
+            }
+            cur = cur.plusDays(1);
+        }
+
+        BigDecimal maxGmv = allDays.stream()
                 .map(AnalyticsReport.DailyTrend::grossGmv)
                 .max(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
 
-        List<AnalyticsReport.DailyTrend> result = new ArrayList<>(list.size());
-        for (AnalyticsReport.DailyTrend item : list) {
+        List<AnalyticsReport.DailyTrend> result = new ArrayList<>(allDays.size());
+        for (AnalyticsReport.DailyTrend item : allDays) {
             int heightPercent = (maxGmv.compareTo(BigDecimal.ZERO) > 0)
                     ? item.grossGmv().multiply(new BigDecimal(100)).divide(maxGmv, 0, RoundingMode.HALF_UP).intValue()
-                    : 10;
+                    : 0;
             result.add(new AnalyticsReport.DailyTrend(
                     item.day(),
                     item.orderCount(),
                     item.grossGmv(),
                     item.platformRevenue(),
-                    Math.max(heightPercent, 8)
+                    heightPercent
             ));
         }
         return result;

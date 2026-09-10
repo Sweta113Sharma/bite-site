@@ -178,14 +178,33 @@
                                 <span class="material-symbols-outlined" style="font-size:32px;">info</span>
                                 <p class="mb-0 mt-2">No order data recorded in this date range.</p>
                             </div>
-                            <div th:if="${!#lists.isEmpty(report.dailyTrends)}" class="d-flex align-items-end gap-2 pt-3" style="height: 180px; overflow-x: auto;">
-                                <div th:each="d : ${report.dailyTrends}" class="d-flex flex-column align-items-center" style="flex: 1; min-width: 38px;">
-                                    <div class="small fw-bold mb-1" th:text="'₹' + ${#numbers.formatDecimal(d.grossGmv, 1, 0)}" style="font-size: 10px;">₹0</div>
-                                    <div th:title="${#temporals.format(d.day, 'dd MMM')} + ': ₹' + ${d.grossGmv} + ' (' + ${d.orderCount} + ' orders)'"
-                                         th:style="'height: ' + ${d.heightPercent} + '%;'"
-                                         class="w-100 bg-primary rounded-top border border-dark"
-                                         style="transition: height 0.3s ease;"></div>
-                                    <span class="small text-muted mt-2 text-nowrap" th:text="${#temporals.format(d.day, 'dd MMM')}" style="font-size: 10px;">Day</span>
+                            <div th:if="${!#lists.isEmpty(report.dailyTrends)}" style="height: 180px; display: flex; align-items: flex-end; gap: 8px; overflow-x: auto; padding-top: 10px;">
+                                <div th:each="d : ${report.dailyTrends}" style="flex: 1; min-width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%;">
+                                    <!-- Value on top (if > 0) -->
+                                    <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px; min-height: 16px; text-align: center;"
+                                         th:text="${d.grossGmv > 0} ? '₹' + ${#numbers.formatDecimal(d.grossGmv, 1, 0)} : ''"></div>
+
+                                    <!-- Bar Container with fixed height of 110px -->
+                                    <div style="height: 110px; width: 100%; display: flex; align-items: flex-end; justify-content: center; position: relative;">
+                                        <!-- Baseline track -->
+                                        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--color-ink);"></div>
+
+                                        <!-- Actual Bar -->
+                                        <div th:if="${d.grossGmv > 0}"
+                                             th:title="${#temporals.format(d.day, 'dd MMM')} + ': ₹' + ${d.grossGmv} + ' (' + ${d.orderCount} + ' orders)'"
+                                             th:style="'height: ' + ${Math.max(d.heightPercent, 12)} + '%;'"
+                                             style="width: 28px; max-width: 80%; background: var(--color-primary); border: 2px solid var(--color-ink); box-shadow: 2px -2px 0 var(--color-ink); border-radius: 4px 4px 0 0; transition: height 0.4s ease; z-index: 1;">
+                                        </div>
+
+                                        <!-- Empty day placeholder dot -->
+                                        <div th:if="${d.grossGmv == 0}"
+                                             th:title="${#temporals.format(d.day, 'dd MMM')} + ': 0 orders'"
+                                             style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-ink-muted); margin-bottom: -3px; z-index: 1;">
+                                        </div>
+                                    </div>
+
+                                    <!-- Date label at bottom -->
+                                    <span class="small text-muted mt-2 text-nowrap" style="font-size: 11px; font-weight: 500;" th:text="${#temporals.format(d.day, 'dd MMM')}">Day</span>
                                 </div>
                             </div>
                         </div>
@@ -200,19 +219,45 @@
                             <span class="small text-muted">Kitchen Staffing Peak</span>
                         </div>
                         <div class="card-body p-3">
-                            <div class="d-flex align-items-end gap-1 pt-3" style="height: 180px;">
-                                <div th:each="h : ${report.hourlyDemands}" class="d-flex flex-column align-items-center" style="flex: 1;">
-                                    <div class="small text-muted mb-1" th:text="${h.orderCount}" style="font-size: 9px;" th:if="${h.orderCount > 0}">0</div>
-                                    <div th:title="${h.hour} + ':00 — ' + ${h.orderCount} + ' orders (₹' + ${h.grossGmv} + ')'"
-                                         th:style="'height: ' + ${h.heightPercent} + '%;'"
-                                         th:classappend="${h.hour >= 12 and h.hour <= 14} ? 'bg-warning border border-dark' : 'bg-dark'"
-                                         class="w-100 rounded-top"
-                                         style="transition: height 0.3s ease;"></div>
-                                    <span class="small text-muted mt-2" th:text="${h.hour}" style="font-size: 10px;">12</span>
+                            <div style="height: 180px; display: flex; align-items: flex-end; gap: 4px; padding-top: 10px;">
+                                <div th:each="h : ${report.hourlyDemands}" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%;">
+                                    <!-- Order count on top -->
+                                    <div style="font-size: 10px; font-weight: bold; margin-bottom: 4px; min-height: 16px;"
+                                         th:text="${h.orderCount > 0} ? ${h.orderCount} : ''"></div>
+
+                                    <!-- Bar track of fixed height 110px -->
+                                    <div style="height: 110px; width: 100%; display: flex; align-items: flex-end; justify-content: center; position: relative;">
+                                        <!-- Baseline -->
+                                        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--color-ink);"></div>
+
+                                        <!-- Peak rush hours (12:00-14:00) with orders -->
+                                        <div th:if="${h.hour >= 12 and h.hour <= 14 and h.orderCount > 0}"
+                                             th:title="${h.hour} + ':00 — ' + ${h.orderCount} + ' orders (₹' + ${h.grossGmv} + ')'"
+                                             th:style="'height: ' + ${Math.max(h.heightPercent, 15)} + '%;'"
+                                             style="width: 22px; max-width: 90%; background: var(--color-accent-tint); border: 2px solid var(--color-ink); box-shadow: 2px -2px 0 var(--color-ink); border-radius: 4px 4px 0 0; z-index: 1;">
+                                        </div>
+
+                                        <!-- Normal hours with orders -->
+                                        <div th:if="${(h.hour < 12 or h.hour > 14) and h.orderCount > 0}"
+                                             th:title="${h.hour} + ':00 — ' + ${h.orderCount} + ' orders (₹' + ${h.grossGmv} + ')'"
+                                             th:style="'height: ' + ${Math.max(h.heightPercent, 15)} + '%;'"
+                                             style="width: 22px; max-width: 90%; background: var(--color-ink); border: 2px solid var(--color-ink); border-radius: 4px 4px 0 0; z-index: 1;">
+                                        </div>
+
+                                        <!-- Empty hours track -->
+                                        <div th:if="${h.orderCount == 0}"
+                                             th:title="${h.hour} + ':00 — 0 orders'"
+                                             th:style="${h.hour >= 12 and h.hour <= 14} ? 'background: rgba(255, 201, 24, 0.25);' : 'background: rgba(0,0,0,0.06);'"
+                                             style="width: 14px; height: 6px; border-radius: 2px 2px 0 0; z-index: 1;">
+                                        </div>
+                                    </div>
+
+                                    <!-- Hour label at bottom -->
+                                    <span class="small text-muted mt-2" style="font-size: 10px; font-weight: 500;" th:text="${h.hour}">12</span>
                                 </div>
                             </div>
                             <div class="mt-2 text-center small text-muted">
-                                <span class="badge bg-warning text-dark border border-dark me-1">■</span> 12:00–14:00 Lunch Rush
+                                <span class="badge text-dark border border-dark me-1" style="background: var(--color-accent-tint);">■</span> 12:00–14:00 Lunch Rush
                                 <span class="badge bg-dark text-white ms-2 me-1">■</span> Normal Operating Hours
                             </div>
                         </div>
@@ -320,7 +365,10 @@
                                 </thead>
                                 <tbody>
                                     <tr th:if="${#lists.isEmpty(report.slowMovingItems)}">
-                                        <td colspan="4" class="text-center py-3 text-muted">No data available.</td>
+                                        <td colspan="4" class="text-center py-3 text-muted">
+                                            <span class="material-symbols-outlined align-middle me-1">check_circle</span>
+                                            No menu stagnation detected. All ordered items are performing actively.
+                                        </td>
                                     </tr>
                                     <tr th:each="item : ${report.slowMovingItems}">
                                         <td class="fw-bold" th:text="${item.itemName}">Item</td>

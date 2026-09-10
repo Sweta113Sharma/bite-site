@@ -38,6 +38,21 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 ? (paidOrders * 100.0) / totalAttempts
                 : 100.0;
 
+        var topSelling = analyticsDao.fetchTopSellingItems(filter, 10);
+        var rawSlowMoving = analyticsDao.fetchSlowMovingItems(filter, 10);
+
+        // When there are 5 or fewer items ordered, don't just reverse the bestsellers list;
+        // only show items as slow movers if they were not already highlighted as top sellers.
+        var slowMoving = rawSlowMoving;
+        if (topSelling.size() <= 5) {
+            java.util.Set<Long> topIds = topSelling.stream()
+                    .map(AnalyticsReport.MenuItemVelocity::menuItemId)
+                    .collect(java.util.stream.Collectors.toSet());
+            slowMoving = rawSlowMoving.stream()
+                    .filter(item -> !topIds.contains(item.menuItemId()))
+                    .toList();
+        }
+
         return AnalyticsReport.builder()
                 .fromDate(filter.getFromDate())
                 .toDate(filter.getToDate())
@@ -56,8 +71,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .dailyTrends(analyticsDao.fetchDailyTrends(filter))
                 .hourlyDemands(analyticsDao.fetchHourlyDemands(filter))
                 .canteenPerformances(analyticsDao.fetchCanteenPerformances(filter))
-                .topSellingItems(analyticsDao.fetchTopSellingItems(filter, 10))
-                .slowMovingItems(analyticsDao.fetchSlowMovingItems(filter, 10))
+                .topSellingItems(topSelling)
+                .slowMovingItems(slowMoving)
                 .build();
     }
 
