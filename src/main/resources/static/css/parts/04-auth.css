@@ -119,7 +119,6 @@
     line-height: 1;
 }
 .field__toggle:hover, .field__toggle:focus-visible { color: var(--color-ink); }
-.field__toggle i { font-size: 1.15rem; }
 
 /* Select gets the same underline treatment. Bootstrap's .form-select paints
    its own border, fill and arrow, so all three are stripped and the chevron
