@@ -1,6 +1,7 @@
 package com.bitesite.controller.student;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.config.BusinessClock;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.MenuItem;
 import com.bitesite.model.Outlet;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +46,7 @@ public class MenuBrowseController {
     private final OrderService orderService;
     private final OutletService outletService;
     private final Cart cart;
+    private final BusinessClock businessClock;
 
     @GetMapping
     public String browse(@AuthenticationPrincipal AppUserPrincipal principal,
@@ -146,8 +147,17 @@ public class MenuBrowseController {
         return "student/item-detail";
     }
 
+    /**
+     * Reads the canteen's clock, not the server's. {@code LocalTime.now()} here returned
+     * UTC in production, which greeted students in India five and a half hours behind —
+     * "Good afternoon" at 18:19.
+     */
     private String greeting() {
-        int hour = LocalTime.now().getHour();
+        return greetingFor(businessClock.time().getHour());
+    }
+
+    /** Split out from the clock so the wording is testable without standing up a request. */
+    static String greetingFor(int hour) {
         if (hour < 12) return "Good morning";
         if (hour < 17) return "Good afternoon";
         return "Good evening";

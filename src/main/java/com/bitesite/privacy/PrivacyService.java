@@ -8,6 +8,7 @@ import com.bitesite.model.Grievance;
 import com.bitesite.model.Order;
 import com.bitesite.model.User;
 import com.bitesite.service.AuditService;
+import com.bitesite.config.BusinessClock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +36,7 @@ public class PrivacyService {
     public static final String POLICY_VERSION = "2026-08-01";
 
     private final PrivacyDao privacyDao;
+    private final BusinessClock businessClock;
     private final UserDao userDao;
     private final OrderDao orderDao;
     private final GrievanceDao grievanceDao;
@@ -98,7 +100,7 @@ public class PrivacyService {
                 .toList();
 
         Map<String, Object> export = new LinkedHashMap<>();
-        export.put("exportedAt", java.time.LocalDateTime.now().toString());
+        export.put("exportedAt", businessClock.now().toString());
         export.put("policyVersion", POLICY_VERSION);
         export.put("profile", profile);
         export.put("notificationPreferences", Map.of(

@@ -1,5 +1,6 @@
 package com.bitesite.service;
 
+import com.bitesite.config.BusinessClock;
 import com.bitesite.dao.AnalyticsDao;
 import com.bitesite.dto.analytics.AnalyticsFilter;
 import com.bitesite.dto.analytics.AnalyticsReport;
@@ -10,7 +11,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,9 +30,18 @@ class AnalyticsServiceTest {
 
     private AnalyticsService analyticsService;
 
+    /**
+     * Pinned rather than live. The service reads the business clock (IST) while a test
+     * calling LocalDate.now() would read the runner's zone, so on a UTC CI machine the two
+     * disagree for the first five and a half hours of every day.
+     */
+    private static final LocalDate TODAY = LocalDate.of(2026, 9, 10);
+
     @BeforeEach
     void setUp() {
-        analyticsService = new AnalyticsServiceImpl(analyticsDao);
+        BusinessClock clock = new BusinessClock(
+                Clock.fixed(Instant.parse("2026-09-10T12:49:00Z"), ZoneId.of("Asia/Kolkata")));
+        analyticsService = new AnalyticsServiceImpl(analyticsDao, clock);
     }
 
     @Test
@@ -58,8 +71,8 @@ class AnalyticsServiceTest {
         AnalyticsReport report = analyticsService.generateReport(filter);
 
         assertThat(report).isNotNull();
-        assertThat(report.getFromDate()).isEqualTo(LocalDate.now().minusDays(6));
-        assertThat(report.getToDate()).isEqualTo(LocalDate.now());
+        assertThat(report.getFromDate()).isEqualTo(TODAY.minusDays(6));
+        assertThat(report.getToDate()).isEqualTo(TODAY);
         assertThat(report.getTotalOrders()).isEqualTo(10L);
         assertThat(report.getGrossGmv()).isEqualByComparingTo("1500.00");
         assertThat(report.getPlatformRevenue()).isEqualByComparingTo("150.00");

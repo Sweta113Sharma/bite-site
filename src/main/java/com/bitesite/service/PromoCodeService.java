@@ -1,6 +1,7 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.PromoCodeDao;
+import com.bitesite.config.BusinessClock;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.PromoCode;
@@ -10,7 +11,6 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -32,6 +32,7 @@ import java.util.List;
 public class PromoCodeService {
 
     private final PromoCodeDao promoCodeDao;
+    private final BusinessClock businessClock;
     private final AuditService auditService;
 
     /** A validated code and what it is worth on this particular order. */
@@ -61,7 +62,10 @@ public class PromoCodeService {
         if (!code.isActive()) {
             throw new BusinessException("That code is no longer active.");
         }
-        if (!code.withinWindow(LocalDateTime.now())) {
+        // The canteen's clock, not the server's. valid_from/valid_until are wall-clock
+        // times an admin typed while thinking in IST, so judging them against a UTC now
+        // left an expired code working for another five and a half hours.
+        if (!code.withinWindow(businessClock.now())) {
             throw new BusinessException("That code has expired or has not started yet.");
         }
         if (!code.appliesTo(tenantId, outletId)) {

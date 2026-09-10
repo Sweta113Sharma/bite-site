@@ -1,5 +1,6 @@
 package com.bitesite.service;
 
+import com.bitesite.config.BusinessClock;
 import com.bitesite.dao.OtpCodeDao;
 import com.bitesite.dao.UserDao;
 import com.bitesite.model.OtpChannel;
@@ -13,7 +14,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.security.MessageDigest;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.HexFormat;
 import java.util.Optional;
 
@@ -32,9 +35,18 @@ class OtpServiceTest {
 
     private OtpService service;
 
+    /**
+     * Pinned, and shared with the assertions below. The service reads the business clock
+     * (IST); a test building expiry times from the runner's own {@code CLOCK.now()}
+     * disagrees with it by 5.5 hours on a UTC CI machine, which would read every code as
+     * already expired.
+     */
+    private static final BusinessClock CLOCK = new BusinessClock(
+            Clock.fixed(Instant.parse("2026-09-10T12:49:00Z"), ZoneId.of("Asia/Kolkata")));
+
     @BeforeEach
     void setUp() {
-        service = new OtpService(otpCodeDao, userDao, emailService, smsService);
+        service = new OtpService(otpCodeDao, userDao, emailService, smsService, CLOCK);
     }
 
     private static String hash(String code) throws Exception {
@@ -66,7 +78,7 @@ class OtpServiceTest {
         verify(otpCodeDao).save(captor.capture());
         assertThat(captor.getValue().getUserId()).isEqualTo(7L);
         assertThat(captor.getValue().getChannel()).isEqualTo(OtpChannel.EMAIL);
-        assertThat(captor.getValue().getExpiresAt()).isAfter(LocalDateTime.now());
+        assertThat(captor.getValue().getExpiresAt()).isAfter(CLOCK.now());
 
         ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);
         verify(emailService).sendOtpEmail(eq("student@demo.local"), eq("A Student"), codeCaptor.capture());
@@ -123,7 +135,7 @@ class OtpServiceTest {
     void verifyReturnsFalseForAnExpiredCode() throws Exception {
         when(otpCodeDao.findLatest(1L, OtpChannel.EMAIL)).thenReturn(Optional.of(OtpCode.builder()
                 .id(5L).userId(1L).channel(OtpChannel.EMAIL).codeHash(hash("123456"))
-                .expiresAt(LocalDateTime.now().minusMinutes(1)).build()));
+                .expiresAt(CLOCK.now().minusMinutes(1)).build()));
 
         assertThat(service.verify(1L, OtpChannel.EMAIL, "123456")).isFalse();
         verify(userDao, never()).markEmailVerified(any());
@@ -133,7 +145,7 @@ class OtpServiceTest {
     void verifyReturnsFalseAndIncrementsAttemptsForAWrongCode() throws Exception {
         when(otpCodeDao.findLatest(1L, OtpChannel.EMAIL)).thenReturn(Optional.of(OtpCode.builder()
                 .id(5L).userId(1L).channel(OtpChannel.EMAIL).codeHash(hash("123456"))
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(0).build()));
+                .expiresAt(CLOCK.now().plusMinutes(5)).attempts(0).build()));
 
         assertThat(service.verify(1L, OtpChannel.EMAIL, "000000")).isFalse();
         verify(otpCodeDao).incrementAttempts(5L);
@@ -144,7 +156,7 @@ class OtpServiceTest {
     void verifyReturnsFalseOnceTooManyWrongAttemptsHaveBeenMade() throws Exception {
         when(otpCodeDao.findLatest(1L, OtpChannel.EMAIL)).thenReturn(Optional.of(OtpCode.builder()
                 .id(5L).userId(1L).channel(OtpChannel.EMAIL).codeHash(hash("123456"))
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(5).build()));
+                .expiresAt(CLOCK.now().plusMinutes(5)).attempts(5).build()));
 
         assertThat(service.verify(1L, OtpChannel.EMAIL, "123456")).isFalse();
         verify(otpCodeDao, never()).incrementAttempts(any());
@@ -155,7 +167,7 @@ class OtpServiceTest {
     void verifyMarksEmailVerifiedAndConsumesTheCodeOnAMatch() throws Exception {
         when(otpCodeDao.findLatest(3L, OtpChannel.EMAIL)).thenReturn(Optional.of(OtpCode.builder()
                 .id(9L).userId(3L).channel(OtpChannel.EMAIL).codeHash(hash("654321"))
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(0).build()));
+                .expiresAt(CLOCK.now().plusMinutes(5)).attempts(0).build()));
 
         assertThat(service.verify(3L, OtpChannel.EMAIL, "654321")).isTrue();
         verify(userDao).markEmailVerified(3L);
@@ -167,7 +179,7 @@ class OtpServiceTest {
     void verifyMarksPhoneVerifiedOnAMatch() throws Exception {
         when(otpCodeDao.findLatest(3L, OtpChannel.PHONE)).thenReturn(Optional.of(OtpCode.builder()
                 .id(9L).userId(3L).channel(OtpChannel.PHONE).codeHash(hash("654321"))
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(0).build()));
+                .expiresAt(CLOCK.now().plusMinutes(5)).attempts(0).build()));
 
         assertThat(service.verify(3L, OtpChannel.PHONE, "654321")).isTrue();
         verify(userDao).markPhoneVerified(3L);
@@ -231,7 +243,7 @@ class OtpServiceTest {
     void verifyPasswordResetReturnsFalseForAnExpiredCode() throws Exception {
         when(otpCodeDao.findLatest(1L, OtpChannel.PWRESET)).thenReturn(Optional.of(OtpCode.builder()
                 .id(5L).userId(1L).channel(OtpChannel.PWRESET).codeHash(hash("123456"))
-                .expiresAt(LocalDateTime.now().minusMinutes(1)).build()));
+                .expiresAt(CLOCK.now().minusMinutes(1)).build()));
 
         assertThat(service.verifyPasswordReset(1L, "123456")).isFalse();
     }
@@ -240,7 +252,7 @@ class OtpServiceTest {
     void verifyPasswordResetIncrementsAttemptsForAWrongCode() throws Exception {
         when(otpCodeDao.findLatest(1L, OtpChannel.PWRESET)).thenReturn(Optional.of(OtpCode.builder()
                 .id(5L).userId(1L).channel(OtpChannel.PWRESET).codeHash(hash("123456"))
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(0).build()));
+                .expiresAt(CLOCK.now().plusMinutes(5)).attempts(0).build()));
 
         assertThat(service.verifyPasswordReset(1L, "000000")).isFalse();
         verify(otpCodeDao).incrementAttempts(5L);
@@ -250,7 +262,7 @@ class OtpServiceTest {
     void verifyPasswordResetStopsAfterTooManyWrongAttempts() throws Exception {
         when(otpCodeDao.findLatest(1L, OtpChannel.PWRESET)).thenReturn(Optional.of(OtpCode.builder()
                 .id(5L).userId(1L).channel(OtpChannel.PWRESET).codeHash(hash("123456"))
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(5).build()));
+                .expiresAt(CLOCK.now().plusMinutes(5)).attempts(5).build()));
 
         assertThat(service.verifyPasswordReset(1L, "123456")).isFalse();
         verify(otpCodeDao, never()).incrementAttempts(any());
@@ -260,7 +272,7 @@ class OtpServiceTest {
     void verifyPasswordResetConsumesTheCodeButDoesNotMarkAnythingVerified() throws Exception {
         when(otpCodeDao.findLatest(3L, OtpChannel.PWRESET)).thenReturn(Optional.of(OtpCode.builder()
                 .id(9L).userId(3L).channel(OtpChannel.PWRESET).codeHash(hash("654321"))
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(0).build()));
+                .expiresAt(CLOCK.now().plusMinutes(5)).attempts(0).build()));
 
         assertThat(service.verifyPasswordReset(3L, "654321")).isTrue();
         // Consumed, so the same code cannot be replayed to set the password a second time.
@@ -311,7 +323,7 @@ class OtpServiceTest {
     void verifyLoginOtpConsumesTheCodeSoItCannotBeReplayed() throws Exception {
         when(otpCodeDao.findLatest(3L, OtpChannel.LOGIN2FA)).thenReturn(Optional.of(OtpCode.builder()
                 .id(9L).userId(3L).channel(OtpChannel.LOGIN2FA).codeHash(hash("112233"))
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).attempts(0).build()));
+                .expiresAt(CLOCK.now().plusMinutes(5)).attempts(0).build()));
 
         assertThat(service.verifyLoginOtp(3L, "112233")).isTrue();
         verify(otpCodeDao).deleteByUserIdAndChannel(3L, OtpChannel.LOGIN2FA);

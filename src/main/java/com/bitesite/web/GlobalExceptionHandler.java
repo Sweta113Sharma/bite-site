@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.sentry.Sentry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.bitesite.config.BusinessClock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,6 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 
 /**
  * Single place every uncaught exception funnels through. API requests (path under
@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 public class GlobalExceptionHandler {
 
     private final ObjectMapper objectMapper;
+    private final BusinessClock businessClock;
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ModelAndView notFound(ResourceNotFoundException e, HttpServletRequest request, HttpServletResponse response)
@@ -90,7 +91,7 @@ public class GlobalExceptionHandler {
             response.setStatus(status.value());
             response.setContentType("application/json");
             objectMapper.writeValue(response.getWriter(),
-                    new ApiError(status.value(), status.getReasonPhrase(), message, LocalDateTime.now()));
+                    new ApiError(status.value(), status.getReasonPhrase(), message, businessClock.now()));
             return null;
         }
         ModelAndView mav = new ModelAndView("error/generic");

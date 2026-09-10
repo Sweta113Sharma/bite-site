@@ -5,6 +5,7 @@ import com.bitesite.dao.UserDao;
 import com.bitesite.model.OtpChannel;
 import com.bitesite.model.OtpCode;
 import com.bitesite.model.User;
+import com.bitesite.config.BusinessClock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +14,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.Optional;
 
@@ -33,6 +33,7 @@ public class OtpService {
     private final UserDao userDao;
     private final EmailService emailService;
     private final SmsService smsService;
+    private final BusinessClock businessClock;
 
     /** No-ops when SMTP isn't configured — the account was already created email-verified
      * in that case (see UserService.registerStudent). */
@@ -65,7 +66,7 @@ public class OtpService {
             return false;
         }
         OtpCode otp = found.get();
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
+        if (otp.getExpiresAt().isBefore(businessClock.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
             return false;
         }
         if (!otp.getCodeHash().equals(hash(submittedCode))) {
@@ -108,7 +109,7 @@ public class OtpService {
             return false;
         }
         OtpCode otp = found.get();
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
+        if (otp.getExpiresAt().isBefore(businessClock.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
             return false;
         }
         if (!otp.getCodeHash().equals(hash(submittedCode))) {
@@ -143,7 +144,7 @@ public class OtpService {
             return false;
         }
         OtpCode otp = found.get();
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
+        if (otp.getExpiresAt().isBefore(businessClock.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
             return false;
         }
         if (!otp.getCodeHash().equals(hash(submittedCode))) {
@@ -180,7 +181,7 @@ public class OtpService {
             return false;
         }
         OtpCode otp = found.get();
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
+        if (otp.getExpiresAt().isBefore(businessClock.now()) || otp.getAttempts() >= MAX_VERIFY_ATTEMPTS) {
             return false;
         }
         if (!otp.getCodeHash().equals(hash(submittedCode))) {
@@ -198,7 +199,10 @@ public class OtpService {
                 .userId(userId)
                 .channel(channel)
                 .codeHash(hash(code))
-                .expiresAt(LocalDateTime.now().plus(CODE_TTL))
+                // Written on the business clock, and read back on it in all four verify
+                // paths above. otp_codes.expires_at previously sat five and a half hours
+                // behind every other timestamp in a database whose own clock is IST.
+                .expiresAt(businessClock.now().plus(CODE_TTL))
                 .build());
         return code;
     }

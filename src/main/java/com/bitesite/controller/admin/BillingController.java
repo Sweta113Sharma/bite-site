@@ -1,6 +1,7 @@
 package com.bitesite.controller.admin;
 
 import com.bitesite.config.AppUserPrincipal;
+import com.bitesite.config.BusinessClock;
 import com.bitesite.config.PortalGuard;
 import com.bitesite.model.BillingSettings;
 import com.bitesite.model.Settlement;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +43,7 @@ import java.util.Map;
 public class BillingController {
 
     private final BillingService billingService;
+    private final BusinessClock businessClock;
     private final PlatformSettingsService platformSettingsService;
     private final SettlementService settlementService;
     private final TenantService tenantService;
@@ -99,7 +100,7 @@ public class BillingController {
         PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         SettlementService.Period selected = period != null ? period : SettlementService.Period.THIRTY_DAYS;
 
-        List<Settlement> rows = settlementService.forPeriod(selected, tenantId, LocalDate.now());
+        List<Settlement> rows = settlementService.forPeriod(selected, tenantId, businessClock.today());
 
         model.addAttribute("rows", rows);
         model.addAttribute("periods", SettlementService.Period.values());

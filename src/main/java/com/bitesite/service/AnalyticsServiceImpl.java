@@ -1,6 +1,7 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.AnalyticsDao;
+import com.bitesite.config.BusinessClock;
 import com.bitesite.dto.analytics.AnalyticsFilter;
 import com.bitesite.dto.analytics.AnalyticsReport;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 public class AnalyticsServiceImpl implements AnalyticsService {
 
     private final AnalyticsDao analyticsDao;
+    private final BusinessClock businessClock;
 
     @Override
     public AnalyticsReport generateReport(AnalyticsFilter filter) {
@@ -77,7 +79,9 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     }
 
     private void resolveDates(AnalyticsFilter filter) {
-        LocalDate today = LocalDate.now();
+        // Rolls at Indian midnight. On the server's UTC clock the first five and a
+        // half hours of every day still reported as yesterday.
+        LocalDate today = businessClock.today();
         String preset = filter.getRange();
         if (preset == null || preset.isBlank()) {
             preset = "7d";
