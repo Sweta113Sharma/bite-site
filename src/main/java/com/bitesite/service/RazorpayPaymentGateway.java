@@ -2,10 +2,12 @@ package com.bitesite.service;
 
 import com.bitesite.config.RazorpayProperties;
 import com.bitesite.dto.GatewayOrder;
+import com.bitesite.dto.GatewayRefund;
 import com.bitesite.exception.PaymentGatewayException;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import com.razorpay.Refund;
 import com.razorpay.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -105,5 +108,22 @@ public class RazorpayPaymentGateway implements PaymentGateway {
             log.error("Razorpay refund failed for payment {}", gatewayPaymentId, e);
             throw new PaymentGatewayException("Could not process the refund — please try again.", e);
         }
+    }
+
+    @Override
+    public List<GatewayRefund> refundsFor(String gatewayPaymentId) {
+        try {
+            List<Refund> refunds = client().payments.fetchAllRefunds(gatewayPaymentId);
+            return refunds.stream().map(RazorpayPaymentGateway::toGatewayRefund).toList();
+        } catch (RazorpayException e) {
+            log.error("Razorpay refund lookup failed for payment {}", gatewayPaymentId, e);
+            throw new PaymentGatewayException("Could not read refunds from the payment gateway", e);
+        }
+    }
+
+    /** The SDK hands back untyped JSON; {@code amount} is paise and may come as int or long. */
+    private static GatewayRefund toGatewayRefund(Refund refund) {
+        JSONObject json = refund.toJson();
+        return GatewayRefund.fromPaise(json.getString("id"), json.getLong("amount"), json.getString("status"));
     }
 }

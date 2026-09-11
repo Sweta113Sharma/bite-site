@@ -43,15 +43,19 @@ public class RefundLedger {
     private final PaymentDao paymentDao;
 
     /**
-     * Claims the payment for refunding and commits that immediately.
+     * Claims the payment for refunding and commits that immediately, along with what the
+     * refund is for, so that whoever settles it later knows what to do with the order.
      *
+     * @param cancellationReason written on the order once the refund is confirmed; null
+     *                           leaves the order alone (a refund of a COMPLETED order)
+     * @param requestedBy        the actor, for the audit log; null for the system
      * @return true if this caller won the claim and may call the gateway. False means
      *         another cancel already holds it, or the outcome of an earlier attempt is
      *         still unresolved — either way, do not touch the gateway.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public boolean claim(Long paymentId) {
-        return paymentDao.claimForRefund(paymentId);
+    public boolean claim(Long paymentId, String cancellationReason, Long requestedBy) {
+        return paymentDao.claimForRefund(paymentId, cancellationReason, requestedBy);
     }
 
     /**

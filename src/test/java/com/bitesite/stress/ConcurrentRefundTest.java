@@ -5,6 +5,7 @@ import com.bitesite.dao.OutletDao;
 import com.bitesite.dao.PaymentDao;
 import com.bitesite.dao.UserDao;
 import com.bitesite.dto.GatewayOrder;
+import com.bitesite.dto.GatewayRefund;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderStatus;
 import com.bitesite.model.Outlet;
@@ -69,6 +70,9 @@ class ConcurrentRefundTest {
 
     static final AtomicInteger refundCalls = new AtomicInteger();
     static volatile boolean gatewayTimesOut = false;
+    /** What Razorpay would say it holds if asked: gateway payment id -> refund. Written by
+     * the timing-out path, because a refund that times out is one that DID happen. */
+    static final java.util.Map<String, GatewayRefund> heldByGateway = new java.util.concurrent.ConcurrentHashMap<>();
 
     @TestConfiguration
     static class CountingGateway {
@@ -96,6 +100,10 @@ class ConcurrentRefundTest {
                     refundCalls.incrementAndGet();
                     if (gatewayTimesOut) {
                         // Razorpay processed it; we never heard back. The dangerous case.
+                        // It is recorded as held, because that is the whole point: the
+                        // money moved even though the caller was told it did not.
+                        heldByGateway.put(gatewayPaymentId,
+                                new GatewayRefund("rfnd_" + UUID.randomUUID(), amount, "processed"));
                         throw new com.bitesite.exception.PaymentGatewayException(
                                 "Could not process the refund — please try again.",
                                 new RuntimeException("read timed out"));
@@ -106,6 +114,12 @@ class ConcurrentRefundTest {
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
+                }
+
+                @Override
+                public List<GatewayRefund> refundsFor(String gatewayPaymentId) {
+                    GatewayRefund held = heldByGateway.get(gatewayPaymentId);
+                    return held == null ? List.of() : List.of(held);
                 }
             };
         }

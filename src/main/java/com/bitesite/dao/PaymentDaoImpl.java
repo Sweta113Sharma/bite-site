@@ -32,6 +32,10 @@ public class PaymentDaoImpl implements PaymentDao {
             .status(PaymentStatus.valueOf(rs.getString("status")))
             .needsReconciliation(rs.getBoolean("needs_reconciliation"))
             .reconciliationReason(rs.getString("reconciliation_reason"))
+            .refundAttemptedAt(rs.getObject("refund_attempted_at", LocalDateTime.class))
+            .refundRequestedBy(rs.getObject("refund_requested_by", Long.class))
+            .refundReason(rs.getString("refund_reason"))
+            .refundAttempts(rs.getInt("refund_attempts"))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .verifiedAt(rs.getObject("verified_at", LocalDateTime.class))
             .build();
@@ -66,6 +70,14 @@ public class PaymentDaoImpl implements PaymentDao {
     public Optional<Payment> findByRazorpayOrderId(String razorpayOrderId) {
         return jdbcTemplate.query(
                 "SELECT * FROM payments WHERE razorpay_order_id = ?", ROW_MAPPER, razorpayOrderId)
+                .stream().findFirst();
+    }
+
+    @Override
+    public Optional<Payment> findByRazorpayPaymentId(String razorpayPaymentId) {
+        // uq_payments_razorpay_payment makes this an index lookup.
+        return jdbcTemplate.query(
+                "SELECT * FROM payments WHERE razorpay_payment_id = ?", ROW_MAPPER, razorpayPaymentId)
                 .stream().findFirst();
     }
 
@@ -130,14 +142,46 @@ public class PaymentDaoImpl implements PaymentDao {
 
 
     @Override
-    public boolean claimForRefund(Long id) {
+    public boolean claimForRefund(Long id, String cancellationReason, Long requestedBy) {
         // CAPTURED in the WHERE clause is the whole mechanism: the first caller flips the
         // row and every later one matches nothing. Inside cancelOrder's transaction this
         // also takes a row lock, so a second cancel waits for the first to finish rather
         // than racing it, and then finds the payment already refunded.
         return jdbcTemplate.update(
+                "UPDATE payments SET status = ?, refund_reason = ?, refund_requested_by = ?, "
+                        + "refund_attempted_at = CURRENT_TIMESTAMP, refund_attempts = 1 "
+                        + "WHERE id = ? AND status = ?",
+                PaymentStatus.REFUND_PENDING.name(), cancellationReason, requestedBy,
+                id, PaymentStatus.CAPTURED.name()) == 1;
+    }
+
+    @Override
+    public boolean claimRefundRetry(Long id, int olderThanMinutes, int maxAttempts) {
+        // Same shape as the claim above: the age check, the cap and the bump are one
+        // statement, so the database picks the single caller that gets to send.
+        return jdbcTemplate.update(
+                "UPDATE payments SET refund_attempts = refund_attempts + 1, "
+                        + "refund_attempted_at = CURRENT_TIMESTAMP "
+                        + "WHERE id = ? AND status = ? AND refund_attempts < ? "
+                        + "AND refund_attempted_at <= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ? MINUTE)",
+                id, PaymentStatus.REFUND_PENDING.name(), maxAttempts, olderThanMinutes) == 1;
+    }
+
+    @Override
+    public boolean transitionStatus(Long id, PaymentStatus from, PaymentStatus to) {
+        return jdbcTemplate.update(
                 "UPDATE payments SET status = ? WHERE id = ? AND status = ?",
-                PaymentStatus.REFUND_PENDING.name(), id, PaymentStatus.CAPTURED.name()) == 1;
+                to.name(), id, from.name()) == 1;
+    }
+
+    @Override
+    public List<Payment> findRefundPendingOlderThan(int minutes) {
+        // idx_payments_status_created (V19) narrows this to the handful of pending rows.
+        return jdbcTemplate.query(
+                "SELECT * FROM payments WHERE status = ? "
+                        + "AND refund_attempted_at <= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ? MINUTE) "
+                        + "ORDER BY refund_attempted_at, id",
+                ROW_MAPPER, PaymentStatus.REFUND_PENDING.name(), minutes);
     }
 
     @Override

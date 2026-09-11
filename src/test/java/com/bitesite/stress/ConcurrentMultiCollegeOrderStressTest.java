@@ -126,6 +126,11 @@ class ConcurrentMultiCollegeOrderStressTest {
                 public void refund(String gatewayPaymentId, BigDecimal amountRupees) {
                     // no-op: nothing in this test cancels
                 }
+
+                @Override
+                public List<com.bitesite.dto.GatewayRefund> refundsFor(String gatewayPaymentId) {
+                    return List.of();
+                }
             };
         }
     }

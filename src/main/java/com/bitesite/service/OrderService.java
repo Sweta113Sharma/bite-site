@@ -390,8 +390,10 @@ public class OrderService {
      *
      * <p>So the payment is left in REFUND_PENDING and flagged for reconciliation rather than
      * rolled back to CAPTURED. Rolling back would erase the only evidence that we ever asked,
-     * and the next cancel would refund it again. Flagged and stuck is recoverable by a human
-     * with the Razorpay dashboard; a silent second refund is not recoverable at all.
+     * and the next cancel would refund it again. From REFUND_PENDING it is settled by
+     * {@link RefundReconciliationService}: Razorpay's {@code refund.processed} webhook lands
+     * whether or not our call heard the answer, and the sweep asks Razorpay directly for
+     * anything the webhook missed. A human only sees what neither could decide.
      */
     private void refundThroughGateway(Payment payment) {
         try {
@@ -676,18 +678,20 @@ public class OrderService {
                     "Cannot cancel an order in " + order.getStatus() + " status.");
         }
 
+        String explanation = normalizeReason(reason);
         if (order.getStatus() == OrderStatus.PAID) {
             Payment payment = getPaymentForOrder(orderId, tenantId);
             /* An earlier refund attempt whose outcome we never learned. Cancelling anyway
                would quietly close the order while the student may or may not have their
-               money back, and the two possibilities need different actions. Refuse until a
-               human has settled it against Razorpay from the reconciliation screen.
+               money back, and the two possibilities need different actions. Refuse until
+               Razorpay's webhook or the reconciliation sweep has settled it (see
+               RefundReconciliationService), which finishes this cancellation itself.
                Without this the CAPTURED check below simply skipped the refund and cancelled
                the order regardless, which is the worst of the available behaviours. */
             if (payment.getStatus() == PaymentStatus.REFUND_PENDING) {
                 throw new InvalidOrderStateException(
-                        "A refund for this order was attempted and its outcome is unresolved. "
-                                + "It needs reconciling before the order can be cancelled.");
+                        "A refund for this order is already in progress. The order will be "
+                                + "cancelled automatically once it is confirmed.");
             }
             if (payment.getStatus() == PaymentStatus.CAPTURED) {
                 /* Claim the refund before calling the gateway, not after.
@@ -700,12 +704,11 @@ public class OrderService {
                    claimForRefund is a conditional UPDATE, so the database picks exactly one
                    winner. Everyone else is refused here rather than at the counter.
 
-                   This does invert the old ordering, which deliberately moved money before
-                   touching our database so a failed refund could never leave an order
-                   cancelled but unpaid. That guarantee still holds, by rollback instead of
-                   by ordering: this method is transactional, so if the gateway throws, the
-                   claim is undone with everything else and the payment is CAPTURED again. */
-                if (!refundLedger.claim(payment.getId())) {
+                   The claim carries the cancellation reason and the actor. If the gateway
+                   call below times out, this method throws and the order stays PAID; the
+                   refund is then settled by Razorpay's webhook or the reconciliation sweep,
+                   and that is where the order finally gets cancelled, with this reason. */
+                if (!refundLedger.claim(payment.getId(), explanation, actorUserId)) {
                     throw new InvalidOrderStateException(
                             "This order is already being cancelled and refunded.");
                 }
@@ -714,7 +717,6 @@ public class OrderService {
         }
 
         OrderStatus previous = order.getStatus();
-        String explanation = normalizeReason(reason);
         orderDao.cancel(orderId, tenantId, explanation);
         auditService.record(actorUserId, tenantId, "Order", orderId, "STATUS_CANCELLED", previous, OrderStatus.CANCELLED);
         orderNotifier.notifyOrderUpdate(order.getUserId(), "Order cancelled",
@@ -776,9 +778,14 @@ public class OrderService {
                     "Only a captured payment can be refunded; this one is " + payment.getStatus() + ".");
         }
 
+        // Only orders that were never handed over stop being live. COMPLETED stays put,
+        // and a null reason on the claim is how a later settlement knows to leave it.
+        OrderStatus previous = order.getStatus();
+        String explanation = previous == OrderStatus.COMPLETED ? null : normalizeReason(reason);
+
         // Same claim as the cancel path. Two admins pressing refund on the same order is
         // every bit as real as two cancels, and this path had no protection at all.
-        if (!refundLedger.claim(payment.getId())) {
+        if (!refundLedger.claim(payment.getId(), explanation, actorUserId)) {
             throw new InvalidOrderStateException(
                     "A refund for this payment is already in progress or unresolved.");
         }
@@ -786,10 +793,8 @@ public class OrderService {
         auditService.record(actorUserId, tenantId, "Payment", payment.getId(), "REFUND_MANUAL",
                 PaymentStatus.CAPTURED, PaymentStatus.REFUNDED);
 
-        // Only orders that were never handed over stop being live. COMPLETED stays put.
-        OrderStatus previous = order.getStatus();
-        if (previous != OrderStatus.COMPLETED) {
-            orderDao.cancel(orderId, tenantId, normalizeReason(reason));
+        if (explanation != null) {
+            orderDao.cancel(orderId, tenantId, explanation);
             auditService.record(actorUserId, tenantId, "Order", orderId, "CANCELLED_BY_REFUND",
                     previous, OrderStatus.CANCELLED);
         }

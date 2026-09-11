@@ -1,8 +1,10 @@
 package com.bitesite.service;
 
 import com.bitesite.dto.GatewayOrder;
+import com.bitesite.dto.GatewayRefund;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Seam around the payment provider. {@link RazorpayPaymentGateway} is the only
@@ -24,4 +26,11 @@ public interface PaymentGateway {
      * completed — callers must not mark anything cancelled/refunded on our side unless
      * this returns normally. */
     void refund(String gatewayPaymentId, BigDecimal amountRupees);
+
+    /**
+     * Every refund the gateway holds against a payment, in any state. This is how a refund
+     * whose outcome we never learned gets settled: {@link #refund} can succeed while
+     * reporting failure, and the only way to know is to ask. Empty means the gateway has
+     * never been asked, or the request never reached it. */
+    List<GatewayRefund> refundsFor(String gatewayPaymentId);
 }

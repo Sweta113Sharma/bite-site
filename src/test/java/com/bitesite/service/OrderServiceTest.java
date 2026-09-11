@@ -315,13 +315,13 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
-        when(refundLedger.claim(1L)).thenReturn(true);
+        when(refundLedger.claim(eq(1L), any(), any())).thenReturn(true);
 
         orderService.cancelOrder(42L, TENANT_ID, USER_ID, "Ingredients ran out");
 
         // The claim moves CAPTURED -> REFUND_PENDING and commits separately; the gateway call
         // then settles it to REFUNDED. Both halves matter, so both are asserted.
-        verify(refundLedger).claim(1L);
+        verify(refundLedger).claim(eq(1L), eq("Ingredients ran out"), eq(USER_ID));
         verify(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
         verify(paymentDao).updateStatus(1L, PaymentStatus.REFUNDED);
         verify(orderDao).cancel(42L, TENANT_ID, "Ingredients ran out");
@@ -336,7 +336,7 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
-        when(refundLedger.claim(1L)).thenReturn(true);
+        when(refundLedger.claim(eq(1L), any(), any())).thenReturn(true);
         doThrow(new RuntimeException("gateway down")).when(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
 
         assertThatThrownBy(() -> orderService.cancelOrder(42L, TENANT_ID, USER_ID, "Kitchen closing early"))
@@ -364,7 +364,7 @@ class OrderServiceTest {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayPaymentId("rp_pay_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
-        when(refundLedger.claim(1L)).thenReturn(true);
+        when(refundLedger.claim(eq(1L), any(), any())).thenReturn(true);
 
         orderService.cancelOwnOrder(42L, USER_ID, TENANT_ID);
 
@@ -509,7 +509,7 @@ class OrderServiceTest {
         // the state machine, so cancelOrder can never refund this order.
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(orderInStatus(OrderStatus.PREPARING)));
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(paymentInStatus(PaymentStatus.CAPTURED)));
-        when(refundLedger.claim(anyLong())).thenReturn(true);
+        when(refundLedger.claim(anyLong(), any(), any())).thenReturn(true);
 
         orderService.refundOrder(42L, TENANT_ID, USER_ID, "outlet closed early");
 
@@ -525,7 +525,7 @@ class OrderServiceTest {
         // order keeps its status and only the payment changes.
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(orderInStatus(OrderStatus.COMPLETED)));
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(paymentInStatus(PaymentStatus.CAPTURED)));
-        when(refundLedger.claim(anyLong())).thenReturn(true);
+        when(refundLedger.claim(anyLong(), any(), any())).thenReturn(true);
 
         orderService.refundOrder(42L, TENANT_ID, USER_ID, "goodwill");
 
@@ -559,7 +559,7 @@ class OrderServiceTest {
     void refundOrderChangesNothingWhenTheGatewayFails() {
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(orderInStatus(OrderStatus.PREPARING)));
         when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(paymentInStatus(PaymentStatus.CAPTURED)));
-        when(refundLedger.claim(anyLong())).thenReturn(true);
+        when(refundLedger.claim(anyLong(), any(), any())).thenReturn(true);
         doThrow(new RuntimeException("gateway down")).when(paymentGateway).refund("rp_pay_1", new BigDecimal("60.00"));
 
         assertThatThrownBy(() -> orderService.refundOrder(42L, TENANT_ID, USER_ID, "outlet closed"))

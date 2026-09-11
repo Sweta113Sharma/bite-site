@@ -167,6 +167,12 @@ app:
     # now revives the order rather than stranding the money (OrderService.confirmPayment),
     # but not expiring it in the first place is the better outcome.
     payment-timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:20}
+  refund:
+    # How long a refund may sit in REFUND_PENDING before the sweep asks Razorpay about it.
+    # Long enough that the original HTTP call cannot still be in flight and the
+    # refund.processed webhook has had every chance to arrive first; short enough that a
+    # student is not left wondering. See RefundReconciliationService.
+    reconcile-after-minutes: ${REFUND_RECONCILE_AFTER_MINUTES:10}
   mail:
     # Left blank in dev: EmailService logs a warning and skips sending rather than
     # failing registration when SMTP isn't configured — see EmailService.

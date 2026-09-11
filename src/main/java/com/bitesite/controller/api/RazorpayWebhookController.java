@@ -1,8 +1,10 @@
 package com.bitesite.controller.api;
 
+import com.bitesite.dto.GatewayRefund;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.service.OrderService;
 import com.bitesite.service.PaymentGateway;
+import com.bitesite.service.RefundReconciliationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
@@ -20,6 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
  * closed browser tab or dropped connection must not be able to leave a paid order stuck
  * at AWAITING_PAYMENT. Both paths converge on the same idempotent
  * {@link OrderService#confirmPayment}.
+ *
+ * <p>Refunds need this more than captures do. A refund call can succeed and still throw, so
+ * the synchronous response is not proof of anything; {@code refund.processed} and
+ * {@code refund.failed} arrive whether or not our call heard the answer, and are what turn
+ * a timed-out refund into a settled one. See {@link RefundReconciliationService}.
  */
 @RestController
 @RequestMapping("/api/payments")
@@ -29,6 +36,7 @@ public class RazorpayWebhookController {
 
     private final PaymentGateway paymentGateway;
     private final OrderService orderService;
+    private final RefundReconciliationService refundReconciliationService;
 
     @PostMapping("/webhook")
     public ResponseEntity<String> webhook(@RequestBody String payload,
@@ -40,24 +48,52 @@ public class RazorpayWebhookController {
 
         JSONObject body = new JSONObject(payload);
         String event = body.optString("event", "");
-        if ("payment.captured".equals(event)) {
-            JSONObject entity = body.getJSONObject("payload").getJSONObject("payment").getJSONObject("entity");
-            String gatewayPaymentId = entity.getString("id");
-            String gatewayOrderId = entity.getString("order_id");
-            try {
-                orderService.confirmPayment(gatewayOrderId, gatewayPaymentId, null);
-            } catch (ResourceNotFoundException e) {
-                // A capture for a gateway order we have no local payment row for. Razorpay
-                // retries non-2xx responses on a schedule, and this will never succeed on a
-                // retry — the row is not going to appear — so answering 200 stops an
-                // indefinite retry loop while the log keeps the money visible for manual
-                // reconciliation. Anything else that throws still surfaces as a 500 and is
-                // retried, which is what we want for a transient fault.
-                log.error("Razorpay captured payment {} for gateway order {} with no matching payment row. "
-                        + "Acknowledged to stop retries; this needs manual reconciliation.",
-                        gatewayPaymentId, gatewayOrderId, e);
-            }
+        switch (event) {
+            case "payment.captured" -> captured(body);
+            case "refund.processed" -> refundReconciliationService.onRefundProcessed(
+                    paymentIdOf(body), refundOf(body));
+            case "refund.failed" -> refundReconciliationService.onRefundFailed(
+                    paymentIdOf(body), refundOf(body));
+            // Everything else Razorpay is configured to send, including refund.created,
+            // which says only that Razorpay accepted the request. Acknowledged so it is
+            // not retried; refund.processed is the event that means the money moved.
+            default -> log.debug("Ignoring Razorpay webhook event {}", event);
         }
         return ResponseEntity.ok("ok");
+    }
+
+    private void captured(JSONObject body) {
+        JSONObject entity = body.getJSONObject("payload").getJSONObject("payment").getJSONObject("entity");
+        String gatewayPaymentId = entity.getString("id");
+        String gatewayOrderId = entity.getString("order_id");
+        try {
+            orderService.confirmPayment(gatewayOrderId, gatewayPaymentId, null);
+        } catch (ResourceNotFoundException e) {
+            // A capture for a gateway order we have no local payment row for. Razorpay
+            // retries non-2xx responses on a schedule, and this will never succeed on a
+            // retry — the row is not going to appear — so answering 200 stops an
+            // indefinite retry loop while the log keeps the money visible for manual
+            // reconciliation. Anything else that throws still surfaces as a 500 and is
+            // retried, which is what we want for a transient fault.
+            log.error("Razorpay captured payment {} for gateway order {} with no matching payment row. "
+                    + "Acknowledged to stop retries; this needs manual reconciliation.",
+                    gatewayPaymentId, gatewayOrderId, e);
+        }
+    }
+
+    /** The refund entity's own {@code payment_id}, not the payment entity beside it: the
+     * two always agree, and this is the one the event is actually about. */
+    private static String paymentIdOf(JSONObject body) {
+        return refundEntity(body).getString("payment_id");
+    }
+
+    private static GatewayRefund refundOf(JSONObject body) {
+        JSONObject entity = refundEntity(body);
+        return GatewayRefund.fromPaise(entity.getString("id"), entity.getLong("amount"),
+                entity.getString("status"));
+    }
+
+    private static JSONObject refundEntity(JSONObject body) {
+        return body.getJSONObject("payload").getJSONObject("refund").getJSONObject("entity");
     }
 }
