@@ -44,15 +44,26 @@ public class PaymentDaoImpl implements PaymentDao {
     public Payment save(Payment payment) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
+            // razorpay_payment_id is written even though the live callers never have one
+            // yet: at checkout the student has not paid, so it is markVerified that fills
+            // it in later. Leaving it out of the INSERT meant a caller could set it on the
+            // object, watch the save succeed, and get a row without it — no error, no
+            // warning. Test fixtures did exactly that, and the rows they left behind were
+            // the reason the reconciliation sweep had to learn to skip payments with no
+            // gateway reference. A builder field that the database silently discards is a
+            // trap whoever meets it next has to debug from the data.
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO payments (tenant_id, order_id, razorpay_order_id, amount, status) "
-                            + "VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO payments (tenant_id, order_id, razorpay_order_id, razorpay_payment_id, "
+                            + "amount, status) VALUES (?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, payment.getTenantId());
             ps.setLong(2, payment.getOrderId());
             ps.setString(3, payment.getRazorpayOrderId());
-            ps.setBigDecimal(4, payment.getAmount());
-            ps.setString(5, payment.getStatus().name());
+            // Nullable, and uq_payments_razorpay_payment permits any number of NULLs in
+            // MySQL, so the ordinary "not paid yet" case still inserts cleanly.
+            ps.setString(4, payment.getRazorpayPaymentId());
+            ps.setBigDecimal(5, payment.getAmount());
+            ps.setString(6, payment.getStatus().name());
             return ps;
         }, keyHolder);
         payment.setId(keyHolder.getKey().longValue());
