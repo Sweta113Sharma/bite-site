@@ -102,6 +102,21 @@ AWAITING_PAYMENT → PAID → PREPARING → READY_FOR_PICKUP → COMPLETED
   - `RolePermissionSecurityTest`: Verifies role-based access controls
 - Security tests use separate test database to avoid interfering with development data
 
+## Work Ledger — required after every commit
+
+`LEDGER.md` is the project's running record of what changed and why.
+
+**Every commit gets an entry, written at the time of the commit.** Not batched up
+later, not "when there's time". The commit message says what changed; the ledger is the
+only place that says why it was worth doing and what it might have broken.
+
+Each entry carries: what changed, why, **how it was verified**, and what to watch out
+for (migrations, config changes, behaviour users will notice, known gaps). "Compiles"
+is not verification. Record what actually happened, including skipped steps and partial
+work. Never record a secret — that a keystore exists, never what unlocks it.
+
+The format and the full rules are at the top of `LEDGER.md`. Follow them.
+
 ### Important Notes
 - **JDK 21 required**: Newer JDKs break Lombok silently
 - **Seed data**: Opt-in via `FLYWAY_LOCATIONS` containing `classpath:db/seed`
