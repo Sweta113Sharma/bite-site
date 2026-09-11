@@ -52,6 +52,70 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-11
 
+### `9818614` — Store the gateway payment id that save() was handed and threw away
+**Date:** 2026-09-11 · **Scope:** 2 files · **Deployed:** yes
+
+**What changed**
+- `PaymentDaoImpl.save` now writes `razorpay_payment_id`. The INSERT named five columns
+  while `Payment` carries more, so a field set on the object and missing from the statement
+  was discarded silently: the save returned normally and the row came back with a null.
+
+**Why**
+- Production never noticed and could not: at checkout the student has not paid, so the field
+  is genuinely null there and `markVerified` fills it in later. Only test fixtures set one,
+  lost it, and left REFUND_PENDING rows with no gateway reference — which is what made the
+  sweep in `6a27504` need a branch for payments it can never ask Razorpay about. A real
+  defect was inferred from what was actually bad fixture data.
+
+**Verified by**
+- `PaymentRoundTripTest` against MySQL, **mutation-checked**: with the old INSERT restored it
+  fails `expected "pay_..." but was null`, exactly the silent drop.
+- Full suite: 517 tests, 0 failures.
+- End to end in the test database: the REFUND_PENDING row written after this change carries
+  its payment id; every null one predates it.
+- **Deployed 2026-09-11 07:15 UTC**, run 34573532049. Booted clean in 103.8s, no migration
+  needed, health UP. The health endpoint answered 500 for the first ~100s, which is the
+  cold-start window, not a fault: the platform's own startup probe succeeded at 119s.
+
+**Watch out for**
+- No production behaviour changes. The unique index tolerates any number of NULLs in MySQL,
+  so an ordinary unpaid row inserts exactly as before. This closes a trap, it does not fix a
+  live bug.
+- Eight REFUND_PENDING rows with a NULL payment id remain in `bitesite_test_db` from before
+  the fix. Harmless, but the sweep logs a warning for each on every test run.
+
+### `cb56557` — Show the admin why a payment is flagged, and stop telling them to refund it twice
+**Date:** 2026-09-11 · **Scope:** 1 file · **Deployed:** yes (2026-09-11 06:55 UTC, run 34571928519)
+
+**What changed**
+- `reconciliation_reason` is rendered on each flagged row. It was written on every flagged
+  payment and displayed on none of them, so the screen said "3 payments need attention" and
+  nothing else.
+- The red banner no longer tells an admin to refund every flagged payment in the Razorpay
+  dashboard "then clear it here". Both halves were wrong: nothing could be cleared here
+  (`clearReconciliation` has never had a caller), and since V34 the list also holds refunds
+  already in flight, where refunding again is the double refund the whole refund path exists
+  to prevent.
+- REFUND_PENDING gets an amber badge rather than the same grey as CREATED, and the filter
+  reads "Needs attention" rather than "Awaiting refund".
+
+**Why**
+- This screen is where every unresolved refund ends up, and the design in `6a27504` leans on
+  a human reading it. It was the one place saying nothing useful about them, and its one
+  instruction could cost a student their money twice.
+
+**Verified by**
+- `everyAdminAndTechManagerPageRenders` covers `/admin/payments` and `?needsRefund=true`, and
+  the test database holds flagged REFUND_PENDING rows, so the new branches actually render.
+- Full suite: 515 tests, 0 failures. Deployed, health UP, `/admin/payments` returns 302 to
+  login rather than a 500.
+- **This boot hit the Burstable-tier flakiness and survived it**: Flyway logged
+  `Connection error: Communications link failure` at 06:57:23, retried, and reached
+  "Schema is up to date" eleven seconds later. Startup took 139s against the usual ~109s.
+  The retry safety net is doing real work, not sitting idle.
+- **Not seen in a browser.** No browser runs in this environment, so the wording and layout
+  are unreviewed by eye.
+
 ### `6a27504` — Settle a refund from Razorpay's own record instead of waiting for a human
 **Date:** 2026-09-11 · **Scope:** 17 files · **Deployed:** yes
 
