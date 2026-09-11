@@ -21,9 +21,11 @@
     <!--/* Always offered, not only when non-zero: knowing the number is zero is the point
          of looking. */-->
     <div class="mb-3">
+        <!--/* "Needs attention" rather than "Awaiting refund": since V34 this set also holds
+             refunds already in flight, which are the opposite of awaiting one. */-->
         <a th:unless="${needsRefund}" class="btn btn-sm btn-outline-secondary"
            th:href="@{/admin/payments(needsRefund=true)}">
-            Awaiting refund<span class="badge bg-danger ms-2" th:if="${refundCount > 0}" th:text="${refundCount}">0</span>
+            Needs attention<span class="badge bg-danger ms-2" th:if="${refundCount > 0}" th:text="${refundCount}">0</span>
             <span class="ms-2" th:if="${refundCount == 0}">(none)</span>
         </a>
         <a th:if="${needsRefund}" class="btn btn-sm btn-outline-secondary" th:href="@{/admin/payments}">
@@ -31,15 +33,31 @@
         </a>
     </div>
 
+    <!--/* This used to say "refund each one in the Razorpay dashboard, then clear it here".
+         Both halves became wrong. Nothing could be cleared here — clearReconciliation had no
+         caller — and since V34 this list also holds refunds that are already in flight, where
+         refunding again is exactly the double refund the whole refund path exists to prevent.
+         The reason on each row is what says which case it is, so the instruction is now to
+         read it. */-->
     <div class="alert alert-danger" th:if="${needsRefund and refundCount > 0}">
-        These payments were captured against an order that could not be honoured — the
-        student was charged and got nothing. Each one needs refunding in the Razorpay
-        dashboard, then clearing here.
+        <p class="mb-2"><strong>Read the reason on each row first.</strong> These are not all the
+            same problem, and two of them want opposite actions.</p>
+        <ul class="mb-0 small">
+            <li><strong>CAPTURED</strong> — money taken against an order that could not be
+                honoured. The student was charged and got nothing. Refund it from the
+                <a th:href="@{/admin/support}">support desk</a>.</li>
+            <li><strong>REFUND_PENDING</strong> — a refund was asked for and its outcome is not
+                known yet. <strong>Do not refund it again</strong>: it may already have gone
+                through. These normally settle themselves within about ten minutes, either when
+                Razorpay's webhook confirms or when the reconciliation sweep asks. Anything still
+                sitting here after that has been checked at least three times and wants a look at
+                the Razorpay dashboard before anyone touches it.</li>
+        </ul>
     </div>
     <div class="state-panel" th:if="${needsRefund and refundCount == 0}">
         <div th:replace="~{fragments/state :: medallion('check_circle','good')}"></div>
-        <h4>Nothing awaiting a refund</h4>
-        <p>Every captured payment is attached to an order.</p>
+        <h4>Nothing needs attention</h4>
+        <p>No payment is stranded, and no refund is unresolved.</p>
     </div>
 
     <p class="text-muted small">
@@ -62,8 +80,16 @@
                     <span class="badge"
                           th:classappend="${p.status.name() == 'CAPTURED'} ? 'bg-success' :
                                           (${p.status.name() == 'REFUNDED'} ? 'bg-info text-dark' :
-                                          (${p.status.name() == 'FAILED'} ? 'bg-danger' : 'bg-secondary'))"
+                                          (${p.status.name() == 'REFUND_PENDING'} ? 'bg-warning text-dark' :
+                                          (${p.status.name() == 'FAILED'} ? 'bg-danger' : 'bg-secondary')))"
                           th:text="${p.status}">STATUS</span>
+                    <!--/* The reason was written on every flagged payment and displayed on none
+                         of them, which left this screen saying "something is wrong with 3
+                         payments" and nothing more. It is the only thing on the row that says
+                         what happened and what to do about it. */-->
+                    <div class="small text-muted mt-1" style="max-width:32rem"
+                         th:if="${p.needsReconciliation and p.reconciliationReason != null}"
+                         th:text="${p.reconciliationReason}">why</div>
                 </td>
                 <td class="small text-muted" th:text="${#temporals.format(p.createdAt,'dd MMM HH:mm')}">date</td>
             </tr>
