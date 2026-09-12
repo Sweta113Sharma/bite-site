@@ -14,6 +14,13 @@ HELP.md
 # Local scratch / session files
 sj.txt
 orders2.html
+
+# Claude Code tooling, per machine: skills are installed locally (symlinks into .agents/),
+# settings.local.json is per-user permissions. Shared conventions live in CLAUDE.md.
+.claude/settings.local.json
+.claude/skills/
+.agents/
+skills-lock.json
 uploads/*
 !uploads/.gitkeep
 
