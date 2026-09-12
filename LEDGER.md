@@ -50,6 +50,95 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ---
 
+## 2026-09-12
+
+### `0e43b8e` — Re-encode every upload as WebP, and give each canteen its own logo
+**Date:** 2026-09-12 · **Scope:** 23 files · **Deployed:** yes (2026-09-12 08:11 UTC, run 34682555084)
+
+**What changed**
+- Every image upload (tenant logo, menu photo, and the new canteen logo) is decoded,
+  EXIF-rotated, resized and stored as lossy WebP by `ImageUploadProcessor`, on both storage
+  backends. Logos cap at 512px on the long edge, menu photos at 1600px. Input accepted is
+  anything ImageIO can decode (PNG, JPEG, GIF, BMP, WebP) up to 5MB, sniffed from the bytes;
+  the old client-Content-Type allowlist and 2MB cap are gone with `ImageUploadValidation`.
+- A canteen manager can upload the canteen's own logo from Outlet settings (V35 adds
+  `outlets.logo_path`). Students see it on the canteen picker card and in the menu hero in
+  place of the "BITE SITE" sticker. Audited as `LOGO_UPLOAD` / `LOGO_REMOVE`.
+- A rejected logo shows as a notice on the settings page with the other fields already
+  saved, rather than dropping the manager on the global error page.
+
+**Why**
+- Nothing optimised menu images at all. The bytes a manager picked were the bytes every
+  student downloaded on every page view (the one local sample: a 374px thumbnail as a
+  254KB PNG), and `/uploads/**` is served `no-store`, so that cost repeats per visit.
+- Decoding and re-encoding is also a stronger upload check than a header allowlist: a
+  polyglot cannot survive the round trip, and a decompression-bomb PNG is refused from its
+  header (24MP cap) before any pixels are read.
+- EXIF orientation had to come along: browsers rotate the original for display, but WebP
+  carries no tag, so without it every portrait phone photo would now be stored sideways.
+
+**Verified by**
+- 540 tests, 0 failures, locally and in CI on Linux x64 (run 34682555136). The CI pass is
+  the proof that the bundled native libwebp loads on the platform production runs on:
+  `ImageUploadProcessorTest` exercises the real encoder with hand-built EXIF-6 and EXIF-3
+  JPEGs, a header-only 20000×20000 PNG, an alpha PNG, and truncated PNG/GIF/BMP files.
+- Driven with curl against the running app as the seeded manager and student. 800×800
+  alpha PNG logo → 512×512 WebP, 5.5KB, served `image/webp`; fake PNG → red notice, hours
+  still saved; remove → NULL and the sticker returns; BMP accepted; 1200×600 EXIF-6 JPEG
+  stored upright at 600×1200; 3000×2000 JPEG → 1600×1067. Picker JSON carries `logoPath`.
+- **Deployed 2026-09-12 08:11 UTC**, run 34682555084. V35 applied in 265ms, no Flyway
+  retries needed, started in 128.8s, health UP, `_success.log` for the day and no failure
+  log. The new CSS bundle hash is being served; the first fetch during the swap returned
+  the old container's hash and a 500 for the bundle, which is the documented swap window.
+- **Not exercised in production:** no upload was made against the live site (that would
+  put a test image into a real canteen), so the Cloudinary path has run only through the
+  same `uploader().upload(byte[])` call the old code already made with `file.getBytes()`.
+  The first real canteen upload is the first proof of that branch with WebP bytes.
+- **Not seen in a browser.** The hero badge and picker card with a logo are unreviewed
+  by eye.
+
+**Watch out for**
+- Migration V35 (`ALTER TABLE outlets ADD COLUMN logo_path`), already applied in production.
+- Existing photos are untouched: only new uploads become WebP. Old PNG/JPEG paths keep
+  serving as before.
+- The input cap went from 2MB to 5MB to match `spring.servlet.multipart.max-file-size`;
+  memory is bounded by the 24MP dimension check, not the byte count.
+- New dependencies: `com.github.usefulness:webp-imageio` 0.11.0 (native libwebp 1.6.0,
+  extracted to `java.io.tmpdir` on first use — an unwritable tmpdir would surface as
+  "Image processing is unavailable" on upload and an ERROR log, not as a boot failure) and
+  `com.drewnoakes:metadata-extractor` 2.19.0. `kotlin.version` is pinned to 2.4.0 in the
+  pom because the encoder is compiled against it and Boot's BOM would otherwise pin 1.9.25;
+  nothing else in the project is Kotlin.
+- A CMYK JPEG is refused ("couldn't be read") because the JDK's decoder cannot open one.
+  Rare from phones, possible from a designer's export.
+- `/uploads/**` is still served `Cache-Control: no-store`. Every stored file now has a
+  UUID name that changes on replace, so a long cache would be safe to add; not done here.
+- Pre-existing and not fixed: `student/select-outlet.html` inlines the whole `Outlet`
+  object into the page, including `commissionPercent`, `gstin` and `legalName`, readable by
+  any student in view-source. Adding `logoPath` rode along on that. It wants a DTO.
+
+### `374a9e6` — Ignore the per-machine Claude Code tooling
+**Date:** 2026-09-12 · **Scope:** 1 file · **Deployed:** n-a (`.gitignore` is on the deploy workflow's `paths-ignore`)
+
+**What changed**
+- `.claude/settings.local.json`, `.claude/skills/`, `.agents/` and `skills-lock.json` are
+  ignored. They are a local skills install (the skills dir is symlinks into `.agents/`) and
+  one person's permission allowlist.
+
+**Why**
+- The tree was clean before the install and these are not the app. The conventions the
+  team shares are in `CLAUDE.md`. Ignored by path rather than the whole `.claude/` so a
+  shared `settings.json` can still be committed later.
+
+**Verified by**
+- `git check-ignore -v` on each path; `git status` shows none of them.
+
+**Watch out for**
+- If the team decides to share the skills, drop `.agents/` and `skills-lock.json` from the
+  ignore list and commit those two; keep the symlink dir and `settings.local.json` ignored.
+
+---
+
 ## 2026-09-11
 
 ### `9818614` — Store the gateway payment id that save() was handed and threw away
