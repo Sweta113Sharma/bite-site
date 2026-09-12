@@ -48,16 +48,25 @@ public class CloudinaryFileStorageService implements FileStorageService {
 
     @Override
     public String storeLogo(Long tenantId, MultipartFile file) {
-        return upload(file, "Logo", "bitesite/logos", "tenant-" + tenantId);
+        return upload(file, ImageUploadProcessor.Kind.LOGO, "bitesite/logos", "tenant-" + tenantId);
+    }
+
+    @Override
+    public String storeOutletLogo(Long tenantId, Long outletId, MultipartFile file) {
+        return upload(file, ImageUploadProcessor.Kind.LOGO, "bitesite/logos", "outlet-" + tenantId + "-" + outletId);
     }
 
     @Override
     public String storeMenuItemPhoto(Long tenantId, MultipartFile file) {
-        return upload(file, "Photo", "bitesite/menu-photos", "menu-" + tenantId);
+        return upload(file, ImageUploadProcessor.Kind.MENU_PHOTO, "bitesite/menu-photos", "menu-" + tenantId);
     }
 
-    private String upload(MultipartFile file, String label, String folder, String publicIdPrefix) {
-        ImageUploadValidation.validateAndGetExtension(file, label); // validates type/size; Cloudinary assigns its own extension
+    private String upload(MultipartFile file, ImageUploadProcessor.Kind kind, String folder, String publicIdPrefix) {
+        // Re-encoded here rather than by Cloudinary's own transformations so that what is
+        // stored is identical whichever backend is active, and the free tier's storage and
+        // bandwidth quotas hold WebP rather than the original.
+        ImageUploadProcessor.ProcessedImage image = ImageUploadProcessor.process(file, kind);
+        String label = kind.label;
 
         Map<String, Object> options = new HashMap<>();
         options.put("folder", folder);
@@ -65,7 +74,7 @@ public class CloudinaryFileStorageService implements FileStorageService {
         options.put("overwrite", true);
 
         try {
-            Map<?, ?> result = cloudinary.uploader().upload(file.getBytes(), options);
+            Map<?, ?> result = cloudinary.uploader().upload(image.bytes(), options);
             Object secureUrl = result.get("secure_url");
             if (secureUrl == null) {
                 throw new BusinessException(label + " upload did not return a URL — please try again.");

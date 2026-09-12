@@ -33,8 +33,12 @@
                     </select>
                 </form>
             </div>
-            <div class="menu-hero-sticker" aria-hidden="true">
-                <span>BITE<br/>SITE</span>
+            <!--/* A canteen that has uploaded its own logo wears it here in place of the
+                 platform sticker. Decorative either way: the canteen's name is in the
+                 switcher above (or is the only outlet, and so needs no naming). */-->
+            <div class="menu-hero-sticker" th:classappend="${selectedOutlet.logoPath != null} ? 'menu-hero-sticker--logo'" aria-hidden="true">
+                <img th:if="${selectedOutlet.logoPath != null}" th:src="@{${selectedOutlet.logoPath}}" alt=""/>
+                <span th:if="${selectedOutlet.logoPath == null}">BITE<br/>SITE</span>
             </div>
         </div>
 

@@ -25,6 +25,11 @@
         <twilio.version>10.9.2</twilio.version>
         <web-push.version>5.1.2</web-push.version>
         <firebase-admin.version>9.9.0</firebase-admin.version>
+        <webp-imageio.version>0.11.0</webp-imageio.version>
+        <!-- webp-imageio is compiled against this kotlin-stdlib; Boot's BOM would otherwise pin
+             1.9.25 underneath it. Nothing else in the project is Kotlin, so this is inert elsewhere. -->
+        <kotlin.version>2.4.0</kotlin.version>
+        <metadata-extractor.version>2.19.0</metadata-extractor.version>
     </properties>
 
     <dependencies>
@@ -143,6 +148,25 @@
             <groupId>com.cloudinary</groupId>
             <artifactId>cloudinary-http5</artifactId>
             <version>${cloudinary.version}</version>
+        </dependency>
+
+        <!-- Uploaded images are re-encoded as WebP before they are stored (see ImageUploadProcessor).
+             The JDK's ImageIO has no WebP writer, so this plugs one in: a JNI wrapper around libwebp
+             with the native library bundled per platform (Linux x86_64/aarch64, macOS, Windows) and
+             extracted to java.io.tmpdir on first use. This fork is chosen over the older
+             org.sejda one because it tracks libwebp releases — decoding user-supplied WebP with a
+             pre-2023 libwebp is CVE-2023-4863. It pulls in kotlin-stdlib; nothing else here does. -->
+        <dependency>
+            <groupId>com.github.usefulness</groupId>
+            <artifactId>webp-imageio</artifactId>
+            <version>${webp-imageio.version}</version>
+        </dependency>
+        <!-- Reads the EXIF orientation tag before re-encoding. ImageIO ignores it and WebP has no
+             equivalent, so without this a phone photo taken in portrait would be stored on its side. -->
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>${metadata-extractor.version}</version>
         </dependency>
 
         <!-- Error tracking (optional — the SDK no-ops with no DSN set, see sentry.dsn) -->

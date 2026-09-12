@@ -323,6 +323,15 @@
     box-shadow: none;
 }
 
+/* A canteen's own logo sits in the disc in place of the glyph. Contained, not cropped:
+   a logo is usually a mark with its own padding, and clipping it reads as a mistake. */
+.outlet-card-icon img {
+    width: 100%;
+    height: 100%;
+    padding: 6px;
+    object-fit: contain;
+}
+
 .outlet-card-name {
     font-family: var(--font-display);
     font-weight: 700;

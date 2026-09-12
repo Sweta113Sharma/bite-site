@@ -52,7 +52,7 @@
                 <div class="card-body">
                     <h5 class="card-title"><span class="material-symbols-outlined">image</span>Logo</h5>
                     <form method="post" th:action="@{/admin/tenants/{id}/logo(id=${tenant.id})}" enctype="multipart/form-data" class="d-flex gap-2">
-                        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="form-control" required="required"/>
+                        <input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" class="form-control" required="required"/>
                         <button type="submit" class="btn btn-outline-primary"><span class="material-symbols-outlined">upload</span>Upload</button>
                     </form>
                 </div>

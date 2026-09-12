@@ -21,6 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
@@ -128,12 +129,23 @@ public class OutletAdminController {
             @RequestParam(required = false) String notice,
             @RequestParam(required = false) BigDecimal latitude,
             @RequestParam(required = false) BigDecimal longitude,
+            @RequestParam(value = "logo", required = false) MultipartFile logo,
+            @RequestParam(defaultValue = "false") boolean removeLogo,
             RedirectAttributes redirectAttributes) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
         User user = principal.getUser();
         outletService.updateSettings(user.getOutletId(), user.getTenantId(),
                 opensAt, closesAt, contactPhone, notice, latitude, longitude, user.getId());
-        redirectAttributes.addFlashAttribute("settingsNotice", "Settings saved.");
+        // The text fields are saved before the logo is looked at, so a rejected image
+        // (wrong type, too large) does not also throw away the hours someone just typed.
+        // The refusal lands on this page as a notice rather than the global error page.
+        try {
+            outletService.updateLogo(user.getOutletId(), user.getTenantId(), logo, removeLogo, user.getId());
+            redirectAttributes.addFlashAttribute("settingsNotice", "Settings saved.");
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("settingsError",
+                    "Settings saved, but the logo was not: " + e.getMessage());
+        }
         return "redirect:/canteen/settings";
     }
 

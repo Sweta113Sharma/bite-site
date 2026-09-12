@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,6 +22,7 @@ public class OutletService {
     private final OutletDao outletDao;
     private final UserDao userDao;
     private final AuditService auditService;
+    private final FileStorageService fileStorageService;
 
     public List<Outlet> listActive(Long tenantId) {
         return outletDao.findActiveByTenantId(tenantId);
@@ -86,6 +88,30 @@ public class OutletService {
         outletDao.updateSettings(id, tenantId, opensAt, closesAt,
                 blankToNull(contactPhone), blankToNull(notice), latitude, longitude);
         auditService.record(actorUserId, tenantId, "Outlet", id, "UPDATE_SETTINGS", before, get(id, tenantId));
+    }
+
+    /**
+     * The canteen's own logo, set by its manager from the same settings form as the hours.
+     *
+     * <p>Same three-way rule as a menu item's photo: a new file replaces whatever was
+     * there, ticking "remove" drops back to the storefront glyph, and leaving both alone
+     * keeps the current logo — an empty file input is "I didn't touch this", not "delete
+     * it". Returns without touching the row in that last case, so saving unrelated
+     * settings does not write an audit entry for a logo that did not change.
+     */
+    public void updateLogo(Long id, Long tenantId, MultipartFile logo, boolean removeLogo, Long actorUserId) {
+        Outlet before = get(id, tenantId);
+        String path;
+        if (logo != null && !logo.isEmpty()) {
+            path = fileStorageService.storeOutletLogo(tenantId, id, logo);
+        } else if (removeLogo && before.getLogoPath() != null) {
+            path = null;
+        } else {
+            return;
+        }
+        outletDao.updateLogoPath(id, tenantId, path);
+        auditService.record(actorUserId, tenantId, "Outlet", id,
+                path == null ? "LOGO_REMOVE" : "LOGO_UPLOAD", before.getLogoPath(), path);
     }
 
     /** An empty form field means "not set", not an empty string — otherwise the templates

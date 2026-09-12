@@ -40,6 +40,10 @@ public interface OutletDao {
             java.time.LocalTime closesAt, String contactPhone, String notice,
             java.math.BigDecimal latitude, java.math.BigDecimal longitude);
 
+    /** Kept off {@link #save} and {@link #updateSettings} for the same reason those two
+     * are kept apart: a logo change must not be able to blank a field it never showed. */
+    void updateLogoPath(Long id, Long tenantId, String logoPath);
+
     /** Orders ever placed at this outlet. Deleting one with history would orphan financial
      * records, so callers check this first and offer deactivation instead. */
     int countOrders(Long id);

@@ -101,8 +101,14 @@
             link.className = 'outlet-card';
             link.href = `/student/menu?outletId=${outlet.id}`;
 
+            // The canteen's own logo when it has set one; the storefront glyph otherwise.
+            // logoPath is a server-issued path or CDN URL, never user-typed text.
+            const icon = outlet.logoPath
+                ? `<img src="${outlet.logoPath}" alt="">`
+                : '<span class="material-symbols-outlined">storefront</span>';
+
             link.innerHTML = `
-                <div class="outlet-card-icon"><span class="material-symbols-outlined">storefront</span></div>
+                <div class="outlet-card-icon">${icon}</div>
                 <div>
                     <p class="outlet-card-name">${outlet.name}</p>
                     <p class="outlet-card-hint">Tap to see today's menu</p>

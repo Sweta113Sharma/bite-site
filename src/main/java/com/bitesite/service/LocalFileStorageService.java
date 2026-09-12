@@ -10,7 +10,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 /** Default storage: the app's own local disk. Fine for a single server instance with
@@ -43,28 +42,34 @@ public class LocalFileStorageService implements FileStorageService {
 
     @Override
     public String storeLogo(Long tenantId, MultipartFile file) {
-        String filename = store(file, "Logo", logoDir, "tenant-" + tenantId);
+        String filename = store(file, ImageUploadProcessor.Kind.LOGO, logoDir, "tenant-" + tenantId);
+        return "/uploads/logos/" + filename;
+    }
+
+    @Override
+    public String storeOutletLogo(Long tenantId, Long outletId, MultipartFile file) {
+        String filename = store(file, ImageUploadProcessor.Kind.LOGO, logoDir, "outlet-" + tenantId + "-" + outletId);
         return "/uploads/logos/" + filename;
     }
 
     @Override
     public String storeMenuItemPhoto(Long tenantId, MultipartFile file) {
-        String filename = store(file, "Photo", menuPhotoDir, "menu-" + tenantId);
+        String filename = store(file, ImageUploadProcessor.Kind.MENU_PHOTO, menuPhotoDir, "menu-" + tenantId);
         return "/uploads/menu-photos/" + filename;
     }
 
-    private String store(MultipartFile file, String label, Path dir, String filenamePrefix) {
-        String extension = ImageUploadValidation.validateAndGetExtension(file, label);
-        String filename = filenamePrefix + "-" + UUID.randomUUID() + extension;
+    private String store(MultipartFile file, ImageUploadProcessor.Kind kind, Path dir, String filenamePrefix) {
+        ImageUploadProcessor.ProcessedImage image = ImageUploadProcessor.process(file, kind);
+        String filename = filenamePrefix + "-" + UUID.randomUUID() + ImageUploadProcessor.EXTENSION;
         try {
             Path target = dir.resolve(filename).toAbsolutePath().normalize();
             if (!target.getParent().equals(dir)) {
                 throw new BusinessException("Invalid file name.");
             }
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            Files.write(target, image.bytes());
         } catch (IOException e) {
-            log.error("Failed to store {} in {}", label.toLowerCase(), dir, e);
-            throw new BusinessException("Could not save the uploaded " + label.toLowerCase() + " — please try again.");
+            log.error("Failed to store {} in {}", kind.label.toLowerCase(), dir, e);
+            throw new BusinessException("Could not save the uploaded " + kind.label.toLowerCase() + " — please try again.");
         }
         return filename;
     }

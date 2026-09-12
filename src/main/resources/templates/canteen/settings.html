@@ -10,8 +10,32 @@
     </div>
 
     <div class="alert alert-success" th:if="${settingsNotice}" th:text="${settingsNotice}"></div>
+    <div class="alert alert-danger" th:if="${settingsError}" th:text="${settingsError}"></div>
 
-    <form method="post" th:action="@{/canteen/settings}">
+    <form method="post" th:action="@{/canteen/settings}" enctype="multipart/form-data">
+        <!--/* Same dropzone as the menu item form, and the same three-way rule behind it:
+             a new file replaces, the tick removes, neither leaves the logo as it is.
+             Whatever is picked is stored as a resized WebP, so the hint names formats,
+             not sizes. */-->
+        <div class="mb-3">
+            <label class="form-label">Logo (optional)</label>
+            <label class="photo-dropzone">
+                <input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp"/>
+                <span class="photo-dropzone-preview">
+                    <img th:if="${outlet.logoPath != null}" th:src="@{${outlet.logoPath}}" alt=""/>
+                    <span th:if="${outlet.logoPath == null}" class="material-symbols-outlined" aria-hidden="true">storefront</span>
+                </span>
+                <span class="photo-dropzone-text">
+                    <strong th:text="${outlet.logoPath != null} ? 'Replace logo' : 'Add a logo'">Add a logo</strong>
+                    <span>PNG, JPEG, GIF, BMP or WebP — under 5MB. Students see it on the canteen picker and your menu.</span>
+                </span>
+            </label>
+            <div class="form-check mt-2" th:if="${outlet.logoPath != null}">
+                <input class="form-check-input" type="checkbox" id="removeLogo" name="removeLogo" value="true"/>
+                <label class="form-check-label small" for="removeLogo">Remove this logo and use the default icon instead</label>
+            </div>
+        </div>
+
         <div class="row g-2 mb-3">
             <div class="col">
                 <label class="form-label" for="opensAt">Opens at</label>
@@ -78,5 +102,6 @@
     </script>
     </form>
 </div>
+<script th:src="@{/js/menu-photo-upload.js}"></script>
 </body>
 </html>

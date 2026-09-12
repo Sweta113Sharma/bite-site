@@ -11,14 +11,14 @@
         <div class="mb-3">
             <label class="form-label">Photo (optional)</label>
             <label class="photo-dropzone">
-                <input type="file" name="photo" accept="image/png,image/jpeg,image/webp"/>
+                <input type="file" name="photo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp"/>
                 <span class="photo-dropzone-preview">
                     <img th:if="${currentPhotoPath != null}" th:src="@{${currentPhotoPath}}" alt=""/>
                     <img th:if="${currentPhotoPath == null}" th:src="@{/img/plate-placeholder.svg}" alt="" class="is-placeholder-icon"/>
                 </span>
                 <span class="photo-dropzone-text">
                     <strong th:text="${currentPhotoPath != null} ? 'Replace photo' : 'Add a photo'">Add a photo</strong>
-                    <span>PNG, JPEG, or WebP — under 2MB</span>
+                    <span>PNG, JPEG, GIF, BMP or WebP — under 5MB</span>
                 </span>
             </label>
             <!--/* Only offered when there is a photo to remove. Falling back to the generated

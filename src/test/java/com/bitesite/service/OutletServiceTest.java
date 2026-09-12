@@ -28,6 +28,7 @@ class OutletServiceTest {
     @Mock private OutletDao outletDao;
     @Mock private UserDao userDao;
     @Mock private AuditService auditService;
+    @Mock private FileStorageService fileStorageService;
 
     private OutletService outletService;
 
@@ -37,7 +38,7 @@ class OutletServiceTest {
 
     @BeforeEach
     void setUp() {
-        outletService = new OutletService(outletDao, userDao, auditService);
+        outletService = new OutletService(outletDao, userDao, auditService, fileStorageService);
     }
 
     private Outlet existing(boolean active, boolean acceptingOrders) {
@@ -135,6 +136,72 @@ class OutletServiceTest {
         assertThatThrownBy(() -> outletService.delete(OUTLET_ID, TENANT_ID, ACTOR_ID))
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(outletDao, never()).delete(anyLong(), anyLong());
+    }
+
+    // ---- logo ----
+
+    private static org.springframework.mock.web.MockMultipartFile logoFile() {
+        return new org.springframework.mock.web.MockMultipartFile("logo", "logo.png", "image/png", new byte[] {1, 2, 3});
+    }
+
+    @Test
+    void aNewLogoIsStoredAgainstTheOutletAndRecorded() {
+        outletExists(existing(true, true));
+        when(fileStorageService.storeOutletLogo(eq(TENANT_ID), eq(OUTLET_ID), any())).thenReturn("/uploads/logos/outlet-1-10-x.webp");
+
+        outletService.updateLogo(OUTLET_ID, TENANT_ID, logoFile(), false, ACTOR_ID);
+
+        verify(outletDao).updateLogoPath(OUTLET_ID, TENANT_ID, "/uploads/logos/outlet-1-10-x.webp");
+        verify(auditService).record(ACTOR_ID, TENANT_ID, "Outlet", OUTLET_ID, "LOGO_UPLOAD", null,
+                "/uploads/logos/outlet-1-10-x.webp");
+    }
+
+    @Test
+    void removeTickedWithNoFileClearsTheLogo() {
+        Outlet withLogo = existing(true, true);
+        withLogo.setLogoPath("/uploads/logos/outlet-1-10-old.webp");
+        outletExists(withLogo);
+
+        outletService.updateLogo(OUTLET_ID, TENANT_ID, null, true, ACTOR_ID);
+
+        verify(outletDao).updateLogoPath(OUTLET_ID, TENANT_ID, null);
+        verify(auditService).record(ACTOR_ID, TENANT_ID, "Outlet", OUTLET_ID, "LOGO_REMOVE",
+                "/uploads/logos/outlet-1-10-old.webp", null);
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    void aNewFileWinsOverTheRemoveTick() {
+        outletExists(existing(true, true));
+        when(fileStorageService.storeOutletLogo(eq(TENANT_ID), eq(OUTLET_ID), any())).thenReturn("/uploads/logos/new.webp");
+
+        outletService.updateLogo(OUTLET_ID, TENANT_ID, logoFile(), true, ACTOR_ID);
+
+        verify(outletDao).updateLogoPath(OUTLET_ID, TENANT_ID, "/uploads/logos/new.webp");
+    }
+
+    @Test
+    void savingOtherSettingsLeavesTheLogoAlone() {
+        Outlet withLogo = existing(true, true);
+        withLogo.setLogoPath("/uploads/logos/keep.webp");
+        outletExists(withLogo);
+        org.springframework.mock.web.MockMultipartFile empty =
+                new org.springframework.mock.web.MockMultipartFile("logo", "", "application/octet-stream", new byte[0]);
+
+        outletService.updateLogo(OUTLET_ID, TENANT_ID, empty, false, ACTOR_ID);
+
+        verify(outletDao, never()).updateLogoPath(anyLong(), anyLong(), any());
+        verify(auditService, never()).record(anyLong(), anyLong(), any(), anyLong(), any(), any(), any());
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    void removeTickedOnAnOutletWithNoLogoIsANoOp() {
+        outletExists(existing(true, true));
+
+        outletService.updateLogo(OUTLET_ID, TENANT_ID, null, true, ACTOR_ID);
+
+        verify(outletDao, never()).updateLogoPath(anyLong(), anyLong(), any());
     }
 
     @Test

@@ -49,6 +49,10 @@ public class Outlet {
      * kind of thing. Distinct from pausing orders, which actually blocks checkout. */
     private String notice;
 
+    /** The canteen's own logo, as returned by FileStorageService — a root-relative path
+     * or an absolute CDN URL, rendered as-is. Null falls back to the storefront glyph. */
+    private String logoPath;
+
     // ---- commercial terms ----
     /** This canteen's negotiated cut. Null inherits the platform default, so moving the
      *  default moves everyone who never negotiated and nobody who did. */

@@ -88,6 +88,20 @@
     letter-spacing: 0.02em;
     color: var(--color-ink);
 }
+/* The same disc carrying the canteen's own logo: no tilt (a rotated logo looks like a
+   bug, not a sticker), a plain ground so the mark's own colours read, and the mark
+   contained inside the border rather than bleeding under it. */
+.menu-hero-sticker--logo {
+    transform: none;
+    background: var(--color-surface);
+    overflow: hidden;
+    padding: 10px;
+}
+.menu-hero-sticker--logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
 
 /* ---------- Ticker ---------- */
 .ticker {

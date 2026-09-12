@@ -101,10 +101,15 @@ client callback fires.
 - **Global exception handling** (`GlobalExceptionHandler`): every uncaught exception
   becomes a branded error page (or a structured JSON body under `/api/**`) — never a raw
   stack trace in the response — and is reported to Sentry when `SENTRY_DSN` is set.
-- **File storage** for tenant logos is behind a `FileStorageService` interface with two
-  implementations: local-disk (default) and Cloudinary (`UPLOAD_STORAGE_TYPE=cloudinary` +
-  three `CLOUDINARY_*` env vars). Local-disk is fine for one server; Cloudinary is the
-  free-tier-friendly option for anything ephemeral or multi-instance.
+- **File storage** for tenant logos, canteen logos and menu photos is behind a
+  `FileStorageService` interface with two implementations: local-disk (default) and
+  Cloudinary (`UPLOAD_STORAGE_TYPE=cloudinary` + three `CLOUDINARY_*` env vars). Local-disk
+  is fine for one server; Cloudinary is the free-tier-friendly option for anything ephemeral
+  or multi-instance. Whatever is uploaded (PNG, JPEG, GIF, BMP, WebP; up to 5MB) is decoded,
+  EXIF-rotated, resized (logos 512px, photos 1600px on the long edge) and stored as WebP by
+  `ImageUploadProcessor`, so both backends hold the same small file. The WebP encoder is a
+  bundled native libwebp (`com.github.usefulness:webp-imageio`) extracted to `java.io.tmpdir`
+  on first use; `ImageUploadProcessorTest` loads it, so an unsupported platform fails in CI.
 - **Privacy policy, terms, and self-service account deletion** (`/privacy-policy`, `/terms`,
   `/student/account`) — DPDP 2025 groundwork. Deletion anonymizes a student's name, email,
   phone, and roll number in place rather than hard-deleting the row, so order/payment history
@@ -376,11 +381,12 @@ docker compose up --build
   real Razorpay Java SDK and unit-tested with a mocked gateway, but no Razorpay test-mode
   credentials were available while building this, so it's never actually round-tripped
   against Razorpay's servers. Verify it with a real test-mode payment before relying on it.
-- **Image uploads no longer accept SVG.** It was previously allowlisted alongside PNG/JPEG/
-  WebP; removed because SVG can embed `<script>` and uploaded files are served directly from
-  `/uploads/**` with no sandboxing — a stored-XSS vector via a malicious "logo" upload. If SVG
-  support is needed later, it needs real sanitization (e.g. strip `<script>`/event handlers)
-  first, not just a content-type check.
+- **Image uploads do not accept SVG.** It was once allowlisted alongside PNG/JPEG/WebP;
+  removed because SVG can embed `<script>` and uploaded files are served directly from
+  `/uploads/**` with no sandboxing — a stored-XSS vector via a malicious "logo" upload. Since
+  uploads are now decoded and re-encoded as WebP, SVG is rejected because ImageIO cannot
+  decode it, not by a content-type check; adding it later would need a rasteriser, not an
+  allowlist entry.
 - **No lawyer has reviewed anything**, including the tenant-onboarding flow, which currently
   has no terms-of-service acceptance step at all when a college is converted from a lead to a
   live tenant — worth adding before onboarding a paying institutional customer.

@@ -34,6 +34,7 @@ public class OutletDaoImpl implements OutletDao {
             .latitude(rs.getObject("latitude", java.math.BigDecimal.class))
             .longitude(rs.getObject("longitude", java.math.BigDecimal.class))
             .notice(rs.getString("notice"))
+            .logoPath(rs.getString("logo_path"))
             .commissionPercent(rs.getBigDecimal("commission_percent"))
             .gstin(rs.getString("gstin"))
             .legalName(rs.getString("legal_name"))
@@ -114,6 +115,13 @@ public class OutletDaoImpl implements OutletDao {
                 "UPDATE outlets SET opens_at = ?, closes_at = ?, contact_phone = ?, notice = ?, "
                         + "latitude = ?, longitude = ? WHERE id = ? AND tenant_id = ?",
                 opensAt, closesAt, contactPhone, notice, latitude, longitude, id, tenantId);
+    }
+
+    @Override
+    public void updateLogoPath(Long id, Long tenantId, String logoPath) {
+        jdbcTemplate.update(
+                "UPDATE outlets SET logo_path = ? WHERE id = ? AND tenant_id = ?",
+                logoPath, id, tenantId);
     }
 
     @Override
