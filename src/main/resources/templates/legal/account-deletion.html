@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 760px;">
+    <h3 class="mb-1">Delete your BiteSite account</h3>
+    <p class="text-muted mb-4">You can permanently remove your identifying account details from any web browser.</p>
+
+    <h5 class="mt-4">Delete through My account</h5>
+    <ol>
+        <li><a th:href="@{/login}">Sign in to BiteSite</a> with the student account you want to delete.</li>
+        <li>Open <a th:href="@{/student/account}">My account</a>.</li>
+        <li>Under <strong>Danger Zone</strong>, choose <strong>Delete Account</strong> and confirm.</li>
+    </ol>
+    <p>If you cannot sign in, use <a th:href="@{/forgot-password}">Forgot password</a> first. These browser
+        steps work even if the Android app has been uninstalled.</p>
+
+    <h5 class="mt-4">What deletion does</h5>
+    <p>Deletion removes your name, email address, phone number, roll number, usable password, and notification
+        tokens. Your current session is signed out immediately and the deactivated account cannot be used again.</p>
+    <p>Order and payment records are retained only for the canteen's operational and accounting obligations.
+        They are anonymised so they no longer identify you. See the <a th:href="@{/privacy-policy}">privacy
+        policy</a> for full details.</p>
+
+    <hr/>
+    <p class="text-muted small">
+        <a th:href="@{/terms}">Terms</a> ·
+        <a th:href="@{/privacy-policy}">Privacy</a> ·
+        <a th:href="@{/refund-policy}">Refunds</a> ·
+        <a th:href="@{/grievance-policy}">Grievances</a>
+    </p>
+</div>
+</body>
+</html>

@@ -121,7 +121,7 @@ public class SecurityConfig {
                     .requestMatchers("/", "/login", "/tenant-unavailable",
                             "/register/student", "/css/**", "/js/**", "/img/**", "/fonts/**", "/uploads/**", "/error",
                             "/actuator/health", "/actuator/health/liveness", "/api/payments/webhook", "/api/csp-report",
-                            "/privacy-policy", "/terms", "/refund-policy",
+                            "/privacy-policy", "/account-deletion", "/terms", "/refund-policy",
                             "/shipping-policy", "/grievance-policy",
                             "/verify", "/verify/**", "/resend-verification",
                             // Recovery has to be reachable by someone who cannot sign in —

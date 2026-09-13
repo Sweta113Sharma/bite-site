@@ -183,4 +183,9 @@ public interface OrderDao {
      * {@link #sumQuantitiesByMenuItemToday}: the comparison has to be made against the
      * database's own clock, since that is what wrote {@code created_at}. */
     List<Order> findExpiredAwaitingPayment(int timeoutMinutes);
+
+    /** Non-terminal orders belonging to review accounts, created in the last day.
+     * Used by the auto-advance scheduler so Play Store reviewers see the full lifecycle
+     * without canteen staff. */
+    List<Order> findReviewAccountOrdersToAdvance();
 }

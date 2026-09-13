@@ -39,7 +39,8 @@ public class PortalGateFilter extends OncePerRequestFilter {
     private static final Set<String> BYPASS_PREFIXES = Set.of(
             "/login", "/login/verify", "/logout", "/register", "/css/", "/js/", "/img/", "/uploads/",
             "/error", "/actuator", "/api/payments/webhook", "/api/csp-report",
-            "/privacy-policy", "/terms", "/refund-policy", "/shipping-policy", "/grievance-policy", "/tenant-unavailable",
+            "/privacy-policy", "/account-deletion", "/terms", "/refund-policy", "/shipping-policy",
+            "/grievance-policy", "/tenant-unavailable",
             "/verify", "/resend-verification", "/forgot-password", "/reset-password",
             "/manifest.webmanifest", "/sw.js", "/offline.html",
             "/api/role/switch",  // role-switching must be accessible from any portal

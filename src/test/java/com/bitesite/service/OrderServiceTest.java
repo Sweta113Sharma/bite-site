@@ -24,7 +24,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -825,6 +827,46 @@ class OrderServiceTest {
         orderService.checkout(TENANT_ID, OUTLET_ID, USER_ID, cart, null, "   ");
 
         verifyNoInteractions(promoCodeService);
+    }
+
+    // ---- review-account auto-advance ----
+
+    @Test
+    void advanceReviewOrdersMovesFromPaidToPreparing() {
+        Order paid = Order.builder().id(99L).tenantId(TENANT_ID).outletId(OUTLET_ID)
+                .userId(USER_ID).tokenNo("BITE-5555").status(OrderStatus.PAID).build();
+        when(orderDao.findReviewAccountOrdersToAdvance()).thenReturn(List.of(paid));
+        when(orderDao.findByIdAndTenantId(99L, TENANT_ID)).thenReturn(Optional.of(paid));
+
+        int count = orderService.advanceReviewOrders();
+
+        assertThat(count).isEqualTo(1);
+        verify(orderDao).updateStatus(99L, TENANT_ID, OrderStatus.PREPARING);
+    }
+
+    @Test
+    void advanceReviewOrdersCompletesReadyOrder() {
+        Order ready = Order.builder().id(88L).tenantId(TENANT_ID).outletId(OUTLET_ID)
+                .userId(USER_ID).tokenNo("BITE-6666").status(OrderStatus.READY_FOR_PICKUP)
+                .pickupCode("1234").build();
+        when(orderDao.findReviewAccountOrdersToAdvance()).thenReturn(List.of(ready));
+        // First call in advanceReviewOrders for READY_FOR_PICKUP re-reads the order
+        when(orderDao.findByIdAndTenantId(88L, TENANT_ID)).thenReturn(Optional.of(ready));
+
+        int count = orderService.advanceReviewOrders();
+
+        assertThat(count).isEqualTo(1);
+        verify(orderDao).updateStatus(88L, TENANT_ID, OrderStatus.COMPLETED);
+    }
+
+    @Test
+    void advanceReviewOrdersDoesNothingWhenNoReviewOrders() {
+        when(orderDao.findReviewAccountOrdersToAdvance()).thenReturn(Collections.emptyList());
+
+        int count = orderService.advanceReviewOrders();
+
+        assertThat(count).isEqualTo(0);
+        verify(orderDao, never()).updateStatus(anyLong(), anyLong(), any());
     }
 
 }

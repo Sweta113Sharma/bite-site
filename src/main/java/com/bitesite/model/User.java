@@ -58,6 +58,11 @@ public class User implements Serializable {
     @Builder.Default
     private boolean notifyMarketing = false;
 
+    /** Designates an account used by app-store reviewers. Orders placed by this user are
+     * auto-advanced through the happy path by {@link com.bitesite.config.ReviewOrderAdvancer}
+     * so the reviewer can verify the full lifecycle without canteen staff. */
+    private boolean reviewAccount;
+
     // Fail-closed by default (Lombok's default for an unset boolean): a User built without
     // explicitly verifying email is treated as unverified, since email is required for
     // every account. phoneVerified defaults the other way — true — because phone

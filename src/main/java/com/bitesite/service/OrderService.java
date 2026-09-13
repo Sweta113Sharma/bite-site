@@ -813,4 +813,51 @@ public class OrderService {
         }
         return stale.size();
     }
+
+    /**
+     * Auto-advances orders belonging to review accounts through the happy path:
+     * {@code PAID → PREPARING → READY_FOR_PICKUP → COMPLETED}.
+     *
+     * <p>Each invocation advances every eligible order by one step, so the full journey
+     * takes three scheduler ticks (~90 s at the default 30 s interval). This is enough
+     * time for a Play Store reviewer to watch the progress rail animate through every
+     * stage without needing canteen staff online.
+     *
+     * <p>Uses the same {@link #advanceStatus} and {@link #completeWithPickupCode} paths
+     * as real orders, so the audit trail, pickup codes, and notifications are all genuine.
+     *
+     * @return the number of orders advanced
+     * @see com.bitesite.config.ReviewOrderAdvancer
+     */
+    public int advanceReviewOrders() {
+        List<Order> orders = orderDao.findReviewAccountOrdersToAdvance();
+        int advanced = 0;
+        for (Order order : orders) {
+            try {
+                switch (order.getStatus()) {
+                    case PAID -> {
+                        advanceStatus(order.getId(), order.getTenantId(),
+                                OrderStatus.PREPARING, order.getUserId());
+                        advanced++;
+                    }
+                    case PREPARING -> {
+                        advanceStatus(order.getId(), order.getTenantId(),
+                                OrderStatus.READY_FOR_PICKUP, order.getUserId());
+                        advanced++;
+                    }
+                    case READY_FOR_PICKUP -> {
+                        // Re-read to get the pickup code that advanceStatus just issued.
+                        Order fresh = getForTenant(order.getId(), order.getTenantId());
+                        completeWithPickupCode(order.getId(), order.getTenantId(),
+                                fresh.getPickupCode(), order.getUserId());
+                        advanced++;
+                    }
+                    default -> { /* nothing to do */ }
+                }
+            } catch (RuntimeException e) {
+                log.warn("Could not auto-advance review order {}: {}", order.getId(), e.getMessage());
+            }
+        }
+        return advanced;
+    }
 }

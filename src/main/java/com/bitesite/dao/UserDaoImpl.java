@@ -46,6 +46,7 @@ public class UserDaoImpl implements UserDao {
             .notifyMarketing(rs.getBoolean("notify_marketing"))
             .emailVerified(rs.getBoolean("email_verified"))
             .phoneVerified(rs.getBoolean("phone_verified"))
+            .reviewAccount(rs.getBoolean("review_account"))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .build();
 

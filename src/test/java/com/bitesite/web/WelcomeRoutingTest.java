@@ -69,4 +69,12 @@ class WelcomeRoutingTest {
                         .header("Sec-CH-UA-Mobile", "?0"))
                 .andExpect(redirectedUrl("/login"));
     }
+
+    @Test
+    void accountDeletionInstructionsArePublic() throws Exception {
+        mockMvc.perform(get("/account-deletion").header("Host", APP_HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Delete your BiteSite account")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("My account")));
+    }
 }

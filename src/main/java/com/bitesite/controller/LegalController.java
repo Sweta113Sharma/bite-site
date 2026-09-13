@@ -18,6 +18,12 @@ public class LegalController {
         return "legal/privacy-policy";
     }
 
+    @GetMapping("/account-deletion")
+    public String accountDeletion(Model model) {
+        model.addAttribute("pageTitle", "Delete your account");
+        return "legal/account-deletion";
+    }
+
     @GetMapping("/terms")
     public String terms(Model model) {
         model.addAttribute("pageTitle", "Terms of service");

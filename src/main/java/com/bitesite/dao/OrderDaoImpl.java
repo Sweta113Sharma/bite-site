@@ -538,4 +538,16 @@ public class OrderDaoImpl implements OrderDao {
                         + "AND created_at < NOW() - INTERVAL ? MINUTE",
                 ORDER_ROW_MAPPER, timeoutMinutes);
     }
+
+    @Override
+    public List<Order> findReviewAccountOrdersToAdvance() {
+        return jdbcTemplate.query(
+                "SELECT o.* FROM orders o"
+                        + " JOIN users u ON o.user_id = u.id"
+                        + " WHERE u.review_account = TRUE"
+                        + "   AND o.status IN ('PAID', 'PREPARING', 'READY_FOR_PICKUP')"
+                        + "   AND o.created_at >= NOW() - INTERVAL 1 DAY"
+                        + " ORDER BY o.created_at",
+                ORDER_ROW_MAPPER);
+    }
 }
