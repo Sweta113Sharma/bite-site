@@ -185,6 +185,33 @@ class OrderServiceTest {
     }
 
     @Test
+    void reviewCheckoutMarksPaidWithoutContactingTheGateway() {
+        outletIsOpen();
+        when(menuService.get(5L, TENANT_ID)).thenReturn(availableItem(5L, "Samosa", new BigDecimal("30.00")));
+        when(orderDao.existsTokenForTenantToday(eq(TENANT_ID), any())).thenReturn(false);
+        when(orderDao.createOrder(any())).thenAnswer(inv -> {
+            Order order = inv.getArgument(0);
+            order.setId(42L);
+            return order;
+        });
+        when(paymentDao.save(any())).thenAnswer(inv -> {
+            Payment payment = inv.getArgument(0);
+            payment.setId(7L);
+            return payment;
+        });
+
+        CheckoutResult result = orderService.checkoutForReview(
+                TENANT_ID, OUTLET_ID, USER_ID, Map.of(5L, 1), null, null);
+
+        assertThat(result.order().getStatus()).isEqualTo(OrderStatus.PAID);
+        assertThat(result.gatewayOrder()).isNull();
+        verifyNoInteractions(paymentGateway);
+        verify(paymentDao).markVerified(7L, "play_review_payment_42",
+                "play-review-no-charge", PaymentStatus.CAPTURED);
+        verify(orderDao).updateStatus(42L, TENANT_ID, OrderStatus.PAID);
+    }
+
+    @Test
     void confirmPaymentIsIdempotentOnceAlreadyCaptured() {
         Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
                 .razorpayOrderId("rp_order_1").amount(new BigDecimal("60.00")).status(PaymentStatus.CAPTURED).build();

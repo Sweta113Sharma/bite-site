@@ -83,6 +83,24 @@ public class OrderService {
      */
     public CheckoutResult checkout(Long tenantId, Long outletId, Long userId,
             Map<Long, Integer> cartQuantities, BigDecimal requestedTip, String promoCode) {
+        return checkoutInternal(tenantId, outletId, userId, cartQuantities, requestedTip, promoCode, false);
+    }
+
+    /**
+     * Places an order for the dedicated Play review account without contacting Razorpay.
+     * The controller exposes this path only for an authenticated user whose server-side
+     * {@code review_account} flag is set. Normal customer checkout always uses
+     * {@link #checkout(Long, Long, Long, Map, BigDecimal, String)} above.
+     */
+    @Transactional
+    public CheckoutResult checkoutForReview(Long tenantId, Long outletId, Long userId,
+            Map<Long, Integer> cartQuantities, BigDecimal requestedTip, String promoCode) {
+        return checkoutInternal(tenantId, outletId, userId, cartQuantities, requestedTip, promoCode, true);
+    }
+
+    private CheckoutResult checkoutInternal(Long tenantId, Long outletId, Long userId,
+            Map<Long, Integer> cartQuantities, BigDecimal requestedTip, String promoCode,
+            boolean reviewCheckout) {
         if (cartQuantities.isEmpty()) {
             throw new InvalidOrderStateException("Your cart is empty.");
         }
@@ -176,6 +194,29 @@ public class OrderService {
         // constraint on order_id is what actually stops one order redeeming twice.
         if (applied != null) {
             promoCodeService.redeem(applied.code(), saved.getId(), userId, applied.discount());
+        }
+
+        if (reviewCheckout) {
+            String gatewayOrderId = "play_review_order_" + saved.getId();
+            String gatewayPaymentId = "play_review_payment_" + saved.getId();
+            Payment payment = paymentDao.save(Payment.builder()
+                    .tenantId(tenantId)
+                    .orderId(saved.getId())
+                    .razorpayOrderId(gatewayOrderId)
+                    .amount(charges.total())
+                    .status(PaymentStatus.CREATED)
+                    .build());
+            paymentDao.markVerified(payment.getId(), gatewayPaymentId,
+                    "play-review-no-charge", PaymentStatus.CAPTURED);
+            orderDao.updateStatus(saved.getId(), tenantId, OrderStatus.PAID);
+            saved.setStatus(OrderStatus.PAID);
+            auditService.record(userId, tenantId, "Payment", payment.getId(),
+                    "PLAY_REVIEW_NO_CHARGE", PaymentStatus.CREATED, PaymentStatus.CAPTURED);
+            orderNotifier.notifyOrderUpdate(userId, "Review order confirmed",
+                    "Your Play review order " + saved.getTokenNo()
+                            + " was placed without a charge and will advance automatically.");
+            log.info("Play review order {} confirmed without contacting the payment gateway", saved.getId());
+            return new CheckoutResult(saved, null);
         }
 
         GatewayOrder gatewayOrder;

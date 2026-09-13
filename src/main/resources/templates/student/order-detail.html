@@ -26,6 +26,10 @@
         <span class="material-symbols-outlined">check_circle</span>
         <span>Payment successful. The canteen has your order.</span>
     </div>
+    <div class="alert alert-success d-flex align-items-center gap-2" th:if="${reviewOrderPlaced}">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span>Review order placed with no charge. Watch it advance automatically.</span>
+    </div>
 
     <!--/* Outcome of a self-cancel attempt. Losing the race by a second is an ordinary
          thing to happen, so it is reported here as a message rather than an error page. */-->

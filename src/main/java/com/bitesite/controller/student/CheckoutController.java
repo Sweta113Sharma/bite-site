@@ -55,13 +55,21 @@ public class CheckoutController {
             return "redirect:/student/cart";
         }
         try {
-            CheckoutResult result = orderService.checkout(
-                    user.getTenantId(), cart.getOutletId(), user.getId(), cart.getQuantities(),
-                    tip, cart.getPromoCode());
+            CheckoutResult result = user.isReviewAccount()
+                    ? orderService.checkoutForReview(
+                            user.getTenantId(), cart.getOutletId(), user.getId(), cart.getQuantities(),
+                            tip, cart.getPromoCode())
+                    : orderService.checkout(
+                            user.getTenantId(), cart.getOutletId(), user.getId(), cart.getQuantities(),
+                            tip, cart.getPromoCode());
             cart.clear();
             // The saved copy goes with it, or the next session restores a cart the student
             // has already ordered and paid for.
             cartPersistence.persist(user, cart);
+            if (user.isReviewAccount()) {
+                redirectAttributes.addFlashAttribute("reviewOrderPlaced", true);
+                return "redirect:/student/orders/" + result.order().getId();
+            }
             return "redirect:/student/checkout/" + result.order().getId();
         } catch (InvalidOrderStateException e) {
             redirectAttributes.addFlashAttribute("cartError", e.getMessage());
