@@ -241,28 +241,7 @@ public class CartController {
         cartPersistence.persist(principal.getUser(), cart);
 
         if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
-            // Re-read prices from the service (never trust a client) and roll up the
-            // affected line and the whole cart so the cart page can update totals in
-            // place instead of reloading.
-            User user = principal.getUser();
-            BigDecimal lineTotal = BigDecimal.ZERO;
-            BigDecimal total = BigDecimal.ZERO;
-            for (Map.Entry<Long, Integer> entry : cart.getQuantities().entrySet()) {
-                MenuItem item = menuService.get(entry.getKey(), user.getTenantId());
-                BigDecimal lt = item.effectivePrice().multiply(BigDecimal.valueOf(entry.getValue()));
-                total = total.add(lt);
-                if (entry.getKey().equals(menuItemId)) {
-                    lineTotal = lt;
-                }
-            }
-            int count = cart.getQuantities().values().stream().mapToInt(Integer::intValue).sum();
-            Map<String, Object> body = new HashMap<>();
-            body.put("count", count);
-            body.put("quantity", clamped);
-            body.put("lineTotal", lineTotal);
-            body.put("total", total);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            objectMapper.writeValue(response.getWriter(), body);
+            sendCartSummaryResponse(principal.getUser(), menuItemId, clamped, response);
             return null;
         }
         return "redirect:/student/cart";
@@ -276,15 +255,52 @@ public class CartController {
         cartPersistence.persist(principal.getUser(), cart);
 
         if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
-            // The undo toast on the menu page and the remove buttons on the cart page both
-            // post here via fetch() asking for JSON so the badge can update without a reload.
-            int count = cart.getQuantities().values().stream().mapToInt(Integer::intValue).sum();
-            Map<String, Object> body = new HashMap<>();
-            body.put("count", count);
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            objectMapper.writeValue(response.getWriter(), body);
+            sendCartSummaryResponse(principal.getUser(), menuItemId, 0, response);
             return null;
         }
         return "redirect:/student/cart";
+    }
+
+    private void sendCartSummaryResponse(User user, Long menuItemId, int quantity,
+            HttpServletResponse response) throws IOException {
+        BigDecimal lineTotal = BigDecimal.ZERO;
+        BigDecimal itemTotal = BigDecimal.ZERO;
+        for (Map.Entry<Long, Integer> entry : cart.getQuantities().entrySet()) {
+            MenuItem item = menuService.get(entry.getKey(), user.getTenantId());
+            BigDecimal lt = item.effectivePrice().multiply(BigDecimal.valueOf(entry.getValue()));
+            itemTotal = itemTotal.add(lt);
+            if (entry.getKey().equals(menuItemId)) {
+                lineTotal = lt;
+            }
+        }
+        BigDecimal discount = BigDecimal.ZERO;
+        if (cart.getPromoCode() != null && cart.getOutletId() != null) {
+            try {
+                discount = promoCodeService
+                        .validate(cart.getPromoCode(), user.getId(), user.getTenantId(), cart.getOutletId(), itemTotal)
+                        .discount();
+            } catch (BusinessException e) {
+                cart.setPromoCode(null);
+            }
+        }
+        BigDecimal payable = itemTotal.subtract(discount);
+        BigDecimal fee = (billingService.settings() != null && billingService.settings().feeCharged() != null)
+                ? billingService.settings().feeCharged() : BigDecimal.ZERO;
+        BigDecimal grandTotal = payable.add(fee);
+        int count = cart.getQuantities().values().stream().mapToInt(Integer::intValue).sum();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("count", count);
+        body.put("quantity", quantity);
+        body.put("lineTotal", lineTotal);
+        body.put("total", itemTotal);
+        body.put("itemTotal", itemTotal);
+        body.put("discount", discount);
+        body.put("payable", payable);
+        body.put("fee", fee);
+        body.put("grandTotal", grandTotal);
+        body.put("empty", cart.isEmpty());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        objectMapper.writeValue(response.getWriter(), body);
     }
 }

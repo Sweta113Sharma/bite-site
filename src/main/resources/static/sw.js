@@ -13,7 +13,7 @@
 
 // Bumped when the precache list changes: an existing client keeps its old list
 // until the version changes.
-const VERSION = 'v5';
+const VERSION = 'v6';
 const STATIC_CACHE = `bitesite-static-${VERSION}`;
 const PAGE_CACHE = `bitesite-pages-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
@@ -62,6 +62,15 @@ function isStaticAsset(url) {
             || url.pathname.startsWith('/fonts/'));
 }
 
+function isDynamicPage(pathname) {
+    return pathname.startsWith('/student/cart')
+        || pathname.startsWith('/student/checkout')
+        || pathname.startsWith('/student/order')
+        || pathname.startsWith('/canteen')
+        || pathname.startsWith('/admin')
+        || pathname.startsWith('/api');
+}
+
 // How long a navigation waits for the network before falling back to a cached copy.
 // Not a timeout in the sense of giving up: the request carries on in the background and
 // still refreshes the cache. This is only about what the student LOOKS at meanwhile.
@@ -72,45 +81,34 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(request.url);
 
     if (request.method !== 'GET') {
-        /* Anything that changes WHO the user is has to empty the page cache. Cached pages
-           are keyed by URL and nothing else, so on a shared phone — which here is most of
-           them — the next person could be handed the previous student's order page out of
-           the cache while the network catches up.
-
-           All three of these matter, and logout alone is not enough:
-             /logout           the tidy case, and the least common one on a shared device
-             /login            someone signs in WITHOUT the previous person having signed
-                               out, which is the normal way a shared phone changes hands
-             /api/role/switch  same person, different portal, different pages
-
-           Purging on a failed login attempt too is harmless: it costs one cache miss.
-
-           This became more pressing when navigations started falling back to the cache
-           after 2.5 seconds rather than only when the network failed outright. That is
-           the whole point of the change, but it also means a stale authenticated page is
-           reachable on a merely slow connection instead of a dead one — and slow is the
-           condition this app is built for. */
+        /* Anything that changes WHO the user is or changes cart/order state has to
+           empty the page cache. Cached pages are keyed by URL and nothing else.
+           Cart and checkout state changes must immediately invalidate PAGE_CACHE so
+           future navigations never serve stale cart totals or line items. */
         if (url.pathname === '/logout' || url.pathname === '/login'
-                || url.pathname === '/api/role/switch') {
+                || url.pathname === '/api/role/switch'
+                || url.pathname.startsWith('/student/cart')
+                || url.pathname.startsWith('/student/checkout')
+                || url.pathname.startsWith('/canteen')
+                || url.pathname.startsWith('/admin')) {
             event.waitUntil(caches.delete(PAGE_CACHE));
         }
         return; // never intercept POST/PUT/DELETE — checkout, cart, order actions pass straight through
     }
 
-    /* Page navigations: still network-first, but no longer network-ONLY-until-it-answers.
-       The old handler awaited the network however long it took, so on a slow campus
-       connection a student stared at a blank screen for the full round trip even when a
-       perfectly good copy of that page was sitting in the cache.
-
-       Now the network races a short timer. If it answers within the timeout the student
-       gets fresh content exactly as before, which on any decent connection is every time.
-       If it does not, they get the cached page immediately and the network request keeps
-       running to refresh the cache for next time.
-
-       Deliberately NOT stale-while-revalidate, which would show the cached copy first on
-       every navigation. Order status is the thing students look at this app for, and
-       showing a stale one to save 200ms on a fast connection is a bad trade. */
+    /* Page navigations:
+       Dynamic pages whose contents change on every user action (cart, checkout, orders, canteen, admin)
+       must NEVER be served from a stale HTML cache. Fall back only to offline page if network fails outright. */
     if (request.mode === 'navigate') {
+        if (isDynamicPage(url.pathname)) {
+            event.respondWith(
+                fetch(request).catch(async () => {
+                    return (await caches.match(OFFLINE_URL)) || Response.error();
+                })
+            );
+            return;
+        }
+
         event.respondWith((async () => {
             const network = fetch(request).then((response) => {
                 const copy = response.clone();

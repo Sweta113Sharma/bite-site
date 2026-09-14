@@ -52,6 +52,28 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
+### `pending` — Make cart updates and removals live in place and prevent stale page caching
+**Date:** 2026-09-15 · **Scope:** 5 files · **Deployed:** pending
+
+**What changed**
+- Instant in-place cart line removal: deleting an item from `/student/cart` no longer performs a full page reload (`window.location.reload()`). The item card is removed from the DOM immediately, subtotal and bill totals recalculate live in place, and if the cart becomes empty, it transitions smoothly to the empty state panel without a reload.
+- Optimistic feedback on menu item steppers and cart line steppers: clicking +/- responds immediately on the UI before the network request resolves, reverting on error.
+- Full breakdown response on cart mutations: `/student/cart/update` and `/student/cart/remove` now return `itemTotal`, `discount`, `fee`, `grandTotal`, and `empty` in JSON mode, keeping the summary list, sticky pay bar, and header cart badge 100% in sync without full reloads.
+- Service Worker (`sw.js`) cache bypass for dynamic transactional pages: bumped `VERSION` to `'v6'` and excluded `/student/cart`, `/student/checkout`, `/student/order`, `/canteen`, and `/admin` navigations from being cached or served from stale `PAGE_CACHE`. In addition, any non-GET mutations to `/student/cart` or `/student/checkout` now immediately invalidate `PAGE_CACHE`.
+
+**Why**
+- Users experienced a 15–20 second delay when removing or updating items in the cart where the bill total appeared frozen (e.g. remaining at ₹270 after an item was deleted). This was caused by three compounding issues:
+  1. `sw.js` had a 2.5s network race timer that matched the previously cached `/student/cart` HTML page when `window.location.reload()` ran on slower or high-latency connections.
+  2. Cart mutations did not invalidate `PAGE_CACHE` in `sw.js`.
+  3. `CartController`'s remove action only returned item count, forcing client-side `window.location.reload()` instead of updating the DOM in place.
+
+**Verified by**
+- Full test suite passed cleanly (`mvn test`: 577 tests run, 0 failures, 0 errors).
+- Added `CartControllerTest` verifying both `/student/cart/update` and `/student/cart/remove` return full cart summaries with verified item total, fee, grand total, and empty state flags.
+
+**Watch out for**
+- Service worker bumped to `v6`. Browsers will activate `v6` on next visit and delete existing `v5` static and page caches.
+
 ### `ebf15e7` — Show out-of-stock items on outlet menu with restock action
 **Date:** 2026-09-15 · **Scope:** 6 files · **Deployed:** yes (2026-09-14 20:45 UTC, run 34894568531)
 

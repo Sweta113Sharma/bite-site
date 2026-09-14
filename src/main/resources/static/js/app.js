@@ -620,6 +620,9 @@ function initCartControls() {
             const next = Math.max(0, Math.min(20, current + delta));
             if (next === current) return;
 
+            // Optimistic update for instant feedback
+            setControlQuantity(control, next);
+
             const body = new URLSearchParams();
             body.set('menuItemId', itemId);
             body.set('quantity', next);
@@ -638,7 +641,11 @@ function initCartControls() {
                     setControlQuantity(control, data.quantity);
                     updateCartCount(data.count);
                 })
-                .catch(() => { showToast("Couldn't update your cart"); haptic('error'); });
+                .catch(() => {
+                    setControlQuantity(control, current);
+                    showToast("Couldn't update your cart", 'error');
+                    haptic('error');
+                });
         };
 
         stepper.querySelector('.cart-qty-minus')
@@ -855,24 +862,68 @@ function initCartPageControls() {
     const setBusy = (form, busy) => {
         form.querySelectorAll('button').forEach(b => {
             b.disabled = busy;
-            // Picks up the same spinner every other button in the product now uses.
             b.classList.toggle('is-busy', busy);
         });
         form.classList.toggle('is-busy', busy);
     };
 
-    const refreshTotals = (data) => {
-        if (typeof data.lineTotal !== 'undefined') {
-            const card = document.querySelector('[data-cart-line]');
-            const sub = card && card.querySelector('.cart-item-subtotal');
-            if (sub) sub.textContent = formatMoney(data.lineTotal);
+    const applyCartState = (data, changedItemId) => {
+        if (!data) return;
+
+        // Update line subtotal for the modified item
+        if (changedItemId) {
+            const card = document.querySelector(`.cart-item-card[data-item-id="${changedItemId}"]`);
+            if (card) {
+                if (data.quantity === 0) {
+                    card.remove();
+                } else {
+                    const sub = card.querySelector('.cart-item-subtotal');
+                    if (sub && typeof data.lineTotal !== 'undefined') {
+                        sub.textContent = formatMoney(data.lineTotal);
+                    }
+                }
+            }
         }
-        if (typeof data.total !== 'undefined') {
-            document.querySelectorAll('.cart-summary dd, .sticky-pay-total span')
-                .forEach(el => { el.textContent = formatMoney(data.total); });
+
+        // Update item total
+        const itemTotalEl = document.querySelector('.cart-summary__item-total');
+        if (itemTotalEl && typeof data.itemTotal !== 'undefined') {
+            itemTotalEl.textContent = formatMoney(data.itemTotal);
         }
+
+        // Update discount if present
+        const discountRow = document.querySelector('.cart-summary__row--discount');
+        const discountEl = document.querySelector('.cart-summary__discount');
+        if (discountEl && typeof data.discount !== 'undefined') {
+            if (data.discount > 0) {
+                discountEl.textContent = '-₹' + Number(data.discount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                if (discountRow) discountRow.style.display = '';
+            } else if (discountRow) {
+                discountRow.style.display = 'none';
+            }
+        }
+
+        // Update To pay in summary and sticky bar
+        const toPay = typeof data.grandTotal !== 'undefined' ? data.grandTotal : data.total;
+        if (typeof toPay !== 'undefined') {
+            document.querySelectorAll('.cart-summary__to-pay, .sticky-pay-amount').forEach(el => {
+                el.textContent = formatMoney(toPay);
+            });
+        }
+
+        // Update nav badge count
         if (typeof data.count !== 'undefined') {
             updateCartCount(data.count);
+        }
+
+        // Handle empty cart transition
+        if (data.empty || data.count === 0) {
+            const activeBody = document.getElementById('cart-active-body');
+            const emptyState = document.getElementById('cart-empty-state');
+            const stickyBar = document.querySelector('.sticky-pay-bar');
+            if (activeBody) activeBody.style.display = 'none';
+            if (stickyBar) stickyBar.style.display = 'none';
+            if (emptyState) emptyState.style.display = '';
         }
     };
 
@@ -882,12 +933,17 @@ function initCartPageControls() {
         const display = form.querySelector('.qty-value');
         const minusBtn = form.querySelector('.qty-minus');
         const plusBtn = form.querySelector('.qty-plus');
-        if (!input || !display || !minusBtn || !plusBtn) return;
-
         const itemId = form.querySelector('input[name="menuItemId"]')?.value;
+        if (!input || !display || !minusBtn || !plusBtn || !itemId) return;
 
         const send = (next) => {
-            if (next < 1 || next > 20) return;
+            if (next < 0 || next > 20) return;
+            const prev = parseInt(input.value, 10) || 1;
+
+            // Instant optimistic feedback
+            input.value = next;
+            display.textContent = next;
+
             setBusy(form, true);
             const body = csrfParams();
             body.set('menuItemId', itemId);
@@ -905,9 +961,14 @@ function initCartPageControls() {
                 .then(data => {
                     input.value = data.quantity;
                     display.textContent = data.quantity;
-                    refreshTotals(data);
+                    applyCartState(data, itemId);
                 })
-                .catch(() => { showToast("Couldn't update your cart", 'error'); haptic('error'); })
+                .catch(() => {
+                    input.value = prev;
+                    display.textContent = prev;
+                    showToast("Couldn't update your cart", 'error');
+                    haptic('error');
+                })
                 .finally(() => setBusy(form, false));
         };
 
@@ -923,14 +984,16 @@ function initCartPageControls() {
         });
     });
 
-    // Remove buttons: delete the line via fetch, then reload so the
-    // (possibly empty) cart state and any server-side warnings re-render.
+    // Remove buttons: delete line in place with zero page reload
     document.querySelectorAll('form[data-cart-remove]').forEach(form => {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const itemId = form.querySelector('input[name="menuItemId"]')?.value;
+            if (!itemId) return;
 
+            const card = form.closest('.cart-item-card');
             setBusy(form, true);
+
             const body = csrfParams();
             body.set('menuItemId', itemId);
 
@@ -941,7 +1004,13 @@ function initCartPageControls() {
             })
                 .then(response => {
                     if (!response.ok) throw new Error('cart remove failed');
-                    window.location.reload();
+                    return response.json();
+                })
+                .then(data => {
+                    if (card) card.remove();
+                    applyCartState(data, itemId);
+                    showToast('Removed from cart');
+                    haptic('tap');
                 })
                 .catch(() => {
                     setBusy(form, false);

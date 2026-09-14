@@ -26,14 +26,14 @@
         </ul>
     </div>
 
-    <div th:if="${#lists.isEmpty(lines)}" class="state-panel">
+    <div id="cart-empty-state" class="state-panel" th:style="${#lists.isEmpty(lines)} ? '' : 'display:none;'">
         <div th:replace="~{fragments/state :: medallion('shopping_cart','neutral')}"></div>
         <h4>Your cart is empty</h4>
         <p>Nothing here yet — grab something tasty before the break ends.</p>
         <a class="btn btn-primary" th:href="@{/student/menu}"><span class="material-symbols-outlined">restaurant</span>Browse the menu</a>
     </div>
 
-    <div th:if="${!#lists.isEmpty(lines)}" class="cart-page-body"> <!--/* clearance for the sticky pay bar lives in CSS, next to the bar itself */-->
+    <div th:if="${!#lists.isEmpty(lines)}" class="cart-page-body" id="cart-active-body"> <!--/* clearance for the sticky pay bar lives in CSS, next to the bar itself */-->
         <div th:if="${outlet != null}">
             <p class="section-label">Pickup location</p>
             <div class="pickup-card">
@@ -48,7 +48,7 @@
         <p class="section-label">Items</p>
         <!--/* Cart Items (Card Layout) */-->
         <div class="cart-items mb-4">
-            <div class="cart-item-card" th:each="line : ${lines}">
+            <div class="cart-item-card" th:each="line : ${lines}" data-cart-line th:attr="data-item-id=${line.item().id}">
                 <div class="cart-item-photo" th:classappend="${line.item().usesIllustration()} ? 'is-illustration'">
                     <img th:if="${!line.item().usesIllustration()}" th:src="@{${line.item().photoPath}}" data-shimmer="data-shimmer" th:alt="${line.item().name}"/>
                     <span th:if="${line.item().usesIllustration()}" class="material-symbols-outlined">restaurant</span>
@@ -115,12 +115,12 @@
         <dl class="cart-summary">
             <div class="cart-summary__row">
                 <dt>Item total</dt>
-                <dd th:text="'₹' + ${total}">₹0</dd>
+                <dd class="cart-summary__item-total" th:text="'₹' + ${total}">₹0</dd>
             </div>
             <div class="cart-summary__row cart-summary__row--discount"
                  th:if="${discount != null and discount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
                 <dt th:text="'Discount (' + ${appliedCode} + ')'">Discount</dt>
-                <dd th:text="'-₹' + ${discount}">-₹0</dd>
+                <dd class="cart-summary__discount" th:text="'-₹' + ${discount}">-₹0</dd>
             </div>
             <!--/* The platform fee shown before payment, not sprung at the last screen.
                  While it is free it is shown struck through with the word FREE, which is
@@ -136,11 +136,11 @@
             <div class="cart-summary__row"
                  th:if="${billing != null and billing.feeCharged().compareTo(T(java.math.BigDecimal).ZERO) > 0}">
                 <dt th:text="${billing.platformFeeLabel()}">Platform fee</dt>
-                <dd th:text="'₹' + ${billing.feeCharged()}">₹0</dd>
+                <dd class="cart-summary__fee" th:text="'₹' + ${billing.feeCharged()}">₹0</dd>
             </div>
             <div class="cart-summary__row cart-summary__row--total">
                 <dt>To pay</dt>
-                <dd th:text="'₹' + ${payable.add(billing != null ? billing.feeCharged() : T(java.math.BigDecimal).ZERO)}">₹0</dd>
+                <dd class="cart-summary__to-pay" th:text="'₹' + ${payable.add(billing != null ? billing.feeCharged() : T(java.math.BigDecimal).ZERO)}">₹0</dd>
             </div>
         </dl>
 
@@ -155,7 +155,7 @@
     <div class="sticky-pay-inner">
         <div class="sticky-pay-total">
             <small>To Pay</small>
-            <span th:text="'₹' + ${payable.add(billing != null ? billing.feeCharged() : T(java.math.BigDecimal).ZERO)}">0</span>
+            <span class="sticky-pay-amount" th:text="'₹' + ${payable.add(billing != null ? billing.feeCharged() : T(java.math.BigDecimal).ZERO)}">0</span>
         </div>
         <!--/* The tip rides along on the checkout form as a hidden field. It is only ever
              one of the amounts the panel offers — the server re-checks, so a hand-edited
