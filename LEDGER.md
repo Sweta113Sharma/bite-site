@@ -52,6 +52,24 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
+### `6fbbc75` — Fix cart stepper listener conflict and single-step quantity changes
+**Date:** 2026-09-15 · **Scope:** 2 files · **Deployed:** pending
+
+**What changed**
+- Excluded cart-page stepper forms (`form[data-cart-update]`) from `initQuantitySteppers()` in `app.js`. Previously, both `initQuantitySteppers` and `initCartPageControls` attached click listeners to the same `+` and `-` buttons on `cart.html`. On click of `+`, `initQuantitySteppers` incremented `input.value` by 1 locally and then `initCartPageControls` read that new value and added 1 again, jumping quantities by 2 (1 > 3 > 5 > 7 > 9). On click of `-`, `initQuantitySteppers` decremented `input.value` locally before `initCartPageControls` evaluated `current > 1`, suppressing the network call when stepping down to 1 and desyncing display from line totals.
+- Allowed reducing quantity from 1 to 0 via the minus button on the cart page, removing the item seamlessly.
+- Enabled `csrfParams(form)` to pull `_csrf` directly from the enclosing form when present, improving CSRF resilience.
+- Bumped service worker cache version in `sw.js` to `v7` to flush client-cached assets.
+
+**Why**
+- Fixes the bug where clicking `+` in the cart stepped by +2 instead of +1, and clicking `-` failed to update server line totals.
+
+**Verified by**
+- Ran full test suite `mvn test`: 583 tests run, 0 failures, 0 errors, build success.
+
+**Watch out for**
+- Nothing.
+
 ### `f79ccdb` — Serve sw.js, webmanifest, and offline fallback through SiteController endpoints
 **Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** yes (2026-09-14 21:11 UTC, run 34897124407)
 

@@ -231,10 +231,17 @@ function disableNativePush(toggle) {
    permission unannounced elsewhere in the app.
    ============================================================ */
 
-function csrfParams() {
+function csrfParams(form) {
+    const params = new URLSearchParams();
+    if (form) {
+        const formCsrf = form.querySelector('input[name="_csrf"]');
+        if (formCsrf && formCsrf.value) {
+            params.set('_csrf', formCsrf.value);
+            return params;
+        }
+    }
     const token = document.querySelector('meta[name="_csrf"]')?.content;
     const paramName = document.querySelector('meta[name="_csrf_parameter"]')?.content;
-    const params = new URLSearchParams();
     if (token && paramName) params.set(paramName, token);
     return params;
 }
@@ -497,9 +504,10 @@ function initSearchFilter() {
 function initQuantitySteppers() {
     document.querySelectorAll('.qty-stepper').forEach(stepper => {
         // Menu-card steppers are cart-backed and handled by initCartControls();
-        // binding this local-only handler to them as well would move the number
-        // without ever telling the server.
-        if (stepper.closest('.cart-control')) return;
+        // cart-page steppers are handled by initCartPageControls();
+        // binding this local-only handler to them as well moves the number
+        // without telling the server or doubles the increment/decrement.
+        if (stepper.closest('.cart-control') || stepper.closest('form[data-cart-update]')) return;
         const input = stepper.querySelector('input[type="hidden"], input[name="quantity"]');
         const display = stepper.querySelector('.qty-value');
         const minusBtn = stepper.querySelector('.qty-minus');
@@ -945,7 +953,7 @@ function initCartPageControls() {
             display.textContent = next;
 
             setBusy(form, true);
-            const body = csrfParams();
+            const body = csrfParams(form);
             body.set('menuItemId', itemId);
             body.set('quantity', next);
 
@@ -962,6 +970,10 @@ function initCartPageControls() {
                     input.value = data.quantity;
                     display.textContent = data.quantity;
                     applyCartState(data, itemId);
+                    if (data.quantity === 0) {
+                        showToast('Removed from cart');
+                        haptic('tap');
+                    }
                 })
                 .catch(() => {
                     input.value = prev;
@@ -975,7 +987,11 @@ function initCartPageControls() {
         minusBtn.addEventListener('click', (e) => {
             e.preventDefault();
             const current = parseInt(input.value, 10) || 1;
-            if (current > 1) send(current - 1);
+            if (current > 1) {
+                send(current - 1);
+            } else if (current === 1) {
+                send(0);
+            }
         });
         plusBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -994,7 +1010,7 @@ function initCartPageControls() {
             const card = form.closest('.cart-item-card');
             setBusy(form, true);
 
-            const body = csrfParams();
+            const body = csrfParams(form);
             body.set('menuItemId', itemId);
 
             fetch(removeUrl, {

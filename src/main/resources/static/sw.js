@@ -13,7 +13,7 @@
 
 // Bumped when the precache list changes: an existing client keeps its old list
 // until the version changes.
-const VERSION = 'v6';
+const VERSION = 'v7';
 const STATIC_CACHE = `bitesite-static-${VERSION}`;
 const PAGE_CACHE = `bitesite-pages-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
