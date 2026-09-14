@@ -52,7 +52,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
-### `pending` — Serve root static assets sw.js, manifest, and offline page with explicit resource handlers
+### `1dec9a1` — Serve root static assets sw.js, manifest, and offline page with explicit resource handlers
 **Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** pending
 
 **What changed**
