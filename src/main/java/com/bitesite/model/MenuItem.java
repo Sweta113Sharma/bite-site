@@ -104,6 +104,10 @@ public class MenuItem {
         return available && !outOfStockToday;
     }
 
+    public boolean isAvailableNow() {
+        return availableNow();
+    }
+
     /**
      * How full the day's cap is, 0-100, for the progress bar on the outlet's menu screen.
      * Clamped at 100 because a cap can be overshot slightly by simultaneous checkouts

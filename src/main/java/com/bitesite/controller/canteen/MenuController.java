@@ -116,13 +116,17 @@ public class MenuController {
      * today's state; a manager who wants an item gone for good uses delete.
      */
     @PostMapping("/{id}/toggle")
-    public String toggleAvailability(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id) {
+    public String toggleAvailability(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
         MenuItem item = menuService.get(id, user.getTenantId());
         // An item out of stock for today reads as off, so pressing the button restocks it
         // (which also clears today's mark) rather than switching it off for good.
-        menuService.setAvailability(id, user.getTenantId(), !item.availableNow(), user.getId());
+        boolean nowAvailable = !item.availableNow();
+        menuService.setAvailability(id, user.getTenantId(), nowAvailable, user.getId());
+        redirectAttributes.addFlashAttribute("menuNotice", item.getName() + " is "
+                + (nowAvailable ? "back on sale." : "marked out of stock."));
         return "redirect:/canteen/menu";
     }
 

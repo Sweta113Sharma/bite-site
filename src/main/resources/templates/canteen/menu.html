@@ -11,7 +11,7 @@
             <!--/* Opening-time reset. Only offered when there is actually something switched
                  off, so it isn't a button that does nothing most of the time. */-->
             <form method="post" th:action="@{/canteen/menu/restock-all}"
-                  th:if="${#lists.size(items.?[!available]) > 0}"
+                  th:if="${#lists.size(items.?[!availableNow]) > 0}"
                   onsubmit="return confirm('Put every out-of-stock item back on sale?');">
                 <button class="btn btn-outline-secondary" type="submit">
                     <span class="material-symbols-outlined">restart_alt</span>Restock all
@@ -60,11 +60,11 @@
 
     <ul class="menu-admin" id="menu-rows" th:if="${!#lists.isEmpty(items)}">
         <li class="menu-admin__row" th:each="item : ${items}"
-            th:classappend="${!item.available} ? 'is-off'"
+            th:classappend="${!item.availableNow} ? 'is-off'"
             data-filter-row="data-filter-row"
             th:attr="data-search=${item.name} + ' ' + ${item.category},
                      data-category=${item.category},
-                     data-stock=${!item.available} ? 'OFF' : (${item.soldOutToday()} ? 'SOLDOUT' : 'ON')">
+                     data-stock=${!item.availableNow} ? 'OFF' : (${item.soldOutToday()} ? 'SOLDOUT' : 'ON')">
 
             <div class="menu-admin__thumb" th:classappend="${item.photoPath == null} ? 'is-placeholder'">
                 <img th:if="${item.photoPath != null}" th:src="@{${item.photoPath}}" data-shimmer="data-shimmer" th:alt="${item.name}"/>
@@ -77,7 +77,8 @@
                     <!--/* Switched off by staff and sold out against the day's cap are
                          different facts, so they read as different badges. */-->
                     <span class="badge bg-danger" th:if="${!item.available}">Out of stock</span>
-                    <span class="badge bg-warning" th:if="${item.available and item.soldOutToday()}">Sold out today</span>
+                    <span class="badge bg-danger" th:if="${item.available and item.outOfStockToday}">Out of stock today</span>
+                    <span class="badge bg-warning" th:if="${item.availableNow and item.soldOutToday()}">Sold out today</span>
                 </div>
                 <div class="menu-admin__meta">
                     <span class="menu-admin__price">
@@ -107,10 +108,10 @@
                      on a button left it ambiguous whether it was a status or an action. */-->
                 <form method="post" th:action="@{/canteen/menu/{id}/toggle(id=${item.id})}">
                     <button class="btn btn-sm" type="submit"
-                            th:classappend="${item.available} ? 'btn-outline-secondary' : 'btn-accent'"
-                            th:title="${item.available} ? 'Mark out of stock' : 'Put back on sale'">
-                        <span class="material-symbols-outlined" th:text="${item.available} ? 'cancel' : 'check_circle'"></span>
-                        <span th:text="${item.available} ? 'Sold out' : 'Restock'">Sold out</span>
+                            th:classappend="${item.availableNow} ? 'btn-outline-secondary' : 'btn-accent'"
+                            th:title="${item.availableNow} ? 'Mark out of stock' : 'Put back on sale'">
+                        <span class="material-symbols-outlined" th:text="${item.availableNow} ? 'cancel' : 'check_circle'"></span>
+                        <span th:text="${item.availableNow} ? 'Sold out' : 'Restock'">Sold out</span>
                     </button>
                 </form>
                 <a sec:authorize="hasRole('CANTEEN_MANAGER')" class="btn btn-sm btn-outline-secondary"

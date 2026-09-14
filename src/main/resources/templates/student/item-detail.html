@@ -42,7 +42,7 @@
         <span class="material-symbols-outlined">block</span>
         <span>This item is not being served right now.</span>
     </div>
-    <div th:if="${item.available and item.soldOutToday()}" class="detail-unavailable">
+    <div th:if="${item.available and (item.outOfStockToday or item.soldOutToday())}" class="detail-unavailable">
         <span class="material-symbols-outlined">hourglass_top</span>
         <span>Sold out for today — it'll be back tomorrow.</span>
     </div>

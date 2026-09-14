@@ -225,4 +225,21 @@ class MenuItemTest {
         assertThat(capped(null, 5, true).dailyLimitPercent()).isZero();
         assertThat(capped(40, 10, true).dailyLimitPercent()).isEqualTo(25);
     }
+
+    @Test
+    void availableNowRequiresBothAvailableAndNotOutOfStockToday() {
+        MenuItem active = MenuItem.builder().available(true).outOfStockToday(false).build();
+        assertThat(active.availableNow()).isTrue();
+        assertThat(active.isAvailableNow()).isTrue();
+
+        MenuItem outToday = MenuItem.builder().available(true).outOfStockToday(true).build();
+        assertThat(outToday.availableNow()).isFalse();
+        assertThat(outToday.isAvailableNow()).isFalse();
+        assertThat(outToday.orderable()).isFalse();
+
+        MenuItem switchedOff = MenuItem.builder().available(false).outOfStockToday(false).build();
+        assertThat(switchedOff.availableNow()).isFalse();
+        assertThat(switchedOff.isAvailableNow()).isFalse();
+        assertThat(switchedOff.orderable()).isFalse();
+    }
 }
