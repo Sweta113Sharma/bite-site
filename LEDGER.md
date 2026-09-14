@@ -52,7 +52,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
-### `pending` — Make cart updates and removals live in place and prevent stale page caching
+### `6efb0bb` — Make cart updates and removals live in place and prevent stale page caching
 **Date:** 2026-09-15 · **Scope:** 5 files · **Deployed:** pending
 
 **What changed**
