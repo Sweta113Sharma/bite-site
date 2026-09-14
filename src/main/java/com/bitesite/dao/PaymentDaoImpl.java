@@ -29,6 +29,7 @@ public class PaymentDaoImpl implements PaymentDao {
             .razorpayPaymentId(rs.getString("razorpay_payment_id"))
             .razorpaySignature(rs.getString("razorpay_signature"))
             .amount(rs.getBigDecimal("amount"))
+            .refundedAmount(rs.getBigDecimal("refunded_amount"))
             .status(PaymentStatus.valueOf(rs.getString("status")))
             .needsReconciliation(rs.getBoolean("needs_reconciliation"))
             .reconciliationReason(rs.getString("reconciliation_reason"))
@@ -198,5 +199,32 @@ public class PaymentDaoImpl implements PaymentDao {
     @Override
     public void updateStatus(Long id, PaymentStatus status) {
         jdbcTemplate.update("UPDATE payments SET status = ? WHERE id = ?", status.name(), id);
+    }
+
+    @Override
+    public Optional<Payment> lockByOrderId(Long orderId, Long tenantId) {
+        // FOR UPDATE is the point: a partial refund claim holds this row until it commits,
+        // so a full cancellation's claimForRefund (an UPDATE on the same row) waits behind
+        // it and then sees the reduced refundable amount, and vice versa. Only meaningful
+        // inside a transaction; RefundLedger is the caller.
+        return jdbcTemplate.query(
+                "SELECT * FROM payments WHERE order_id = ? AND tenant_id = ? "
+                        + "ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE",
+                ROW_MAPPER, orderId, tenantId).stream().findFirst();
+    }
+
+    @Override
+    public void reservePartialRefund(Long id, java.math.BigDecimal amount) {
+        // chk_payments_refunded_amount refuses a total above the capture, so a bug in the
+        // arithmetic upstream fails here instead of promising money that was never taken.
+        jdbcTemplate.update(
+                "UPDATE payments SET refunded_amount = refunded_amount + ? WHERE id = ?", amount, id);
+    }
+
+    @Override
+    public void releasePartialRefund(Long id, java.math.BigDecimal amount) {
+        jdbcTemplate.update(
+                "UPDATE payments SET refunded_amount = GREATEST(0, refunded_amount - ?) WHERE id = ?",
+                amount, id);
     }
 }

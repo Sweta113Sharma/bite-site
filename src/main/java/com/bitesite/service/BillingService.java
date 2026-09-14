@@ -87,10 +87,7 @@ public class BillingService {
         // PLATFORM funds the promotion the canteen sold at full price and is owed
         // commission on full price — the platform absorbs the difference out of its margin.
         // Getting this backwards makes canteens pay for the platform's marketing.
-        BigDecimal commissionBase = "CANTEEN".equals(fundedBy) ? foodAmount.subtract(off) : foodAmount;
-        BigDecimal commission = commissionBase
-                .multiply(commissionPercent)
-                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+        BigDecimal commission = commissionOn(foodAmount, off, fundedBy, commissionPercent);
 
         return new Charges(
                 foodAmount,
@@ -104,6 +101,66 @@ public class BillingService {
                 s.showGstBreakdown() ? s.gstPercent() : BigDecimal.ZERO,
                 // What the student actually pays: the discount comes off the food.
                 foodAmount.subtract(off).add(fee).add(tip));
+    }
+
+    private static BigDecimal commissionOn(BigDecimal foodAmount, BigDecimal discount, String fundedBy,
+            BigDecimal commissionPercent) {
+        BigDecimal commissionBase = "CANTEEN".equals(fundedBy) ? foodAmount.subtract(discount) : foodAmount;
+        return commissionBase
+                .multiply(commissionPercent)
+                .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+    }
+
+    /** An order's money after some of its lines came off, and what the student is owed. */
+    public record Restatement(
+            BigDecimal foodAmount,
+            BigDecimal discountAmount,
+            BigDecimal commissionAmount,
+            BigDecimal totalAmount,
+            BigDecimal refund) {}
+
+    /**
+     * Restates an order's frozen terms once lines worth {@code removedSubtotal} are taken
+     * off it, for the kitchen removing items it cannot make.
+     *
+     * <p>The student gets back the removed food less that food's share of the discount. A
+     * ₹50-off code on a ₹500 order was worth 10% of each line, so a ₹100 line comes back as
+     * ₹90 and the ₹450 left keeps its ₹45 off. The platform fee and the tip stay: the order
+     * is still being made and collected. They go back only if every line comes off, which
+     * is a full cancellation and is not priced here.
+     *
+     * <p>Commission is recomputed from the order's own percentage and funder, never today's
+     * settings, so the canteen is settled on what it actually sold under the terms it sold
+     * it on. Legacy orders placed before commission was recorded keep their null.
+     *
+     * <p>Applying this twice in a row gives the same money as removing both lines at once,
+     * give or take a paisa of rounding, because each step prices against what is left.
+     *
+     * @throws IllegalArgumentException if nothing, or everything, is being removed
+     */
+    public Restatement withoutLines(Order order, BigDecimal removedSubtotal) {
+        BigDecimal food = order.getFoodAmount() != null ? order.getFoodAmount() : order.getTotalAmount();
+        BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
+        if (removedSubtotal.signum() <= 0 || removedSubtotal.compareTo(food) >= 0) {
+            throw new IllegalArgumentException(
+                    "Removing " + removedSubtotal + " of " + food + " is not a partial removal");
+        }
+
+        BigDecimal discountShare = discount.signum() == 0 ? BigDecimal.ZERO
+                : discount.multiply(removedSubtotal).divide(food, 2, RoundingMode.HALF_UP);
+        BigDecimal newFood = food.subtract(removedSubtotal);
+        BigDecimal newDiscount = discount.subtract(discountShare);
+        // Rounding must never leave more discount than food for it to come off.
+        if (newDiscount.compareTo(newFood) > 0) {
+            discountShare = discountShare.add(newDiscount.subtract(newFood));
+            newDiscount = newFood;
+        }
+        BigDecimal refund = removedSubtotal.subtract(discountShare);
+
+        BigDecimal commission = order.getCommissionPercent() == null ? order.getCommissionAmount()
+                : commissionOn(newFood, newDiscount, order.getDiscountFundedBy(), order.getCommissionPercent());
+
+        return new Restatement(newFood, newDiscount, commission, order.getTotalAmount().subtract(refund), refund);
     }
 
     /**
@@ -147,7 +204,10 @@ public class BillingService {
         // crosses a state line and the tax is always half CGST, half SGST.
         BigDecimal half = tax.divide(new BigDecimal("2"), 2, RoundingMode.HALF_UP);
 
+        // Only what is still on the order. The amounts above were restated when lines came
+        // off, so listing a removed line would make the bill not add up.
         List<Invoice.Line> lines = items.stream()
+                .filter(i -> !i.isCancelled())
                 .map(i -> new Invoice.Line(i.getItemNameSnapshot(), i.getQuantity(),
                         i.getUnitPrice(), i.getSubtotal()))
                 .toList();

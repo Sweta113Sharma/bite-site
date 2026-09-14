@@ -105,6 +105,22 @@ public interface OrderDao {
      * say what happened instead of just showing a red badge. */
     void cancel(Long id, Long tenantId, String reason);
 
+    /** The order and its lines, the order row locked until the surrounding transaction ends. */
+    Optional<Order> lockByIdAndTenantId(Long id, Long tenantId);
+
+    /**
+     * Marks these lines of this order cancelled, but only lines not already cancelled.
+     * Returns how many rows changed, which the caller compares with how many it asked for:
+     * fewer means someone else took one of them off first.
+     */
+    int cancelLines(Long orderId, List<Long> lineIds, String reason, Long refundId);
+
+    /** Rewrites the money on an order after lines were taken off it. The percentages and
+     * who funded the discount are untouched; only the amounts they produced change. */
+    void restateAmounts(Long id, Long tenantId, java.math.BigDecimal foodAmount,
+            java.math.BigDecimal discountAmount, java.math.BigDecimal commissionAmount,
+            java.math.BigDecimal totalAmount);
+
     /** Stores the pickup code issued when an order is marked ready. */
     void setPickupCode(Long id, Long tenantId, String code);
 

@@ -53,7 +53,7 @@ class PickupCodeTest {
         orderService = new OrderService(orderDao, paymentDao, menuService, outletService,
                 paymentGateway, auditService, orderNotifier, billingService, promoCodeService,
                 new PlatformSettingsService(settingsDao, auditService),
-                new RefundLedger(paymentDao));
+                new RefundLedger(paymentDao, orderDao, null, billingService));
     }
 
     private Order at(OrderStatus status, String code) {

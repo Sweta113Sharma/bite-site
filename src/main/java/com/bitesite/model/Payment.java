@@ -20,6 +20,11 @@ public class Payment {
     private String razorpayPaymentId;
     private String razorpaySignature;
     private BigDecimal amount;
+    /** The part of this capture already claimed by partial refunds (unavailable items taken
+     * off the order). Claimed, not confirmed: it is reserved before the gateway is called,
+     * so a full cancellation arriving meanwhile can only ever refund what is left. */
+    @Builder.Default
+    private BigDecimal refundedAmount = BigDecimal.ZERO;
     private PaymentStatus status;
 
     /** Money we hold that no order is going to honour. Set when a capture arrives for an
@@ -43,4 +48,11 @@ public class Payment {
     private int refundAttempts;
     private LocalDateTime createdAt;
     private LocalDateTime verifiedAt;
+
+    /** What a full refund of this payment means now: the capture less anything partial
+     * refunds have already claimed. Null-safe for rows built without the column. */
+    public BigDecimal refundableAmount() {
+        BigDecimal claimed = refundedAmount == null ? BigDecimal.ZERO : refundedAmount;
+        return amount.subtract(claimed);
+    }
 }

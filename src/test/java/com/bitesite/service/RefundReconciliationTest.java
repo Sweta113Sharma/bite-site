@@ -325,7 +325,7 @@ class RefundReconciliationTest {
         Payment flagged = reload(payment.getId());
         assertThat(flagged.getStatus()).isEqualTo(PaymentStatus.REFUND_PENDING);
         assertThat(flagged.isNeedsReconciliation()).isTrue();
-        assertThat(flagged.getReconciliationReason()).contains("only issues full refunds");
+        assertThat(flagged.getReconciliationReason()).contains("matches no refund BiteSite sent");
         assertThat(refundCallsFor(payment.getId()))
                 .as("never top up a partial refund automatically").isEqualTo(1);
     }

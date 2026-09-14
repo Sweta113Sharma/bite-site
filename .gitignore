@@ -19,6 +19,7 @@ orders2.html
 # settings.local.json is per-user permissions. Shared conventions live in CLAUDE.md.
 .claude/settings.local.json
 .claude/skills/
+.codex/
 .agents/
 skills-lock.json
 uploads/*

@@ -99,7 +99,8 @@
 
     function renderOrder(order) {
         const badgeClass = STATUS_BADGE[order.status] || 'bg-secondary';
-        const items = order.itemSummaries.map(s => `<li>${escapeHtml(s)}</li>`).join('');
+        const items = order.itemSummaries.map(s => `<li><span>${escapeHtml(s)}</span></li>`).join('')
+            + (order.removedSummaries || []).map(s => `<li class="line-removed"><span>${escapeHtml(s)}</span> <span class="line-removed__why">(removed)</span></li>`).join('');
         const action = NEXT_ACTION[order.status];
         const actionHtml = action ? `
             <form method="post" action="/canteen/queue/${order.id}/status">
@@ -124,19 +125,46 @@
                            inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
                            placeholder="0000" aria-label="Pickup code"/>
                     <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
-                    <button type="submit" class="btn btn-sm btn-success"><i class="ph ph-check-circle"></i>Hand over</button>
+                    <button type="submit" class="btn btn-sm btn-success"><span class="material-symbols-outlined">check_circle</span>Hand over</button>
                 </div>
             </form>` : '';
 
         const cancelHtml = order.status === 'PAID' ? `
             <details class="cancel-panel mt-2">
-                <summary><i class="ph ph-x-circle"></i>Cancel &amp; refund</summary>
+                <summary><span class="material-symbols-outlined">cancel</span>Cancel &amp; refund</summary>
                 <form method="post" action="/canteen/queue/${order.id}/cancel"
                       onsubmit="return confirm('Cancel this order and refund the customer in full?');">
                     <label class="form-label small mb-1">Reason (the student sees this)</label>
                     <select name="reason" class="form-select form-select-sm mb-2">${reasonOptions}</select>
                     <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
-                    <button type="submit" class="btn btn-sm btn-danger w-100"><i class="ph ph-arrow-u-up-left"></i>Cancel and refund in full</button>
+                    <button type="submit" class="btn btn-sm btn-danger w-100"><span class="material-symbols-outlined">undo</span>Cancel and refund in full</button>
+                </form>
+            </details>` : '';
+
+        // Mirrors the "Some items unavailable" panel in canteen/queue.html, including when
+        // it is offered: while PREPARING, or while PAID with more than one line to choose from.
+        const lines = order.lines || [];
+        const itemCancelHtml = (order.status === 'PREPARING' || (order.status === 'PAID' && lines.length > 1)) ? `
+            <details class="cancel-panel item-cancel mt-2">
+                <summary><span class="material-symbols-outlined">block</span>Some items unavailable</summary>
+                <form method="post" action="/canteen/queue/${order.id}/items/cancel"
+                      onsubmit="return confirm('Remove the ticked items and refund the student for them?');">
+                    <fieldset class="item-cancel__lines">
+                        <legend class="form-label small mb-1">Tick what can't be made</legend>
+                        ${lines.map(l => `
+                        <label class="item-cancel__line">
+                            <input type="checkbox" name="lineId" value="${l.id}"/>
+                            <span>${escapeHtml(l.quantity + 'x ' + l.name)}</span>
+                        </label>`).join('')}
+                    </fieldset>
+                    <label class="form-label small mb-1" for="item-reason-${order.id}">Why (the student sees this)</label>
+                    <select name="reason" class="form-select form-select-sm mb-2" id="item-reason-${order.id}">
+                        <option value="OUT_OF_STOCK">Out of stock (off the menu until tomorrow)</option>
+                        <option value="CANNOT_MAKE">Can't be made right now</option>
+                        <option value="STUDENT_REQUEST">Student asked to remove it</option>
+                    </select>
+                    <input type="hidden" name="${csrfParam}" value="${csrfToken}"/>
+                    <button type="submit" class="btn btn-sm btn-danger w-100"><span class="material-symbols-outlined">undo</span>Remove and refund</button>
                 </form>
             </details>` : '';
 
@@ -152,6 +180,7 @@
                         ${actionHtml}
                         ${pickupHtml}
                         ${cancelHtml}
+                        ${itemCancelHtml}
                     </div>
                 </div>
             </div>`;
@@ -170,10 +199,19 @@
                 return false;
             }
             const orders = await response.json();
-            const snapshot = JSON.stringify(orders.map(o => [o.id, o.status]));
+            // Line count is in the snapshot so an item removed on another tablet shows up
+            // here too; a removal changes the ticket without changing the status.
+            const snapshot = JSON.stringify(orders.map(o => [o.id, o.status, (o.lines || []).length]));
             if (snapshot === lastSnapshot) {
                 return true;
             }
+            /* Someone is halfway through a cancel or an item removal: replacing the queue now
+               would throw away their ticks and their chosen reason. Leave the snapshot
+               unrecorded so the next poll after they close the panel redraws everything. */
+            if (container.querySelector('details[open]')) {
+                return true;
+            }
+
             /* Only orders that were not on the previous poll count as arrivals — a status
                change on an order already in the queue is not a new one, and chiming for it
                would train staff to ignore the sound. lastSnapshot is null on first load,

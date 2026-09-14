@@ -63,6 +63,7 @@ public class DashboardDaoImpl implements DashboardDao {
                         + "JOIN outlets o ON o.id = ord.outlet_id "
                         + "WHERE ord.token_day = CURDATE() "
                         + "  AND ord.status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED') "
+                        + "  AND oi.cancelled_at IS NULL "
                         + "GROUP BY mi.id, mi.name, o.name, mi.daily_limit "
                         + "HAVING mi.daily_limit IS NOT NULL AND SUM(oi.quantity) >= mi.daily_limit "
                         + "ORDER BY o.name, mi.name",
@@ -81,6 +82,7 @@ public class DashboardDaoImpl implements DashboardDao {
                         + "JOIN outlets o ON o.id = ord.outlet_id "
                         + "WHERE ord.token_day = CURDATE() "
                         + "  AND ord.status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED') "
+                        + "  AND oi.cancelled_at IS NULL "
                         + "GROUP BY mi.id, mi.name, o.name "
                         + "ORDER BY sold_today DESC, revenue DESC "
                         + "LIMIT 5",

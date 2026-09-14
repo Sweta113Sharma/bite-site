@@ -28,8 +28,16 @@ public class MenuItemDaoImpl implements MenuItemDao {
      * and every caller unchanged.
      */
     private static final String SELECT_ITEM =
-            "SELECT mi.*, c.name AS category FROM menu_items mi "
+            // out_of_stock_today is resolved against the database's own date, the same
+            // CURDATE() the daily sales cap counts from, so both reset at the same midnight.
+            "SELECT mi.*, c.name AS category, "
+                    + "COALESCE(mi.out_of_stock_on = CURDATE(), FALSE) AS out_of_stock_today "
+                    + "FROM menu_items mi "
                     + "JOIN categories c ON c.id = mi.category_id ";
+
+    /** On sale today: switched on and not marked out of stock for today. */
+    private static final String ON_SALE =
+            "mi.is_available = TRUE AND (mi.out_of_stock_on IS NULL OR mi.out_of_stock_on <> CURDATE()) ";
 
     private static final RowMapper<MenuItem> ROW_MAPPER = (rs, rowNum) -> MenuItem.builder()
             .id(rs.getLong("id"))
@@ -43,6 +51,7 @@ public class MenuItemDaoImpl implements MenuItemDao {
             .discountPrice(rs.getBigDecimal("discount_price"))
             .discountPercent(rs.getBigDecimal("discount_percent"))
             .available(rs.getBoolean("is_available"))
+            .outOfStockToday(rs.getBoolean("out_of_stock_today"))
             .dailyLimit(rs.getObject("daily_limit", Integer.class))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .updatedAt(rs.getObject("updated_at", LocalDateTime.class))
@@ -66,7 +75,7 @@ public class MenuItemDaoImpl implements MenuItemDao {
     @Override
     public List<MenuItem> findAvailableByOutletId(Long outletId, Long tenantId) {
         return jdbcTemplate.query(
-                SELECT_ITEM + "WHERE mi.outlet_id = ? AND mi.tenant_id = ? AND mi.is_available = TRUE "
+                SELECT_ITEM + "WHERE mi.outlet_id = ? AND mi.tenant_id = ? AND " + ON_SALE
                         + "ORDER BY c.sort_order, c.name, mi.name",
                 ROW_MAPPER, outletId, tenantId);
     }
@@ -107,16 +116,37 @@ public class MenuItemDaoImpl implements MenuItemDao {
 
     @Override
     public void updateAvailability(Long id, Long tenantId, boolean available) {
+        // Putting an item back on sale has to clear today's out-of-stock mark too, or the
+        // Restock button would appear to work and change nothing until midnight.
         jdbcTemplate.update(
-                "UPDATE menu_items SET is_available = ? WHERE id = ? AND tenant_id = ?", available, id, tenantId);
+                "UPDATE menu_items SET is_available = ?, "
+                        + "out_of_stock_on = CASE WHEN ? THEN NULL ELSE out_of_stock_on END "
+                        + "WHERE id = ? AND tenant_id = ?",
+                available, available, id, tenantId);
     }
 
     @Override
     public int markAllAvailable(Long outletId, Long tenantId) {
         return jdbcTemplate.update(
-                "UPDATE menu_items SET is_available = TRUE WHERE outlet_id = ? AND tenant_id = ? "
-                        + "AND is_available = FALSE",
+                "UPDATE menu_items SET is_available = TRUE, out_of_stock_on = NULL "
+                        + "WHERE outlet_id = ? AND tenant_id = ? "
+                        + "AND (is_available = FALSE OR out_of_stock_on = CURDATE())",
                 outletId, tenantId);
+    }
+
+    @Override
+    public int markOutOfStockToday(List<Long> ids, Long outletId, Long tenantId) {
+        if (ids.isEmpty()) {
+            return 0;
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        List<Object> args = new java.util.ArrayList<>(ids);
+        args.add(outletId);
+        args.add(tenantId);
+        return jdbcTemplate.update(
+                "UPDATE menu_items SET out_of_stock_on = CURDATE() WHERE id IN (" + placeholders + ") "
+                        + "AND outlet_id = ? AND tenant_id = ?",
+                args.toArray());
     }
 
     @Override

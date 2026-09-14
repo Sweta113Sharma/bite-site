@@ -128,7 +128,7 @@ public class OrderService {
         BigDecimal total = BigDecimal.ZERO;
         for (Map.Entry<Long, Integer> entry : cartQuantities.entrySet()) {
             MenuItem item = menuService.get(entry.getKey(), tenantId);
-            if (!item.isAvailable() || !item.getOutletId().equals(outletId)) {
+            if (!item.availableNow() || !item.getOutletId().equals(outletId)) {
                 throw new InvalidOrderStateException(item.getName() + " is no longer available.");
             }
             item.setSoldToday(soldToday.getOrDefault(item.getId(), 0));
@@ -437,8 +437,16 @@ public class OrderService {
      * anything the webhook missed. A human only sees what neither could decide.
      */
     private void refundThroughGateway(Payment payment) {
+        // What is left, not the original amount: items the kitchen already took off this
+        // order were refunded separately, and Razorpay refuses a refund above what remains.
+        BigDecimal amount = payment.refundableAmount();
+        if (amount.signum() <= 0) {
+            // Every rupee already went back through partial refunds. Nothing to send.
+            paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
+            return;
+        }
         try {
-            paymentGateway.refund(payment.getRazorpayPaymentId(), payment.getAmount());
+            paymentGateway.refund(payment.getRazorpayPaymentId(), amount);
         } catch (RuntimeException gatewayFailed) {
             refundLedger.recordUnresolved(payment.getId(),
                     "Refund attempted, outcome unknown: " + gatewayFailed.getMessage());
@@ -718,9 +726,35 @@ public class OrderService {
             throw new InvalidOrderStateException(
                     "Cannot cancel an order in " + order.getStatus() + " status.");
         }
+        cancelWithRefund(order, actorUserId, reason);
+    }
 
+    /**
+     * Cancels an order the kitchen cannot make any of, refunding everything still held.
+     *
+     * <p>The one staff route from PREPARING to CANCELLED, and deliberately narrow. The state
+     * machine forbids that move so a student's own cancel can never land on food already on
+     * the grill (see {@link #cancelOwnOrder}), and that path still goes through
+     * {@link #cancelOrder}. This is reached only when staff take every remaining item off an
+     * order (see ItemCancellationService): with nothing left to prepare, keeping the order
+     * open would hold the student's money against no food at all.
+     */
+    /* Deliberately NOT @Transactional, for the reasons on cancelOrder. */
+    public void cancelUnmakeable(Long orderId, Long tenantId, Long actorUserId, String reason) {
+        Order order = getForTenant(orderId, tenantId);
+        if (order.getStatus() != OrderStatus.PAID && order.getStatus() != OrderStatus.PREPARING) {
+            throw new InvalidOrderStateException(
+                    "Cannot cancel an order in " + order.getStatus() + " status.");
+        }
+        cancelWithRefund(order, actorUserId, reason);
+    }
+
+    private void cancelWithRefund(Order order, Long actorUserId, String reason) {
+        Long orderId = order.getId();
+        Long tenantId = order.getTenantId();
         String explanation = normalizeReason(reason);
-        if (order.getStatus() == OrderStatus.PAID) {
+        boolean captured = order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.PREPARING;
+        if (captured) {
             Payment payment = getPaymentForOrder(orderId, tenantId);
             /* An earlier refund attempt whose outcome we never learned. Cancelling anyway
                would quietly close the order while the student may or may not have their
@@ -753,7 +787,10 @@ public class OrderService {
                     throw new InvalidOrderStateException(
                             "This order is already being cancelled and refunded.");
                 }
-                refundThroughGateway(payment);
+                // Re-read after the claim, not before: a partial refund that committed in
+                // the meantime changed how much is left, and the claim is what shut the door
+                // on any more of them.
+                refundThroughGateway(getPaymentForOrder(orderId, tenantId));
             }
         }
 
@@ -761,7 +798,7 @@ public class OrderService {
         orderDao.cancel(orderId, tenantId, explanation);
         auditService.record(actorUserId, tenantId, "Order", orderId, "STATUS_CANCELLED", previous, OrderStatus.CANCELLED);
         orderNotifier.notifyOrderUpdate(order.getUserId(), "Order cancelled",
-                "Your order " + order.getTokenNo() + " was cancelled" + (previous == OrderStatus.PAID ? " and refunded" : "")
+                "Your order " + order.getTokenNo() + " was cancelled" + (captured ? " and refunded" : "")
                         + ": " + explanation);
     }
 
@@ -830,7 +867,9 @@ public class OrderService {
             throw new InvalidOrderStateException(
                     "A refund for this payment is already in progress or unresolved.");
         }
-        refundThroughGateway(payment);
+        // Re-read for the same reason as in cancelWithRefund: partial refunds may have
+        // claimed part of this capture before ours committed.
+        refundThroughGateway(getPaymentForOrder(orderId, tenantId));
         auditService.record(actorUserId, tenantId, "Payment", payment.getId(), "REFUND_MANUAL",
                 PaymentStatus.CAPTURED, PaymentStatus.REFUNDED);
 

@@ -16,8 +16,13 @@ public interface MenuItemDao {
 
     void updateAvailability(Long id, Long tenantId, boolean available);
 
-    /** Switches every item at an outlet back on in one statement — the "we restocked" button. */
+    /** Switches every item at an outlet back on in one statement — the "we restocked" button.
+     * Also clears "out of stock today", which is the other way an item is off sale. */
     int markAllAvailable(Long outletId, Long tenantId);
+
+    /** Takes these items off sale until the end of today. Scoped to the outlet, so an id
+     * from another canteen's order can never switch off a different canteen's item. */
+    int markOutOfStockToday(List<Long> ids, Long outletId, Long tenantId);
 
     void delete(Long id, Long tenantId);
 }

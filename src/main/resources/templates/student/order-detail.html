@@ -7,6 +7,7 @@
 
 <!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
+<dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>
 
 <div class="container" style="max-width: 560px;"
      th:attr="data-order-id=${order.id},data-order-status=${order.status.name()}">
@@ -134,6 +135,14 @@
                 <div class="small">It goes back to the method you paid with. Banks usually take 5-7 working days to show it.</div>
             </div>
         </div>
+        <div class="alert alert-info d-flex align-items-start gap-3 mb-4"
+             th:if="${payment.refundedAmount != null and payment.refundedAmount.signum() > 0 and payment.status.name() != 'REFUNDED'}">
+            <div class="icon-circle bg-info text-white" style="background: var(--color-info) !important;"><span class="material-symbols-outlined">undo</span></div>
+            <div>
+                <strong th:text="'₹' + ${payment.refundedAmount} + ' has been refunded for removed items.'">Refunded</strong>
+                <div class="small">It goes back to the method you paid with. Banks usually take 5-7 working days to show it.</div>
+            </div>
+        </div>
         <!--/* cancelOrder refunds before it cancels, so this pairing means something went
              wrong rather than something is pending. Say so, and point at support. */-->
         <div class="alert alert-warning d-flex align-items-start gap-3 mb-4"
@@ -143,6 +152,23 @@
                 <strong>Your refund hasn't gone through yet.</strong>
                 <div class="small">Raise this through Support with your order token and it will be sorted out.</div>
             </div>
+        </div>
+    </div>
+
+    <!--/* If the kitchen removed items because they were unavailable, explain which items
+         were taken off and why so the restated bill below makes sense. */-->
+    <div class="alert alert-warning d-flex align-items-start gap-3 mb-4"
+         th:if="${order.items != null and #lists.size(order.items.?[cancelled]) > 0}">
+        <div class="icon-circle bg-warning text-white" style="background: var(--color-warning) !important;"><span class="material-symbols-outlined">block</span></div>
+        <div>
+            <strong>Some items were removed by the kitchen:</strong>
+            <ul class="mb-0 mt-1 ps-3 small">
+                <li th:each="i : ${order.items.?[cancelled]}">
+                    <span th:text="${i.quantity} + '× ' + ${i.itemNameSnapshot}">Item</span>
+                    <span class="text-muted" th:if="${i.cancellationReason != null}"
+                          th:text="'(' + ${i.cancellationReason} + ')'"></span>
+                </li>
+            </ul>
         </div>
     </div>
 

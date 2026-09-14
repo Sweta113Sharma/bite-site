@@ -28,6 +28,20 @@ public interface PaymentGateway {
     void refund(String gatewayPaymentId, BigDecimal amountRupees);
 
     /**
+     * Refunds part of a captured payment and returns the refund the gateway created, whose
+     * id is how its later {@code refund.processed} webhook is matched back to the lines it
+     * paid for. Same failure contract as {@link #refund}: an exception means the outcome is
+     * unknown, not that no money moved.
+     *
+     * <p>The default exists for gateway stand-ins in tests that predate partial refunds; it
+     * reports no id, which the caller treats as "matched later by amount".
+     */
+    default GatewayRefund refundPart(String gatewayPaymentId, BigDecimal amountRupees) {
+        refund(gatewayPaymentId, amountRupees);
+        return new GatewayRefund(null, amountRupees, null);
+    }
+
+    /**
      * Every refund the gateway holds against a payment, in any state. This is how a refund
      * whose outcome we never learned gets settled: {@link #refund} can succeed while
      * reporting failure, and the only way to know is to ask. Empty means the gateway has

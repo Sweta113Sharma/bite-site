@@ -16,8 +16,13 @@
     <div class="card mb-3">
         <div class="card-body">
             <div class="list-group list-group-flush">
-                <div class="list-group-item d-flex justify-content-between px-0" th:each="i : ${order.items}">
-                    <span><strong th:text="${i.quantity}">1</strong>× <span th:text="${i.itemNameSnapshot}">Item</span></span>
+                <div class="list-group-item d-flex justify-content-between px-0" th:each="i : ${order.items}"
+                     th:classappend="${i.cancelled} ? 'line-removed'">
+                    <span>
+                        <strong th:text="${i.quantity}">1</strong>× <span th:text="${i.itemNameSnapshot}">Item</span>
+                        <span th:if="${i.cancelled}" class="line-removed__why"
+                              th:text="'(removed: ' + ${i.cancellationReason} + ')'">(removed)</span>
+                    </span>
                     <span th:text="'₹' + ${i.subtotal}">₹0</span>
                 </div>
                 <div class="list-group-item d-flex justify-content-between px-0 fw-bold">

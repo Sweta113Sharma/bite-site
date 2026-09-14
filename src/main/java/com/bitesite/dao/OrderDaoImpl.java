@@ -66,6 +66,9 @@ public class OrderDaoImpl implements OrderDao {
             .quantity(rs.getInt("quantity"))
             .unitPrice(rs.getBigDecimal("unit_price"))
             .subtotal(rs.getBigDecimal("subtotal"))
+            .cancelledAt(rs.getObject("cancelled_at", LocalDateTime.class))
+            .cancellationReason(rs.getString("cancellation_reason"))
+            .refundId(rs.getObject("refund_id", Long.class))
             .build();
 
     /** Falls back rather than writing a null into a NOT NULL money column. */
@@ -350,6 +353,46 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    public Optional<Order> lockByIdAndTenantId(Long id, Long tenantId) {
+        Optional<Order> orderOpt = jdbcTemplate.query(
+                "SELECT * FROM orders WHERE id = ? AND tenant_id = ? FOR UPDATE", ORDER_ROW_MAPPER, id, tenantId)
+                .stream().findFirst();
+        orderOpt.ifPresent(order -> order.setItems(jdbcTemplate.query(
+                "SELECT * FROM order_items WHERE order_id = ? ORDER BY id FOR UPDATE",
+                ITEM_ROW_MAPPER, order.getId())));
+        return orderOpt;
+    }
+
+    @Override
+    public int cancelLines(Long orderId, List<Long> lineIds, String reason, Long refundId) {
+        if (lineIds.isEmpty()) {
+            return 0;
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(lineIds.size(), "?"));
+        List<Object> args = new ArrayList<>();
+        args.add(reason);
+        args.add(refundId);
+        args.add(orderId);
+        args.addAll(lineIds);
+        // order_id in the WHERE clause is what stops a line id from somebody else's order
+        // being cancelled through this one; cancelled_at IS NULL makes a repeat a no-op.
+        return jdbcTemplate.update(
+                "UPDATE order_items SET cancelled_at = CURRENT_TIMESTAMP, cancellation_reason = ?, refund_id = ? "
+                        + "WHERE order_id = ? AND id IN (" + placeholders + ") AND cancelled_at IS NULL",
+                args.toArray());
+    }
+
+    @Override
+    public void restateAmounts(Long id, Long tenantId, java.math.BigDecimal foodAmount,
+            java.math.BigDecimal discountAmount, java.math.BigDecimal commissionAmount,
+            java.math.BigDecimal totalAmount) {
+        jdbcTemplate.update(
+                "UPDATE orders SET food_amount = ?, discount_amount = ?, commission_amount = ?, total_amount = ? "
+                        + "WHERE id = ? AND tenant_id = ?",
+                foodAmount, discountAmount, commissionAmount, totalAmount, id, tenantId);
+    }
+
+    @Override
     public void setPickupCode(Long id, Long tenantId, String code) {
         jdbcTemplate.update(
                 "UPDATE orders SET pickup_code = ?, pickup_code_issued_at = CURRENT_TIMESTAMP "
@@ -373,6 +416,9 @@ public class OrderDaoImpl implements OrderDao {
                         + "FROM order_items oi JOIN orders o ON o.id = oi.order_id "
                         + "WHERE o.tenant_id = ? AND o.outlet_id = ? AND o.created_at >= CURDATE() "
                         + "AND o.status NOT IN ('CANCELLED','EXPIRED','PAYMENT_FAILED') "
+                        // A line the kitchen took off an order was never sold, so it must
+                        // not use up the day's cap for the next student.
+                        + "AND oi.cancelled_at IS NULL "
                         + "GROUP BY oi.menu_item_id",
                 rs -> { totals.put(rs.getLong("menu_item_id"), rs.getInt("qty")); },
                 tenantId, outletId);
@@ -389,6 +435,7 @@ public class OrderDaoImpl implements OrderDao {
                         + "JOIN orders o ON o.id = oi.order_id "
                         + "WHERE o.user_id = ? AND o.tenant_id = ? AND o.outlet_id = ? "
                         + "AND o.status NOT IN ('CANCELLED','EXPIRED','PAYMENT_FAILED','AWAITING_PAYMENT') "
+                        + "AND oi.cancelled_at IS NULL "
                         + "GROUP BY oi.menu_item_id "
                         + "ORDER BY COUNT(*) DESC, MAX(o.created_at) DESC "
                         + "LIMIT ?",

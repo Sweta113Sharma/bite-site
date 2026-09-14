@@ -74,6 +74,15 @@ public interface PaymentDao {
 
     void updateStatus(Long id, PaymentStatus status);
 
+    /** The order's payment, locked until the surrounding transaction ends. */
+    Optional<Payment> lockByOrderId(Long orderId, Long tenantId);
+
+    /** Adds to the amount partial refunds have claimed against this capture. */
+    void reservePartialRefund(Long id, java.math.BigDecimal amount);
+
+    /** Gives back a claim whose refund the gateway reported as failed. */
+    void releasePartialRefund(Long id, java.math.BigDecimal amount);
+
     /** Marks a captured payment as needing a human — see V22. */
     void flagForReconciliation(Long id, String reason);
 

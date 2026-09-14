@@ -986,6 +986,39 @@ body.console .cancel-panel[open] > summary {
     margin-bottom: 0.5rem;
 }
 
+/* ============================================================
+   ITEM CANCELLATION & REMOVED LINES — canteen queue & ticket
+   ============================================================ */
+
+.line-removed {
+    text-decoration: line-through;
+    opacity: 0.65;
+}
+
+.line-removed__why {
+    text-decoration: none;
+    display: inline-block;
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--color-ink-muted);
+}
+
+.item-cancel__lines {
+    border: none;
+    padding: 0;
+    margin: 0 0 0.5rem 0;
+}
+
+.item-cancel__line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-bottom: 0.35rem;
+    user-select: none;
+}
+
 
 /* ============================================================
    PRINT — the sales report and the order queue get printed in kitchens.

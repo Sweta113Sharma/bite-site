@@ -111,6 +111,24 @@ public class RazorpayPaymentGateway implements PaymentGateway {
     }
 
     @Override
+    public GatewayRefund refundPart(String gatewayPaymentId, BigDecimal amountRupees) {
+        long amountPaise = toPaise(amountRupees);
+        if (amountPaise < MIN_AMOUNT_PAISE) {
+            // Razorpay's floor applies to refunds too, and its own rejection is opaque.
+            // Reachable when a removed line was almost entirely covered by a discount.
+            throw new PaymentGatewayException("Refunds under ₹1 can't be sent through Razorpay.");
+        }
+        try {
+            JSONObject request = new JSONObject();
+            request.put("amount", amountPaise);
+            return toGatewayRefund(client().payments.refund(gatewayPaymentId, request));
+        } catch (RazorpayException e) {
+            log.error("Razorpay partial refund failed for payment {}", gatewayPaymentId, e);
+            throw new PaymentGatewayException("Could not process the refund — please try again.", e);
+        }
+    }
+
+    @Override
     public List<GatewayRefund> refundsFor(String gatewayPaymentId) {
         try {
             List<Refund> refunds = client().payments.fetchAllRefunds(gatewayPaymentId);

@@ -137,6 +137,21 @@ public class MenuService {
         return restored;
     }
 
+    /**
+     * Takes items off sale until the end of today, for the kitchen that has just found them
+     * missing while making an order. Unlike the manual toggle it undoes itself tomorrow, so
+     * a busy lunch rush cannot leave a dish switched off for a week because nobody
+     * remembered to switch it back on. Restock, or Restock all, brings it back sooner.
+     */
+    public int markOutOfStockToday(List<Long> menuItemIds, Long outletId, Long tenantId, Long actorUserId) {
+        List<Long> distinct = menuItemIds.stream().distinct().toList();
+        int marked = menuItemDao.markOutOfStockToday(distinct, outletId, tenantId);
+        for (Long id : distinct) {
+            auditService.record(actorUserId, tenantId, "MenuItem", id, "MARK_OUT_OF_STOCK_TODAY", null, null);
+        }
+        return marked;
+    }
+
     public void delete(Long id, Long tenantId, Long actorUserId) {
         MenuItem before = get(id, tenantId);
         menuItemDao.delete(id, tenantId);

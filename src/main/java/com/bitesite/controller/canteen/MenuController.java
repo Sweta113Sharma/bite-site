@@ -120,7 +120,9 @@ public class MenuController {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_OPS);
         User user = principal.getUser();
         MenuItem item = menuService.get(id, user.getTenantId());
-        menuService.setAvailability(id, user.getTenantId(), !item.isAvailable(), user.getId());
+        // An item out of stock for today reads as off, so pressing the button restocks it
+        // (which also clears today's mark) rather than switching it off for good.
+        menuService.setAvailability(id, user.getTenantId(), !item.availableNow(), user.getId());
         return "redirect:/canteen/menu";
     }
 

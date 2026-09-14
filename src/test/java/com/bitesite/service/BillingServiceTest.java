@@ -252,4 +252,89 @@ class BillingServiceTest {
                 .charges(new BigDecimal("100.00"), outletAt(null), null);
         assertThat(on.gstPercent()).isEqualByComparingTo("5");
     }
+
+    // ---- withoutLines (item removals / partial restatement) -----------------
+
+    @Test
+    void withoutLinesReducesDiscountProportionallyAndRefundsNetFood() {
+        com.bitesite.model.Order order = com.bitesite.model.Order.builder()
+                .foodAmount(new BigDecimal("500.00"))
+                .discountAmount(new BigDecimal("50.00"))
+                .discountFundedBy("CANTEEN")
+                .commissionPercent(new BigDecimal("10.00"))
+                .totalAmount(new BigDecimal("455.00")) // ₹450 food after discount + ₹5 fee
+                .build();
+
+        BillingService service = serviceWith(settings());
+        BillingService.Restatement r = service.withoutLines(order, new BigDecimal("100.00"));
+
+        // ₹100 is 20% of the food, so ₹10 of the ₹50 discount came off it.
+        // The student gets back ₹90, and the remaining ₹400 keeps ₹40 discount.
+        assertThat(r.foodAmount()).isEqualByComparingTo("400.00");
+        assertThat(r.discountAmount()).isEqualByComparingTo("40.00");
+        assertThat(r.refund()).isEqualByComparingTo("90.00");
+        assertThat(r.totalAmount()).isEqualByComparingTo("365.00"); // 455 - 90
+        // CANTEEN funded: commission is 10% of (400 - 40) = ₹36.00
+        assertThat(r.commissionAmount()).isEqualByComparingTo("36.00");
+    }
+
+    @Test
+    void withoutLinesCommissionPlatformFundedUsesFullRemainingFood() {
+        com.bitesite.model.Order order = com.bitesite.model.Order.builder()
+                .foodAmount(new BigDecimal("200.00"))
+                .discountAmount(new BigDecimal("20.00"))
+                .discountFundedBy("PLATFORM")
+                .commissionPercent(new BigDecimal("5.00"))
+                .totalAmount(new BigDecimal("180.00"))
+                .build();
+
+        BillingService service = serviceWith(settings());
+        BillingService.Restatement r = service.withoutLines(order, new BigDecimal("50.00"));
+
+        assertThat(r.foodAmount()).isEqualByComparingTo("150.00");
+        assertThat(r.discountAmount()).isEqualByComparingTo("15.00");
+        assertThat(r.refund()).isEqualByComparingTo("45.00");
+        // PLATFORM funded: commission is 5% of full foodAmount (150) = ₹7.50
+        assertThat(r.commissionAmount()).isEqualByComparingTo("7.50");
+    }
+
+    @Test
+    void withoutLinesWithNoDiscountRefundsFullSubtotal() {
+        com.bitesite.model.Order order = com.bitesite.model.Order.builder()
+                .foodAmount(new BigDecimal("300.00"))
+                .discountAmount(BigDecimal.ZERO)
+                .totalAmount(new BigDecimal("300.00"))
+                .commissionPercent(null)
+                .commissionAmount(new BigDecimal("15.00"))
+                .build();
+
+        BillingService service = serviceWith(settings());
+        BillingService.Restatement r = service.withoutLines(order, new BigDecimal("60.00"));
+
+        assertThat(r.foodAmount()).isEqualByComparingTo("240.00");
+        assertThat(r.discountAmount()).isEqualByComparingTo("0.00");
+        assertThat(r.refund()).isEqualByComparingTo("60.00");
+        assertThat(r.totalAmount()).isEqualByComparingTo("240.00");
+        // Null commissionPercent keeps original commissionAmount for legacy orders
+        assertThat(r.commissionAmount()).isEqualByComparingTo("15.00");
+    }
+
+    @Test
+    void withoutLinesRejectsZeroNegativeOrFullRemoval() {
+        com.bitesite.model.Order order = com.bitesite.model.Order.builder()
+                .foodAmount(new BigDecimal("100.00"))
+                .totalAmount(new BigDecimal("100.00"))
+                .build();
+
+        BillingService service = serviceWith(settings());
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.withoutLines(order, BigDecimal.ZERO));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.withoutLines(order, new BigDecimal("-10.00")));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.withoutLines(order, new BigDecimal("100.00")));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> service.withoutLines(order, new BigDecimal("150.00")));
+    }
 }

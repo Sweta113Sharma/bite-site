@@ -54,9 +54,14 @@
                         <h5 class="token-badge m-0" th:text="${order.tokenNo}">TOKEN</h5>
                         <span th:replace="~{fragments/order-status :: statusBadge(${order.status})}"></span>
                     </div>
+                    <!--/* Removed lines stay visible, struck through with the reason, so a
+                         second member of staff can see why the ticket is shorter. */-->
                     <ul class="small text-muted mb-3">
-                        <li th:each="item : ${order.items}"
-                            th:text="${item.quantity} + 'x ' + ${item.itemNameSnapshot}"></li>
+                        <li th:each="item : ${order.items}" th:classappend="${item.cancelled} ? 'line-removed'">
+                            <span th:text="${item.quantity} + 'x ' + ${item.itemNameSnapshot}">1x Item</span>
+                            <span th:if="${item.cancelled}" class="line-removed__why"
+                                  th:text="'(removed: ' + ${item.cancellationReason} + ')'">(removed)</span>
+                        </li>
                     </ul>
                     <div th:if="${order.status.name() == 'PAID'}" class="d-flex flex-column gap-2">
                         <form method="post" th:action="@{/canteen/queue/{id}/status(id=${order.id})}">
@@ -91,6 +96,35 @@
                         <input type="hidden" name="newStatus" value="READY_FOR_PICKUP"/>
                         <button type="submit" class="btn btn-sm btn-primary w-100"><span class="material-symbols-outlined">notifications_active</span>Mark ready</button>
                     </form>
+
+                    <!--/* Take off what can't be made and refund just that; the rest is still
+                         made. Offered while PAID (when there is more than one thing to
+                         choose from; one item is what "Cancel & refund" above is for) and
+                         while PREPARING, which is when a missing ingredient is usually
+                         found. queue-poll.js draws the same panel and must stay in step. */-->
+                    <details class="cancel-panel item-cancel mt-2"
+                             th:if="${order.status.name() == 'PREPARING' or (order.status.name() == 'PAID' and #lists.size(order.items.?[!cancelled]) > 1)}">
+                        <summary><span class="material-symbols-outlined">block</span>Some items unavailable</summary>
+                        <form method="post" th:action="@{/canteen/queue/{id}/items/cancel(id=${order.id})}"
+                              onsubmit="return confirm('Remove the ticked items and refund the student for them?');">
+                            <fieldset class="item-cancel__lines">
+                                <legend class="form-label small mb-1">Tick what can't be made</legend>
+                                <label class="item-cancel__line" th:each="item : ${order.items.?[!cancelled]}">
+                                    <input type="checkbox" name="lineId" th:value="${item.id}"/>
+                                    <span th:text="${item.quantity} + 'x ' + ${item.itemNameSnapshot}">1x Item</span>
+                                </label>
+                            </fieldset>
+                            <label class="form-label small mb-1" th:for="'item-reason-' + ${order.id}">Why (the student sees this)</label>
+                            <select name="reason" class="form-select form-select-sm mb-2" th:id="'item-reason-' + ${order.id}">
+                                <option value="OUT_OF_STOCK">Out of stock (off the menu until tomorrow)</option>
+                                <option value="CANNOT_MAKE">Can't be made right now</option>
+                                <option value="STUDENT_REQUEST">Student asked to remove it</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-danger w-100">
+                                <span class="material-symbols-outlined">undo</span>Remove and refund
+                            </button>
+                        </form>
+                    </details>
                     <!--/* Handover is authenticated: the student shows the code on their
                          order page and staff type it here. */-->
                     <form method="post" th:if="${order.status.name() == 'READY_FOR_PICKUP'}"

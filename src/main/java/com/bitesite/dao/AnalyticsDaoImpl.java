@@ -325,6 +325,7 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
             JOIN outlets o ON ord.outlet_id = o.id
             WHERE ord.token_day >= ? AND ord.token_day <= ?
               AND ord.status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED')
+              AND oi.cancelled_at IS NULL
         """);
 
         List<Object> args = new ArrayList<>();

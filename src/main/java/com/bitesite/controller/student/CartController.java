@@ -153,6 +153,8 @@ public class CartController {
     private void addWarningIfBlocked(List<String> warnings, MenuItem item, int quantity) {
         if (!item.isAvailable()) {
             warnings.add(item.getName() + " is no longer being served.");
+        } else if (item.isOutOfStockToday()) {
+            warnings.add(item.getName() + " is out of stock for today.");
         } else if (item.soldOutToday()) {
             warnings.add(item.getName() + " is sold out for today.");
         } else if (item.remainingToday() != null && quantity > item.remainingToday()) {
@@ -207,7 +209,7 @@ public class CartController {
         if (!outlet.isActive() || !outlet.isAcceptingOrders()) {
             return outlet.getName() + " isn't taking orders right now.";
         }
-        if (!item.isAvailable()) {
+        if (!item.availableNow()) {
             return item.getName() + " is not being served right now.";
         }
         Integer remaining = item.remainingToday();

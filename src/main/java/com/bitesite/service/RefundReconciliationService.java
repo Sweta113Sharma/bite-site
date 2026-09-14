@@ -1,9 +1,11 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.OrderDao;
+import com.bitesite.dao.OrderRefundDao;
 import com.bitesite.dao.PaymentDao;
 import com.bitesite.dto.GatewayRefund;
 import com.bitesite.model.Order;
+import com.bitesite.model.OrderRefund;
 import com.bitesite.model.OrderStatus;
 import com.bitesite.model.Payment;
 import com.bitesite.model.PaymentStatus;
@@ -12,8 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Settles refunds whose outcome the synchronous call never delivered.
@@ -38,9 +42,13 @@ import java.util.Optional;
  * the student. What neither can decide (a partial refund, a refund Razorpay says failed, a
  * request that keeps failing) stays flagged for a person, with the reason written down.
  *
- * <p>Full refunds only, matched on amount. BiteSite never issues a partial refund, so a
- * refund of any other amount was made by someone at Razorpay's dashboard, and is reported
- * rather than acted on.
+ * <p>Two kinds of refund, told apart before anything is matched on amount. Partial refunds
+ * (items the kitchen took off an order, see ItemCancellationService) each have an
+ * {@code order_refunds} row and are matched by gateway refund id, or, when the call that
+ * sent one timed out before we learned its id, by amount among that payment's unmatched
+ * pending rows. A full refund is expected to equal what the payment still holds,
+ * {@link Payment#refundableAmount()}, not the original capture. A refund that is neither
+ * was made by someone at Razorpay's dashboard, and is reported rather than acted on.
  */
 @Service
 @Slf4j
@@ -56,6 +64,8 @@ public class RefundReconciliationService {
 
     private final PaymentDao paymentDao;
     private final OrderDao orderDao;
+    private final OrderRefundDao orderRefundDao;
+    private final RefundLedger refundLedger;
     private final PaymentGateway paymentGateway;
     private final AuditService auditService;
     private final OrderNotifier orderNotifier;
@@ -64,6 +74,11 @@ public class RefundReconciliationService {
     public void onRefundProcessed(String gatewayPaymentId, GatewayRefund refund) {
         Payment payment = find(gatewayPaymentId, "refund.processed " + refund.id());
         if (payment == null) {
+            return;
+        }
+        Optional<OrderRefund> partial = partialRefundFor(payment, refund);
+        if (partial.isPresent()) {
+            settlePartial(payment, partial.get(), refund.id(), "webhook refund.processed " + refund.id());
             return;
         }
         if (!isFullAmount(payment, refund.amountRupees())) {
@@ -89,6 +104,11 @@ public class RefundReconciliationService {
         if (payment == null) {
             return;
         }
+        Optional<OrderRefund> partial = partialRefundFor(payment, refund);
+        if (partial.isPresent()) {
+            failPartial(partial.get(), refund.id(), "Razorpay reported refund " + refund.id() + " failed");
+            return;
+        }
         if (!isFullAmount(payment, refund.amountRupees())) {
             flagAmountMismatch(payment, refund.amountRupees(), refund.status());
             return;
@@ -105,8 +125,8 @@ public class RefundReconciliationService {
      * outcome, and Razorpay knows it even if we do not.
      */
     public int reconcilePending(int olderThanMinutes) {
+        int settled = reconcilePendingPartials(olderThanMinutes);
         List<Payment> pending = paymentDao.findRefundPendingOlderThan(olderThanMinutes);
-        int settled = 0;
         for (Payment payment : pending) {
             try {
                 if (reconcile(payment, olderThanMinutes)) {
@@ -133,7 +153,13 @@ public class RefundReconciliationService {
                     payment.getId());
             return false;
         }
-        List<GatewayRefund> refunds = paymentGateway.refundsFor(payment.getRazorpayPaymentId());
+        // Partial refunds we already account for are not the full refund being looked for.
+        // Without this, an order that lost an item before being cancelled would show the
+        // item's refund as a "mismatch" against the cancellation's.
+        Set<String> partialIds = new HashSet<>(orderRefundDao.gatewayIdsForPayment(payment.getId()));
+        List<GatewayRefund> refunds = paymentGateway.refundsFor(payment.getRazorpayPaymentId()).stream()
+                .filter(r -> r.id() == null || !partialIds.contains(r.id()))
+                .toList();
         BigDecimal processed = refunds.stream()
                 .filter(GatewayRefund::isProcessed)
                 .map(GatewayRefund::amountRupees)
@@ -170,7 +196,7 @@ public class RefundReconciliationService {
         }
         int attempt = payment.getRefundAttempts() + 1;
         try {
-            paymentGateway.refund(payment.getRazorpayPaymentId(), payment.getAmount());
+            paymentGateway.refund(payment.getRazorpayPaymentId(), payment.refundableAmount());
         } catch (RuntimeException gatewayFailed) {
             paymentDao.flagForReconciliation(payment.getId(), clamp(
                     "Refund attempt " + attempt + " of " + MAX_ATTEMPTS + " failed, outcome unknown: "
@@ -275,16 +301,99 @@ public class RefundReconciliationService {
         return payment.orElse(null);
     }
 
+    /** A full refund now means "everything still held": the capture less partial refunds. */
     private static boolean isFullAmount(Payment payment, BigDecimal amount) {
-        return amount.compareTo(payment.getAmount()) == 0;
+        return amount.compareTo(payment.refundableAmount()) == 0;
     }
 
     private void flagAmountMismatch(Payment payment, BigDecimal amount, String state) {
         paymentDao.flagForReconciliation(payment.getId(), clamp(
-                "Razorpay shows ₹" + amount.toPlainString() + " refunded (" + state + ") against this ₹"
-                        + payment.getAmount().toPlainString() + " payment; BiteSite only issues full refunds"));
-        log.error("Payment {}: Razorpay shows ₹{} refunded ({}) against a ₹{} payment; flagged",
-                payment.getId(), amount, state, payment.getAmount());
+                "Razorpay shows ₹" + amount.toPlainString() + " refunded (" + state + ") against ₹"
+                        + payment.refundableAmount().toPlainString() + " still held on this payment; "
+                        + "matches no refund BiteSite sent"));
+        log.error("Payment {}: Razorpay shows ₹{} refunded ({}) against ₹{} still held; flagged",
+                payment.getId(), amount, state, payment.refundableAmount());
+    }
+
+    // ---------- Partial refunds ----------
+
+    /**
+     * The partial refund this gateway refund belongs to, if any. By id first; failing that,
+     * the oldest pending row of the same amount with no id yet, which is exactly what a
+     * partial refund whose HTTP call timed out looks like. Never matches a row that already
+     * carries a different gateway id.
+     */
+    private Optional<OrderRefund> partialRefundFor(Payment payment, GatewayRefund refund) {
+        Optional<OrderRefund> byId = orderRefundDao.findByGatewayRefundId(refund.id());
+        if (byId.isPresent()) {
+            return byId;
+        }
+        return orderRefundDao.findUnmatchedPending(payment.getId(), refund.amountRupees());
+    }
+
+    private void settlePartial(Payment payment, OrderRefund refund, String gatewayRefundId, String via) {
+        if (!orderRefundDao.markRefunded(refund.getId(), gatewayRefundId)) {
+            // Our own call already recorded it, which is the normal case.
+            log.debug("Partial refund {} already settled; {} is a no-op", refund.getId(), via);
+            return;
+        }
+        auditService.record(refund.getRequestedBy(), refund.getTenantId(), "OrderRefund", refund.getId(),
+                "PARTIAL_REFUND_SETTLED", OrderRefund.Status.PENDING, OrderRefund.Status.REFUNDED);
+        // The flag was raised because this refund's outcome was unknown. Once nothing on the
+        // payment is still unknown, it has nothing left to say. A payment in full-refund
+        // limbo keeps its flag: that one is the full refund's to clear.
+        if (payment.getStatus() == PaymentStatus.CAPTURED && orderRefundDao.countPending(payment.getId()) == 0) {
+            paymentDao.clearReconciliation(payment.getId());
+        }
+        log.info("Partial refund {} for payment {} settled via {}", refund.getId(), payment.getId(), via);
+    }
+
+    private void failPartial(OrderRefund refund, String gatewayRefundId, String what) {
+        if (refundLedger.failPartialRefund(refund, gatewayRefundId, clamp(what + "; ₹"
+                + refund.getAmount().toPlainString() + " for removed items was not paid back"))) {
+            auditService.record(refund.getRequestedBy(), refund.getTenantId(), "OrderRefund", refund.getId(),
+                    "PARTIAL_REFUND_FAILED", refund.getStatus(), OrderRefund.Status.FAILED);
+            log.error("{} for partial refund {} on payment {}; flagged", what, refund.getId(), refund.getPaymentId());
+        }
+    }
+
+    /**
+     * Settles partial refunds whose call never reported back, by asking Razorpay what it
+     * holds. Never retried automatically: unlike a full refund, several partial refunds of
+     * one payment can be in flight, and a guess about which of Razorpay's refunds belongs to
+     * which row is how money goes out twice. What cannot be matched stays flagged.
+     */
+    private int reconcilePendingPartials(int olderThanMinutes) {
+        int settled = 0;
+        for (OrderRefund refund : orderRefundDao.findPendingOlderThan(olderThanMinutes)) {
+            try {
+                Optional<Payment> payment = paymentDao.findByOrderId(refund.getOrderId(), refund.getTenantId());
+                if (payment.isEmpty() || payment.get().getRazorpayPaymentId() == null) {
+                    continue;
+                }
+                Set<String> claimed = new HashSet<>(orderRefundDao.gatewayIdsForPayment(refund.getPaymentId()));
+                Optional<GatewayRefund> match = paymentGateway.refundsFor(payment.get().getRazorpayPaymentId()).stream()
+                        .filter(r -> r.id() != null && !claimed.contains(r.id()))
+                        .filter(r -> r.amountRupees().compareTo(refund.getAmount()) == 0)
+                        .findFirst();
+                if (match.isEmpty()) {
+                    paymentDao.flagForReconciliation(refund.getPaymentId(), clamp("Partial refund of ₹"
+                            + refund.getAmount().toPlainString() + " (order_refunds " + refund.getId()
+                            + ") not found at Razorpay; needs a human"));
+                    continue;
+                }
+                if (match.get().isProcessed()) {
+                    settlePartial(payment.get(), refund, match.get().id(), "reconciliation sweep");
+                    settled++;
+                } else if (match.get().isFailed()) {
+                    failPartial(refund, match.get().id(), "Razorpay reports the partial refund failed");
+                }
+                // Still pending at Razorpay: the webhook or the next sweep will see it finish.
+            } catch (RuntimeException e) {
+                log.error("Could not reconcile partial refund {}; will retry next sweep", refund.getId(), e);
+            }
+        }
+        return settled;
     }
 
     private static String clamp(String reason) {

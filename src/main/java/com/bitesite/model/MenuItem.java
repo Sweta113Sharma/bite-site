@@ -32,7 +32,15 @@ public class MenuItem {
     private BigDecimal price;
     private BigDecimal discountPrice;
     private BigDecimal discountPercent;
+    /** The manual switch: off until someone turns it back on. */
     private boolean available;
+
+    /**
+     * Marked out of stock for today only, usually by the kitchen taking it off an order
+     * (ItemCancellationService). Not a column: read as {@code out_of_stock_on = CURDATE()},
+     * so it clears itself at midnight the same way {@link #soldToday} does.
+     */
+    private boolean outOfStockToday;
 
     /** Null means "no cap" — most items. A number is how many the kitchen can make in a day. */
     private Integer dailyLimit;
@@ -82,11 +90,18 @@ public class MenuItem {
 
     /**
      * The single question every ordering surface actually asks. An item is orderable only
-     * when staff have it switched on AND today's cap has room left — two separate reasons
-     * to hide the Add button that would otherwise be re-combined by hand on each screen.
+     * when staff have it on sale (switched on, not out of stock today) AND today's cap has
+     * room left — separate reasons to hide the Add button that would otherwise be
+     * re-combined by hand on each screen.
      */
     public boolean orderable() {
-        return available && !soldOutToday();
+        return availableNow() && !soldOutToday();
+    }
+
+    /** On sale right now as far as staff are concerned: switched on, and not marked out of
+     * stock for today. The daily cap is separate, see {@link #orderable()}. */
+    public boolean availableNow() {
+        return available && !outOfStockToday;
     }
 
     /**
