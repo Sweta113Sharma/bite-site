@@ -52,8 +52,8 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
-### `52e5c01` — Add fluid page transition loaders, instant canteen rendering, and resilient PWA install
-**Date:** 2026-09-15 · **Scope:** 11 files · **Deployed:** pending
+### `f69e85a` — Add fluid page transition loaders, instant canteen rendering, and resilient PWA install
+**Date:** 2026-09-15 · **Scope:** 11 files · **Deployed:** yes (2026-09-14 21:54 UTC, run 34900875901)
 
 **What changed**
 - Rendered outlet cards server-side with Thymeleaf on `/student/menu/select`. Previously, the page rendered an empty container and waited up to 5 seconds for `navigator.geolocation.getCurrentPosition()` to resolve before creating DOM cards, causing a blank frozen screen. Now outlet cards render in 0ms on initial page paint, while geolocation runs in the background with a 2.5s timeout purely to update distance badges.
