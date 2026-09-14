@@ -52,7 +52,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
-### `pending` — Serve sw.js, webmanifest, and offline fallback through SiteController endpoints
+### `f79ccdb` — Serve sw.js, webmanifest, and offline fallback through SiteController endpoints
 **Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** pending
 
 **What changed**
