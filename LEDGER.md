@@ -52,8 +52,8 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
-### `6fbbc75` — Fix cart stepper listener conflict and single-step quantity changes
-**Date:** 2026-09-15 · **Scope:** 2 files · **Deployed:** pending
+### `8e016b8` — Fix cart stepper listener conflict and single-step quantity changes
+**Date:** 2026-09-15 · **Scope:** 3 files · **Deployed:** yes (2026-09-14 21:30 UTC, run 34898986897)
 
 **What changed**
 - Excluded cart-page stepper forms (`form[data-cart-update]`) from `initQuantitySteppers()` in `app.js`. Previously, both `initQuantitySteppers` and `initCartPageControls` attached click listeners to the same `+` and `-` buttons on `cart.html`. On click of `+`, `initQuantitySteppers` incremented `input.value` by 1 locally and then `initCartPageControls` read that new value and added 1 again, jumping quantities by 2 (1 > 3 > 5 > 7 > 9). On click of `-`, `initQuantitySteppers` decremented `input.value` locally before `initCartPageControls` evaluated `current > 1`, suppressing the network call when stepping down to 1 and desyncing display from line totals.
