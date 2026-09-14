@@ -52,6 +52,23 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
+### `pending` — Serve sw.js, webmanifest, and offline fallback through SiteController endpoints
+**Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** pending
+
+**What changed**
+- Added explicit endpoints in `SiteController` for `/sw.js` (`application/javascript`), `/manifest.webmanifest` (`application/manifest+json`), and `/offline.html` (`text/html`), serving the classpath resources directly with correct HTTP content types and cache-control headers (`no-cache` for service worker and offline fallback, 30 days for webmanifest).
+- Added integration tests in `WelcomeRoutingTest` asserting all three root assets return HTTP 200 with their expected Content-Type headers.
+
+**Why**
+- Spring MVC's `ResourceHttpRequestHandler` directory resolution treats root file mappings without a wildcard or directory structure as missing, leading to 404s when requested. Moving these three specific root endpoints into `SiteController` guarantees they resolve with 100% reliability and exact Content-Type headers without relying on container MIME mappings.
+
+**Verified by**
+- `WelcomeRoutingTest` (8 tests passed, including `serviceWorkerIsServed`, `webManifestIsServed`, `offlineHtmlIsServed`).
+- Full maven test suite passing cleanly (`mvn test`).
+
+**Watch out for**
+- Nothing. Replaces ambiguous resource handler mappings with deterministic controller endpoints.
+
 ### `1dec9a1` — Serve root static assets sw.js, manifest, and offline page with explicit resource handlers
 **Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** pending
 

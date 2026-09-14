@@ -43,6 +43,27 @@ class WelcomeRoutingTest {
     }
 
     @Test
+    void serviceWorkerIsServed() throws Exception {
+        mockMvc.perform(get("/sw.js"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/javascript"));
+    }
+
+    @Test
+    void webManifestIsServed() throws Exception {
+        mockMvc.perform(get("/manifest.webmanifest"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/manifest+json"));
+    }
+
+    @Test
+    void offlineHtmlIsServed() throws Exception {
+        mockMvc.perform(get("/offline.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/html"));
+    }
+
+    @Test
     void desktopIsSentToSignIn() throws Exception {
         mockMvc.perform(get("/").header("Host", APP_HOST).header("User-Agent", DESKTOP))
                 .andExpect(status().is3xxRedirection())
