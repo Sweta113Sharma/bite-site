@@ -53,7 +53,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 ## 2026-09-15
 
 ### `ebf15e7` — Show out-of-stock items on outlet menu with restock action
-**Date:** 2026-09-15 · **Scope:** 6 files · **Deployed:** no
+**Date:** 2026-09-15 · **Scope:** 6 files · **Deployed:** yes (2026-09-14 20:45 UTC, run 34894568531)
 
 **What changed**
 - The outlet menu management screen (`/canteen/menu`) now checks `item.availableNow` rather than only general `item.available`:
