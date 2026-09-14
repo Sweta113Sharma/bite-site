@@ -53,7 +53,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 ## 2026-09-15
 
 ### `6efb0bb` — Make cart updates and removals live in place and prevent stale page caching
-**Date:** 2026-09-15 · **Scope:** 5 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 5 files · **Deployed:** yes (2026-09-14 20:57 UTC, run 34895736245)
 
 **What changed**
 - Instant in-place cart line removal: deleting an item from `/student/cart` no longer performs a full page reload (`window.location.reload()`). The item card is removed from the DOM immediately, subtotal and bill totals recalculate live in place, and if the cart becomes empty, it transitions smoothly to the empty state panel without a reload.
