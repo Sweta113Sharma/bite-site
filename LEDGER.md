@@ -50,6 +50,49 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ---
 
+## 2026-09-15
+
+### `1a7aa66` — Let kitchens remove unavailable items and refund them partially
+**Date:** 2026-09-15 · **Scope:** 41 files · **Deployed:** pending
+
+**What changed**
+- Canteen staff can remove individual unavailable items from paid and preparing orders directly on the queue (`/canteen/queue`) via a "Some items unavailable" panel, selecting reasons (Out of stock, Can't be made right now, Student request).
+- Selecting "Out of stock" marks the dish `out_of_stock_on = CURDATE()`, immediately removing it from sale today while auto-restocking at midnight with no manual job needed.
+- Selecting all remaining items on a ticket automatically routes to a full cancellation and refunds food, fees, and tips.
+- Restates order amounts atomically in `BillingService.withoutLines`: reduces discounts proportionally and recomputes commissions accurately.
+- Employs a durable two-phase ledger in `RefundLedger`: acquires row locks, writes an `order_refunds` pending record, and reserves against `payments.refunded_amount` before calling Razorpay `refundPart`. If the network call times out or fails, the refund remains pending and flagged for reconciliation.
+- Partial refund webhooks and reconciliation sweeps settle confirmed refunds and flag any unexpected amounts.
+- Removed lines are struck through on kitchen queues, canteen order details, and student order screens with reasons and refund breakdown shown.
+- Daily dish sales limits and analytics exclude cancelled lines (`oi.cancelled_at IS NULL`).
+
+**Why**
+- Previously, an order was all-or-nothing: one missing item forced staff to cancel the entire order or cook the rest and send the student to support for manual compensation.
+
+**Verified by**
+- 573 unit, integration, and stress tests passing locally (`mvn test`).
+- Added dedicated test coverage in `BillingServiceTest`, `ItemCancellationServiceTest`, and `RefundLedgerTest`.
+
+**Watch out for**
+- Migration `V37__item_cancellation_partial_refunds.sql` adds `order_refunds` table, `refunded_amount` column on `payments`, cancellation columns on `order_items`, and `out_of_stock_on` on `menu_items`.
+
+### `9243785` — Keep app sessions alive for 30 days and add PWA install sheet
+**Date:** 2026-09-15 · **Scope:** 13 files · **Deployed:** pending
+
+**What changed**
+- Extends Spring Session via `AppRememberMeServices` to 30 days with persistent cookie `Max-Age` for sign-ins from Capacitor Android apps and installed PWAs, eliminating cold-start sign-outs caused by `CapacitorCookies.removeSessionCookies()`.
+- Browser tabs retain the standard 30-minute idle session. Platform admin accounts are explicitly excluded from 30-day sessions for security.
+- Integrates `UserSessionRegistry` to revoke all active sessions across all devices immediately whenever an account is deactivated, deleted, or has roles revoked.
+- Adds an install prompt `<dialog>` bottom sheet for mobile web visitors with 1-click install (Android) and 2-step Safari guidance (iOS).
+
+**Why**
+- Capacitor automatically wipes session cookies without Max-Age when apps are closed, forcing students and kitchen operators to log in on every cold launch.
+
+**Verified by**
+- `AppSignInPersistenceTest` (7 tests) and `UserServiceTest` (43 tests) pass.
+
+**Watch out for**
+- Nothing.
+
 ## 2026-09-12
 
 ### `0e43b8e` — Re-encode every upload as WebP, and give each canteen its own logo
