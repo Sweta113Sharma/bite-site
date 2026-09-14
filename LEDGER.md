@@ -53,7 +53,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 ## 2026-09-15
 
 ### `f79ccdb` — Serve sw.js, webmanifest, and offline fallback through SiteController endpoints
-**Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** yes (2026-09-14 21:11 UTC, run 34897124407)
 
 **What changed**
 - Added explicit endpoints in `SiteController` for `/sw.js` (`application/javascript`), `/manifest.webmanifest` (`application/manifest+json`), and `/offline.html` (`text/html`), serving the classpath resources directly with correct HTTP content types and cache-control headers (`no-cache` for service worker and offline fallback, 30 days for webmanifest).
@@ -70,7 +70,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - Nothing. Replaces ambiguous resource handler mappings with deterministic controller endpoints.
 
 ### `1dec9a1` — Serve root static assets sw.js, manifest, and offline page with explicit resource handlers
-**Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** superseded by f79ccdb
 
 **What changed**
 - Registered explicit resource handlers in `StaticResourceConfig` for `/sw.js`, `/manifest.webmanifest`, and `/offline.html` so Spring MVC serves them directly from `classpath:/static/` with accurate mime types and cache controls (`no-cache` for service worker and offline fallback, long cache for webmanifest).
