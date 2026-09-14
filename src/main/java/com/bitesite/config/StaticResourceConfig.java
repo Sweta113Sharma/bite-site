@@ -69,6 +69,18 @@ public class StaticResourceConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/fonts/**")
                 .addResourceLocations("classpath:/static/fonts/")
                 .setCacheControl(CacheControl.maxAge(UNHASHED).cachePublic());
+
+        registry.addResourceHandler("/sw.js")
+                .addResourceLocations("classpath:/static/sw.js")
+                .setCacheControl(CacheControl.noCache());
+
+        registry.addResourceHandler("/manifest.webmanifest")
+                .addResourceLocations("classpath:/static/manifest.webmanifest")
+                .setCacheControl(CacheControl.maxAge(UNHASHED).cachePublic());
+
+        registry.addResourceHandler("/offline.html")
+                .addResourceLocations("classpath:/static/offline.html")
+                .setCacheControl(CacheControl.noCache());
     }
 
     /**

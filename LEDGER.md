@@ -52,6 +52,24 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
+### `pending` — Serve root static assets sw.js, manifest, and offline page with explicit resource handlers
+**Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** pending
+
+**What changed**
+- Registered explicit resource handlers in `StaticResourceConfig` for `/sw.js`, `/manifest.webmanifest`, and `/offline.html` so Spring MVC serves them directly from `classpath:/static/` with accurate mime types and cache controls (`no-cache` for service worker and offline fallback, long cache for webmanifest).
+- Added `/sw.js`, `/manifest.webmanifest`, and `/offline.html` to `WebSecurityCustomizer.ignoring()` in `SecurityConfig` so they bypass the security filter chain completely without session creation or security overhead.
+- Updated `GlobalExceptionHandler` to directly send a 404 response on `NoResourceFoundException` rather than attempting to render the full HTML error page when static assets are requested.
+
+**Why**
+- Because `StaticResourceConfig` only registered `/css/**`, `/js/**`, `/img/**`, and `/fonts/**`, requests for `/sw.js`, `/manifest.webmanifest`, and `/offline.html` were not intercepted by resource handlers and reached Spring Security / MVC as missing endpoints. When the service worker script was fetched by browsers, it returned an error status instead of JavaScript.
+
+**Verified by**
+- Full test suite passed cleanly (`mvn test`: 579 tests run, 0 failures, 0 errors).
+- Added `rootStaticFilesExist` in `ServiceWorkerPrecacheTest`.
+
+**Watch out for**
+- Nothing. Zero schema changes; standard static resource handler wiring.
+
 ### `6efb0bb` — Make cart updates and removals live in place and prevent stale page caching
 **Date:** 2026-09-15 · **Scope:** 5 files · **Deployed:** yes (2026-09-14 20:57 UTC, run 34895736245)
 

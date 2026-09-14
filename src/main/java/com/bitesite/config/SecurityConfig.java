@@ -80,7 +80,10 @@ public class SecurityConfig {
      */
     @Bean
     public WebSecurityCustomizer staticResources() {
-        return web -> web.ignoring().requestMatchers("/css/**", "/js/**", "/img/**", "/fonts/**");
+        return web -> web.ignoring().requestMatchers(
+                "/css/**", "/js/**", "/img/**", "/fonts/**",
+                "/sw.js", "/manifest.webmanifest", "/offline.html"
+        );
     }
 
     /**

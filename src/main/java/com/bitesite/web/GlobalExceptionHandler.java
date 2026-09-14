@@ -72,7 +72,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ModelAndView noStaticResource(NoResourceFoundException e, HttpServletRequest request, HttpServletResponse response)
             throws IOException {
-        return respond(HttpStatus.NOT_FOUND, "Not found.", request, response);
+        response.sendError(HttpServletResponse.SC_NOT_FOUND, "Not found.");
+        return null;
     }
 
     @ExceptionHandler(Exception.class)

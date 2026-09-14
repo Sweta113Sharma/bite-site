@@ -101,4 +101,13 @@ class ServiceWorkerPrecacheTest {
                     .isTrue();
         }
     }
+
+    @Test
+    void rootStaticFilesExist() {
+        for (String file : List.of("/sw.js", "/manifest.webmanifest", "/offline.html")) {
+            assertThat(new ClassPathResource(staticPathFor(file)).exists())
+                    .as("%s must exist in static resources", file)
+                    .isTrue();
+        }
+    }
 }
