@@ -53,7 +53,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 ## 2026-09-15
 
 ### `1a7aa66` — Let kitchens remove unavailable items and refund them partially
-**Date:** 2026-09-15 · **Scope:** 41 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 41 files · **Deployed:** yes (2026-09-14 20:23 UTC, run 34892478188)
 
 **What changed**
 - Canteen staff can remove individual unavailable items from paid and preparing orders directly on the queue (`/canteen/queue`) via a "Some items unavailable" panel, selecting reasons (Out of stock, Can't be made right now, Student request).
@@ -76,7 +76,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - Migration `V37__item_cancellation_partial_refunds.sql` adds `order_refunds` table, `refunded_amount` column on `payments`, cancellation columns on `order_items`, and `out_of_stock_on` on `menu_items`.
 
 ### `9243785` — Keep app sessions alive for 30 days and add PWA install sheet
-**Date:** 2026-09-15 · **Scope:** 13 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 13 files · **Deployed:** yes (2026-09-14 20:23 UTC, run 34892478188)
 
 **What changed**
 - Extends Spring Session via `AppRememberMeServices` to 30 days with persistent cookie `Max-Age` for sign-ins from Capacitor Android apps and installed PWAs, eliminating cold-start sign-outs caused by `CapacitorCookies.removeSessionCookies()`.
