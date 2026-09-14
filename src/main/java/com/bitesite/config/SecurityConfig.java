@@ -57,6 +57,7 @@ public class SecurityConfig {
     private final LoginFailureHandler failureHandler;
     private final PortalGateFilter portalGateFilter;
     private final CsrfTokenEagerFilter csrfTokenEagerFilter;
+    private final AppRememberMeServices rememberMeServices;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -154,6 +155,9 @@ public class SecurityConfig {
                     .successHandler(successHandler)
                     .failureHandler(failureHandler)
                     .permitAll())
+            // Lengthens the session a login asked to keep, rather than issuing a token of
+            // its own. See AppRememberMeServices for why the apps need it.
+            .rememberMe(rememberMe -> rememberMe.rememberMeServices(rememberMeServices))
             .logout(logout -> logout
                     .logoutUrl("/logout")
                     .logoutSuccessUrl("/login?logout")

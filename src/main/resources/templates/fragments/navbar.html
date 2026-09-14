@@ -315,6 +315,53 @@
 </div>
 
 <!--/* ============================================================
+     INSTALL PROMPT
+
+     "Add BiteSite to your home screen", for the website. Never opened by the server:
+     initInstallPrompt in app.js opens it only on a touch device, outside the Android app,
+     when the site is not already installed and "Not now" was not pressed in the last 14
+     days. Included only on calm pages (menu, orders, account), never mid-task on an item,
+     the cart or checkout.
+
+     Two bodies, one shown. Android browsers get a real Install button, which opens the
+     browser's own install dialog. iPhone Safari has no install API at all, so it gets the
+     two taps instead.
+
+     The share glyph is inline SVG because the icon font is subset to the icons the app
+     already draws (see material-symbols.glyphs.txt) and ios_share is not one of them.
+     ============================================================ */-->
+<dialog th:fragment="installPrompt" sec:authorize="hasRole('USER')"
+        id="install-prompt" class="install-sheet" aria-labelledby="install-prompt-title">
+    <div class="install-sheet__head">
+        <img class="install-sheet__icon" th:src="@{/img/icons/icon-192.png}" alt="" width="56" height="56"/>
+        <div>
+            <h2 class="install-sheet__title" id="install-prompt-title">Get the BiteSite app</h2>
+            <p class="install-sheet__sub">Add it to your home screen. It opens full screen and keeps you signed in.</p>
+        </div>
+        <button type="button" class="install-sheet__close" data-install-dismiss aria-label="Close">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+    </div>
+    <div data-install-variant="prompt" hidden>
+        <button type="button" class="btn btn-primary w-100 install-sheet__action" data-install-accept>
+            <span class="material-symbols-outlined" aria-hidden="true">download</span>Install
+        </button>
+    </div>
+    <ol class="install-sheet__steps" data-install-variant="ios" hidden>
+        <li>Tap <strong>Share</strong>
+            <svg class="install-sheet__share" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 14V3M8 7l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2"
+                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            in Safari. If you can't see it, tap <strong>•••</strong> first.</li>
+        <li>Tap <strong>Add to Home Screen</strong>.</li>
+    </ol>
+    <button type="button" class="btn btn-link install-sheet__later" data-install-dismiss>Not now</button>
+</dialog>
+
+<!--/* ============================================================
      ACTIVE ORDER STRIP
 
      A live order used to exist only as one card inside /student/orders, in a flat

@@ -1,6 +1,7 @@
 package com.bitesite.service;
 
 import com.bitesite.config.RateLimiter;
+import com.bitesite.config.UserSessionRegistry;
 import com.bitesite.dao.FcmTokenDao;
 import com.bitesite.dao.UserDao;
 import com.bitesite.config.RoleAssignment;
@@ -43,6 +44,7 @@ public class UserService {
     private final SmsService smsService;
     private final PushNotificationService pushNotificationService;
     private final FcmTokenDao fcmTokenDao;
+    private final UserSessionRegistry userSessionRegistry;
 
     public User registerStudent(Long tenantId, String name, String rawEmail, String rawPassword,
             String phone, String rollNo) {
@@ -137,6 +139,22 @@ public class UserService {
 
     public void setActive(Long userId, boolean active) {
         userDao.setActive(userId, active);
+        if (!active) {
+            userDao.findById(userId).ifPresent(this::endSessionsOf);
+        }
+    }
+
+    /**
+     * Signs an account out everywhere once it has lost access.
+     *
+     * <p>A session carries a snapshot of the account taken at sign-in, and nothing re-reads
+     * it per request. App sign-ins are now kept for 30 days (AppRememberMeServices), so
+     * without this a switched-off account or a revoked role would stay usable for that long.
+     * Called after the database write, so a failure here still leaves the account unable to
+     * sign in again.
+     */
+    private void endSessionsOf(User user) {
+        userSessionRegistry.revokeAllSessions(user.getEmail());
     }
 
     /** Grant an additional role. {@code user_roles.grantRole} is itself the audit record
@@ -183,6 +201,11 @@ public class UserService {
         if (user.getActiveRole() == role) {
             Role fallback = user.getRoles().stream().filter(r -> r != role).findFirst().orElseThrow();
             userDao.updateActiveRole(userId, fallback);
+        }
+        // Not when revoking your own: that would delete the session serving this very
+        // request. It is an admin-portal session, which is never kept past 30 minutes.
+        if (!userId.equals(actorUserId)) {
+            endSessionsOf(user);
         }
     }
 
@@ -232,6 +255,9 @@ public class UserService {
                     + "leave nobody able to appoint another.");
         }
         userDao.setActive(userId, active);
+        if (!active) {
+            endSessionsOf(target);
+        }
         auditService.record(actorUserId, target.getTenantId(), "User", userId,
                 active ? "REACTIVATE_ACCOUNT" : "DEACTIVATE_ACCOUNT", !active, active);
     }
@@ -263,6 +289,9 @@ public class UserService {
             throw new ResourceNotFoundException("Staff account not found");
         }
         userDao.setActive(userId, active);
+        if (!active) {
+            endSessionsOf(target);
+        }
         auditService.record(actorUserId, tenantId, "User", userId,
                 active ? "REACTIVATE_STAFF" : "DEACTIVATE_STAFF", !active, active);
     }
@@ -286,6 +315,9 @@ public class UserService {
             throw new BusinessException("You can't switch off your own account.");
         }
         userDao.setActive(userId, active);
+        if (!active) {
+            endSessionsOf(target);
+        }
         auditService.record(actorUserId, tenantId, "User", userId,
                 active ? "REACTIVATE_STAFF" : "DEACTIVATE_STAFF", !active, active);
     }
@@ -511,7 +543,12 @@ public class UserService {
     public void deleteOwnAccount(Long userId, Long tenantId) {
         String placeholderEmail = "deleted-" + userId + "-" + RANDOM.nextInt(1_000_000) + "@deleted.bitesite.local";
         String unusablePasswordHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString());
+        // Looked up first: sessions are indexed under the real address, which anonymising
+        // is about to overwrite. This ends the account's other devices; the controller
+        // signs out the one that asked.
+        Optional<User> beforeErasure = userDao.findById(userId);
         userDao.anonymize(userId, placeholderEmail, unusablePasswordHash);
+        beforeErasure.ifPresent(this::endSessionsOf);
         // Anonymising the users row is not enough on its own: the row survives (order and
         // payment history has to keep pointing somewhere), so every push subscription
         // hanging off it stays valid and the person's phone carries on receiving

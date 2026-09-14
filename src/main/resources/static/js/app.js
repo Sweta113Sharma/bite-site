@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initOrderStatusWatch();
     initOfflineState();
     initNativeShell();
+    initKeptSignIn();
+    initInstallPrompt();
     initSelects();
     initConsoleFilters();
     initFormBusyStates();
@@ -97,6 +99,31 @@ function initNativeShell() {
 /** True inside the Android shells, false in every browser. */
 function isNativeShell() {
     return !!window.Capacitor?.isNativePlatform?.();
+}
+
+/** True when the site was opened from a home-screen install rather than a browser tab.
+ * navigator.standalone is iOS Safari's older flag, still the only one some versions set. */
+function isInstalledWebApp() {
+    return !!(window.matchMedia?.('(display-mode: standalone)').matches
+        || window.navigator.standalone === true);
+}
+
+/* Keeps a sign-in made from something that looks like an app.
+
+   Capacitor deletes every cookie without an expiry each time the app starts, and the
+   session cookie had none, so every launch was a sign-out. Asking the server to keep this
+   sign-in is what gives the cookie an expiry; see AppRememberMeServices. A site installed
+   to the home screen makes the same promise, and a 30-minute sign-in there would read as
+   the same bug. A browser tab keeps the short session, which suits a shared campus PC. */
+function initKeptSignIn() {
+    if (!isNativeShell() && !isInstalledWebApp()) return;
+    document.querySelectorAll('form[data-remember-in-app]').forEach((form) => {
+        const field = document.createElement('input');
+        field.type = 'hidden';
+        field.name = 'remember-me';
+        field.value = 'true';
+        form.appendChild(field);
+    });
 }
 
 /* ============================================================
@@ -1209,6 +1236,141 @@ function initPushInvite() {
             localStorage.setItem('pushInviteDismissed', '1');
         } catch (e) { /* Private mode: forget the dismissal rather than fail the click. */ }
         invite.classList.add('d-none');
+    });
+}
+
+/* ============================================================
+   INSTALL PROMPT — "add BiteSite to your home screen"
+
+   The sheet is the installPrompt fragment in navbar.html. Android
+   browsers announce an installable site with beforeinstallprompt,
+   and keeping that event is the only way a button of ours can open
+   the browser's install dialog. iPhone has no such event and no
+   install API, so there the sheet explains the two taps instead.
+   ============================================================ */
+
+const INSTALL_DISMISSED_KEY = 'bitesite.installDismissedAt';
+const INSTALL_DONE_KEY = 'bitesite.installed';
+const INSTALL_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
+/* Long enough that the page has painted and been looked at; a sheet that lands on top of
+   a page before it is readable feels like an ad. */
+const INSTALL_DELAY_MS = 2500;
+
+let deferredInstallPrompt = null;
+
+/* Registered at the top level, not in initInstallPrompt: Chrome can decide the site is
+   installable before DOMContentLoaded, and a listener added later would miss it.
+
+   preventDefault only when our sheet is going to offer the install. It stops Chrome's own
+   mini-infobar, which is right where ours is shown and wrong everywhere else, since on
+   the cart or after a "Not now" it is the only way in left. */
+window.addEventListener('beforeinstallprompt', (event) => {
+    if (!document.getElementById('install-prompt') || !installPromptWanted()) return;
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    document.dispatchEvent(new Event('bitesite:installable'));
+});
+
+window.addEventListener('appinstalled', () => {
+    rememberInstall(INSTALL_DONE_KEY, '1');
+    const sheet = document.getElementById('install-prompt');
+    if (sheet?.open) sheet.close();
+});
+
+function rememberInstall(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch (e) { /* Storage blocked: installPromptWanted already stays quiet in that case. */ }
+}
+
+/** iPhone, iPod, or an iPad, which reports itself as a Mac but has a touch screen. */
+function isIosDevice() {
+    const ua = navigator.userAgent || '';
+    return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+function installPromptWanted() {
+    if (isNativeShell() || isInstalledWebApp()) return false;
+    // A home screen is a phone or tablet thing; a desktop window has its own install icon.
+    if (!window.matchMedia?.('(pointer: coarse)').matches) return false;
+    try {
+        if (localStorage.getItem(INSTALL_DONE_KEY) === '1') return false;
+        const dismissedAt = Number(localStorage.getItem(INSTALL_DISMISSED_KEY));
+        return !(dismissedAt && Date.now() - dismissedAt < INSTALL_SNOOZE_MS);
+    } catch (e) {
+        // With nowhere to remember "Not now", the sheet would return on every page.
+        return false;
+    }
+}
+
+function initInstallPrompt() {
+    const sheet = document.getElementById('install-prompt');
+    if (!sheet || typeof sheet.showModal !== 'function' || !installPromptWanted()) return;
+
+    const snooze = () => rememberInstall(INSTALL_DISMISSED_KEY, String(Date.now()));
+
+    const open = (variant) => {
+        if (sheet.open || !installPromptWanted()) return;
+        // One offer at a time: when the notification banner is up, this page is its turn.
+        const pushInvite = document.getElementById('push-invite');
+        if (pushInvite && !pushInvite.classList.contains('d-none')) return;
+        sheet.querySelectorAll('[data-install-variant]').forEach((body) => {
+            body.hidden = body.dataset.installVariant !== variant;
+        });
+        sheet.showModal();
+    };
+
+    if (deferredInstallPrompt) {
+        setTimeout(() => open('prompt'), INSTALL_DELAY_MS);
+    } else if (isIosDevice()) {
+        setTimeout(() => open('ios'), INSTALL_DELAY_MS);
+    } else {
+        document.addEventListener('bitesite:installable',
+            () => setTimeout(() => open('prompt'), INSTALL_DELAY_MS), { once: true });
+    }
+
+    sheet.querySelector('[data-install-accept]')?.addEventListener('click', () => {
+        const promptEvent = deferredInstallPrompt;
+        // The event can be used once; Chrome sends a fresh one if the site is still installable.
+        deferredInstallPrompt = null;
+        sheet.close();
+        if (!promptEvent) return;
+        haptic('tap');
+        promptEvent.prompt();
+        promptEvent.userChoice
+            .then((choice) => {
+                if (choice?.outcome === 'accepted') {
+                    rememberInstall(INSTALL_DONE_KEY, '1');
+                } else {
+                    // Declining the browser's dialog is the same answer as "Not now".
+                    snooze();
+                }
+            })
+            .catch(() => {});
+    });
+
+    sheet.querySelectorAll('[data-install-dismiss]').forEach((button) => {
+        button.addEventListener('click', () => {
+            snooze();
+            sheet.close();
+        });
+    });
+
+    // Escape closes a modal dialog through `cancel`; that is a "Not now" too.
+    sheet.addEventListener('cancel', snooze);
+
+    // A modal dialog ignores taps on its backdrop by default. On a phone, tapping the
+    // dimmed page is how people say "not this", so treat it that way. The backdrop's
+    // clicks are delivered to the dialog itself, outside its box.
+    sheet.addEventListener('click', (event) => {
+        if (event.target !== sheet) return;
+        const box = sheet.getBoundingClientRect();
+        const inside = event.clientX >= box.left && event.clientX <= box.right
+            && event.clientY >= box.top && event.clientY <= box.bottom;
+        if (!inside) {
+            snooze();
+            sheet.close();
+        }
     });
 }
 

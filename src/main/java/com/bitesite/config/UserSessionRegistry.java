@@ -13,9 +13,11 @@ import java.util.Map;
  *
  * <p>Exists because changing a password otherwise does nothing to whoever is already
  * signed in with the old one. Sessions here are DB-backed (Spring Session JDBC) and last
- * 30 minutes of inactivity, so "I changed my password" and "the person who had my
- * password is logged out" were two different things — on a shared campus machine, or
- * after a credential leak, that gap is the whole point of changing it.
+ * 30 minutes of inactivity, or 30 days for an app sign-in ({@link AppRememberMeServices}),
+ * so "I changed my password" and "the person who had my password is logged out" were two
+ * different things — on a shared campus machine, or after a credential leak, that gap is
+ * the whole point of changing it. {@code UserService} uses the same call when an account
+ * is switched off, loses a role, or is deleted.
  *
  * <p>Spring Session indexes rows by principal name when the session carries a Spring
  * Security context, which is what makes the lookup possible without keeping a registry

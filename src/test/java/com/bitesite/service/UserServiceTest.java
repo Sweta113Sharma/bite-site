@@ -37,6 +37,7 @@ class UserServiceTest {
     @Mock private PushNotificationService pushNotificationService;
     @Mock private OtpService otpService;
     @Mock private com.bitesite.dao.FcmTokenDao fcmTokenDao;
+    @Mock private com.bitesite.config.UserSessionRegistry userSessionRegistry;
 
     // A real encoder, not a mock — this is exactly the kind of "does the password actually
     // verify afterward" property a mock would silently paper over.
@@ -47,7 +48,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         userService = new UserService(userDao, rateLimiter, passwordEncoder, auditService, emailService, otpService,
-                smsService, pushNotificationService, fcmTokenDao);
+                smsService, pushNotificationService, fcmTokenDao, userSessionRegistry);
     }
 
     @Test
@@ -544,5 +545,75 @@ class UserServiceTest {
                 "Password1", null, null);
 
         assertThat(created.isEmailVerified()).isFalse();
+    }
+
+    // ---------- Losing access ends the sessions already open ----------
+
+    private User outletStaff(Long id, String email) {
+        return User.builder().id(id).email(email).tenantId(1L).outletId(10L)
+                .activeRole(Role.CANTEEN_OPERATOR).roles(EnumSet.of(Role.CANTEEN_OPERATOR)).build();
+    }
+
+    /** An app session now lasts 30 days, so a switched-off operator's phone must not. */
+    @Test
+    void switchingStaffOffSignsThemOutEverywhere() {
+        when(userDao.findById(7L)).thenReturn(Optional.of(outletStaff(7L, "op@demo.local")));
+
+        userService.setOutletStaffActive(7L, 10L, 1L, false, 2L);
+
+        verify(userDao).setActive(7L, false);
+        verify(userSessionRegistry).revokeAllSessions("op@demo.local");
+    }
+
+    @Test
+    void switchingStaffBackOnLeavesSessionsAlone() {
+        when(userDao.findById(7L)).thenReturn(Optional.of(outletStaff(7L, "op@demo.local")));
+
+        userService.setOutletStaffActive(7L, 10L, 1L, true, 2L);
+
+        verify(userSessionRegistry, never()).revokeAllSessions(anyString());
+    }
+
+    @Test
+    void anAccountSwitchedOffFromTheDirectoryIsSignedOut() {
+        actorIsSuperAdmin();
+        when(userDao.findById(7L)).thenReturn(Optional.of(User.builder().id(7L).email("s@demo.local")
+                .activeRole(Role.USER).roles(EnumSet.of(Role.USER)).build()));
+
+        userService.setAccountActive(7L, false, 1L);
+
+        verify(userSessionRegistry).revokeAllSessions("s@demo.local");
+    }
+
+    @Test
+    void revokingSomebodyElsesRoleSignsThemOut() {
+        actorIsSuperAdmin();
+        when(userDao.findById(7L)).thenReturn(Optional.of(User.builder().id(7L).email("multi@demo.local")
+                .activeRole(Role.USER).roles(EnumSet.of(Role.USER, Role.CANTEEN_OPERATOR)).build()));
+
+        userService.revokeRole(7L, Role.CANTEEN_OPERATOR, 1L);
+
+        verify(userSessionRegistry).revokeAllSessions("multi@demo.local");
+    }
+
+    /** Deleting the session serving the request would pull it out from under the redirect. */
+    @Test
+    void revokingOneOfYourOwnRolesDoesNotEndYourOwnSession() {
+        when(userDao.findById(1L)).thenReturn(Optional.of(User.builder().id(1L).email("root@demo.local")
+                .activeRole(Role.SUPER_ADMIN).roles(EnumSet.of(Role.SUPER_ADMIN, Role.TECH_MANAGER)).build()));
+
+        userService.revokeRole(1L, Role.TECH_MANAGER, 1L);
+
+        verify(userDao).revokeRole(1L, Role.TECH_MANAGER, 1L);
+        verify(userSessionRegistry, never()).revokeAllSessions(anyString());
+    }
+
+    @Test
+    void deletingYourAccountSignsOutEveryDeviceUnderTheOriginalAddress() {
+        when(userDao.findById(42L)).thenReturn(Optional.of(User.builder().id(42L).email("gone@demo.local").build()));
+
+        userService.deleteOwnAccount(42L, 1L);
+
+        verify(userSessionRegistry).revokeAllSessions("gone@demo.local");
     }
 }
