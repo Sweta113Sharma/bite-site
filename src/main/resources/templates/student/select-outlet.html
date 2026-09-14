@@ -10,118 +10,97 @@
     <div class="text-center mb-4">
         <div th:replace="~{fragments/state :: medallion('storefront','neutral')}"></div>
         <p class="page-header-label" style="text-align:center;">Welcome back</p>
-        <h3 class="page-header-title" style="text-align:center;">Finding nearest canteen...</h3>
+        <h3 class="page-header-title" style="text-align:center;">Which canteen today?</h3>
+        <p class="text-muted small">Choose an outlet to browse today's menu</p>
     </div>
 
-    <div class="d-flex flex-column gap-3" id="outlet-list">
-        <!--/* Outlet cards will be populated here by JavaScript */-->
+    <!-- Empty state if no active canteens -->
+    <div th:if="${outlets == null or #lists.isEmpty(outlets)}" class="state-panel">
+        <h4>No canteens open</h4>
+        <p>There are no active canteens taking orders at the moment.</p>
+    </div>
+
+    <!-- Outlet cards rendered instantly server-side -->
+    <div th:if="${outlets != null and !#lists.isEmpty(outlets)}" class="d-flex flex-column gap-3" id="outlet-list">
+        <a th:each="outlet : ${outlets}" class="outlet-card"
+           th:href="@{/student/menu(outletId=${outlet.id})}"
+           th:attr="data-outlet-id=${outlet.id},data-lat=${outlet.latitude},data-lng=${outlet.longitude},data-outlet-name=${outlet.name}">
+            <div class="outlet-card-icon">
+                <img th:if="${outlet.logoPath != null}" th:src="@{${outlet.logoPath}}" alt=""/>
+                <span th:if="${outlet.logoPath == null}" class="material-symbols-outlined">storefront</span>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                    <p class="outlet-card-name" th:text="${outlet.name}">Canteen</p>
+                    <span class="d-none nearest-badge" style="font-size:0.72rem; color:#15803d; background:#dcfce7; padding:2px 8px; border-radius:999px; font-weight:600;">Nearest</span>
+                </div>
+                <p class="outlet-card-hint">Tap to see today's menu</p>
+            </div>
+            <span class="material-symbols-outlined outlet-card-chevron">chevron_right</span>
+        </a>
     </div>
 </div>
 
 <script th:inline="javascript">
 /*<![CDATA[*/
-    // Convert outlets to JavaScript array
-    const outlets = /*[[${outlets}]]*/ [];
+    // Instant feedback on click
+    document.querySelectorAll('.outlet-card').forEach(card => {
+        card.addEventListener('click', () => {
+            card.classList.add('is-loading');
+            const hint = card.querySelector('.outlet-card-hint');
+            if (hint) hint.textContent = 'Opening menu...';
+            const name = card.dataset.outletName || 'canteen';
+            if (typeof window.showPageTransitionLoader === 'function') {
+                window.showPageTransitionLoader('restaurant', 'Opening ' + name + ' menu...');
+            }
+        });
+    });
 
-    // Haversine formula to calculate distance between two coordinates
+    // Haversine distance in km
     function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; // Earth's radius in kilometers
+        const R = 6371;
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a =
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c; // Distance in kilometers
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // Get user's geolocation and find nearest outlet
-    function findNearestOutlet() {
-        if (!navigator.geolocation) {
-            showOutletList();
-            return;
-        }
-
+    // Optional background geolocation to tag nearest outlet without blocking the page
+    if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-
-                let nearestOutlet = null;
+            (pos) => {
+                const userLat = pos.coords.latitude;
+                const userLng = pos.coords.longitude;
+                let nearestCard = null;
                 let minDistance = Infinity;
 
-                outlets.forEach(outlet => {
-                    // Skip outlets without coordinates
-                    if (outlet.latitude === null || outlet.longitude === null) {
-                        return;
-                    }
-
-                    const distance = calculateDistance(
-                        userLat, userLng,
-                        parseFloat(outlet.latitude),
-                        parseFloat(outlet.longitude)
-                    );
-
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        nearestOutlet = outlet;
+                document.querySelectorAll('.outlet-card').forEach(card => {
+                    const lat = parseFloat(card.dataset.lat);
+                    const lng = parseFloat(card.dataset.lng);
+                    if (isNaN(lat) || isNaN(lng)) return;
+                    const d = calculateDistance(userLat, userLng, lat, lng);
+                    if (d < minDistance) {
+                        minDistance = d;
+                        nearestCard = card;
                     }
                 });
 
-                // If we found a nearest outlet within reasonable distance (50km), use it
-                if (nearestOutlet && minDistance <= 50) {
-                    window.location.href = `/student/menu?outletId=${nearestOutlet.id}`;
-                } else {
-                    // Either no outlet with coordinates or too far, show list
-                    showOutletList();
+                if (nearestCard && minDistance <= 50) {
+                    const badge = nearestCard.querySelector('.nearest-badge');
+                    if (badge) badge.classList.remove('d-none');
+                    // Gently promote nearest card to the top
+                    const list = document.getElementById('outlet-list');
+                    if (list && list.firstElementChild !== nearestCard) {
+                        list.prepend(nearestCard);
+                    }
                 }
             },
-            (error) => {
-                console.error("Geolocation error:", error);
-                showOutletList();
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 5000,
-                maximumAge: 0
-            }
+            () => { /* Geolocation ignored or refused — cards already rendered cleanly */ },
+            { enableHighAccuracy: false, timeout: 2500, maximumAge: 60000 }
         );
     }
-
-    // Display the outlet list for manual selection
-    function showOutletList() {
-        document.querySelector('.page-header-title').textContent = 'Which canteen today?';
-
-        const container = document.getElementById('outlet-list');
-        container.innerHTML = '';
-
-        outlets.forEach(outlet => {
-            const link = document.createElement('a');
-            link.className = 'outlet-card';
-            link.href = `/student/menu?outletId=${outlet.id}`;
-
-            // The canteen's own logo when it has set one; the storefront glyph otherwise.
-            // logoPath is a server-issued path or CDN URL, never user-typed text.
-            const icon = outlet.logoPath
-                ? `<img src="${outlet.logoPath}" alt="">`
-                : '<span class="material-symbols-outlined">storefront</span>';
-
-            link.innerHTML = `
-                <div class="outlet-card-icon">${icon}</div>
-                <div>
-                    <p class="outlet-card-name">${outlet.name}</p>
-                    <p class="outlet-card-hint">Tap to see today's menu</p>
-                </div>
-                <span class="material-symbols-outlined outlet-card-chevron">chevron_right</span>
-            `;
-
-            container.appendChild(link);
-        });
-    }
-
-    // Initialize when page loads
-    document.addEventListener('DOMContentLoaded', findNearestOutlet);
 /*]]>*/
 </script>
 </body>

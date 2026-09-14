@@ -52,6 +52,33 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
+### `52e5c01` — Add fluid page transition loaders, instant canteen rendering, and resilient PWA install
+**Date:** 2026-09-15 · **Scope:** 11 files · **Deployed:** pending
+
+**What changed**
+- Rendered outlet cards server-side with Thymeleaf on `/student/menu/select`. Previously, the page rendered an empty container and waited up to 5 seconds for `navigator.geolocation.getCurrentPosition()` to resolve before creating DOM cards, causing a blank frozen screen. Now outlet cards render in 0ms on initial page paint, while geolocation runs in the background with a 2.5s timeout purely to update distance badges.
+- Added instant click feedback (`.is-loading`, button spinner, and "Opening menu..." status text) when tapping any canteen card.
+- Implemented global `#page-transition-overlay` with a vibrant gradient progress bar (`.route-progress`), glassmorphic loading card, pulsating category icon, spinner, and animated skeleton shimmer lines.
+- Updated `initBottomNav()` in `app.js` to immediately apply the `.active` highlight, pulse the clicked icon, trigger haptic feedback, and display contextual loading overlays (e.g. "Opening your cart...", "Loading today's menu...", "Fetching your orders...", "Loading account...").
+- Enhanced `initRouteProgress()` to catch all internal navigation clicks and form submissions, preventing dead time and visually confirming every user action.
+- Centralized `<dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>` in `navbar.html` so the PWA install modal is present across all authenticated student pages, and eliminated redundant duplicate dialog tags in `account.html`, `menu.html`, `orders.html`, and `order-detail.html`.
+- Added persistent "Install App" triggers with the standard subsetted `download` icon to the navigation drawer (`#nav-drawer-install`) and the Account settings screen (`#account-install-row`), allowing mobile Chrome users to trigger the install prompt manually at any time.
+- Fixed `beforeinstallprompt` handling in `app.js`: unconditionally captures `deferredInstallPrompt` regardless of whether `#install-prompt` is currently mounted, unhides all `[data-install-trigger]` buttons, and reduces dismiss snooze to 2 hours instead of 14 days.
+- Bumped Service Worker cache version in `sw.js` to `'v8'`.
+- Rebuilt `app-bundle.css` via `scripts/build-css-bundle.py`.
+
+**Why**
+- Users experienced a 5-6 second blank freeze when selecting a canteen, 2-3 second blank waits when switching to Cart via the bottom nav bar, and missing "Add to Home Screen" popups on Chrome mobile.
+
+**Verified by**
+- `mvn test -Dtest=BootstrapSubsetTest,IconGlyphCoverageTest` passed.
+- `mvn test -Dtest=CssBundleTest` passed.
+- Full `mvn test` suite passed (583 tests, 0 failures, 0 errors).
+- Geolocation non-blocking fallback and server-side Thymeleaf card rendering verified.
+
+**Watch out for**
+- Service worker cache bump will invalidate `'v7'` caches and download fresh bundles on client visit.
+
 ### `8e016b8` — Fix cart stepper listener conflict and single-step quantity changes
 **Date:** 2026-09-15 · **Scope:** 3 files · **Deployed:** yes (2026-09-14 21:30 UTC, run 34898986897)
 

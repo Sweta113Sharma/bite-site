@@ -444,12 +444,26 @@ function initBottomNav() {
 
         if (isActive) {
             item.classList.add('active');
-            // The filled icon is CSS's job now: .bottom-nav-item.active sets
-            // font-variation-settings 'FILL' 1 on the Material Symbol. This used to
-            // rewrite Phosphor class names, which a variable font cannot express and
-            // which silently stopped matching anything when the icons changed.
-
         }
+
+        // Instant visual feedback and fluid transition screen on tab click
+        item.addEventListener('click', () => {
+            if (item.classList.contains('active')) return;
+            items.forEach(i => { i.classList.remove('active'); i.classList.remove('is-loading'); });
+            item.classList.add('active');
+            item.classList.add('is-loading');
+            haptic('tap');
+
+            const contexts = {
+                cart: { icon: 'shopping_cart', msg: 'Opening your cart...' },
+                menu: { icon: 'restaurant', msg: "Loading today's menu..." },
+                orders: { icon: 'receipt_long', msg: 'Fetching your orders...' },
+                account: { icon: 'account_circle', msg: 'Loading your account...' },
+                support: { icon: 'support_agent', msg: 'Connecting to support...' }
+            };
+            const ctx = contexts[page] || { icon: 'restaurant', msg: 'Loading...' };
+            showPageTransitionLoader(ctx.icon, ctx.msg);
+        });
     });
 }
 
@@ -1339,20 +1353,22 @@ const INSTALL_DONE_KEY = 'bitesite.installed';
 const INSTALL_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
 /* Long enough that the page has painted and been looked at; a sheet that lands on top of
    a page before it is readable feels like an ad. */
-const INSTALL_DELAY_MS = 2500;
+const INSTALL_DELAY_MS = 1500;
 
 let deferredInstallPrompt = null;
 
-/* Registered at the top level, not in initInstallPrompt: Chrome can decide the site is
-   installable before DOMContentLoaded, and a listener added later would miss it.
+function updateInstallButtons() {
+    const isAvailable = !!deferredInstallPrompt || isIosDevice();
+    document.querySelectorAll('[data-install-trigger]').forEach(btn => {
+        btn.classList.toggle('d-none', !isAvailable);
+    });
+}
 
-   preventDefault only when our sheet is going to offer the install. It stops Chrome's own
-   mini-infobar, which is right where ours is shown and wrong everywhere else, since on
-   the cart or after a "Not now" it is the only way in left. */
+// ALWAYS capture beforeinstallprompt event unconditionally so Chrome doesn't drop it
 window.addEventListener('beforeinstallprompt', (event) => {
-    if (!document.getElementById('install-prompt') || !installPromptWanted()) return;
     event.preventDefault();
     deferredInstallPrompt = event;
+    updateInstallButtons();
     document.dispatchEvent(new Event('bitesite:installable'));
 });
 
@@ -1360,6 +1376,7 @@ window.addEventListener('appinstalled', () => {
     rememberInstall(INSTALL_DONE_KEY, '1');
     const sheet = document.getElementById('install-prompt');
     if (sheet?.open) sheet.close();
+    updateInstallButtons();
 });
 
 function rememberInstall(key, value) {
@@ -1376,47 +1393,77 @@ function isIosDevice() {
 
 function installPromptWanted() {
     if (isNativeShell() || isInstalledWebApp()) return false;
-    // A home screen is a phone or tablet thing; a desktop window has its own install icon.
-    if (!window.matchMedia?.('(pointer: coarse)').matches) return false;
+    // Allow coarse pointer or any mobile user agent
+    const isMobile = window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    if (!isMobile) return false;
     try {
         if (localStorage.getItem(INSTALL_DONE_KEY) === '1') return false;
         const dismissedAt = Number(localStorage.getItem(INSTALL_DISMISSED_KEY));
-        return !(dismissedAt && Date.now() - dismissedAt < INSTALL_SNOOZE_MS);
+        // Snooze for 2 hours if explicitly dismissed, so user can easily retry
+        const SNOOZE_MS = 2 * 60 * 60 * 1000;
+        return !(dismissedAt && Date.now() - dismissedAt < SNOOZE_MS);
     } catch (e) {
-        // With nowhere to remember "Not now", the sheet would return on every page.
         return false;
     }
 }
 
 function initInstallPrompt() {
+    updateInstallButtons();
     const sheet = document.getElementById('install-prompt');
-    if (!sheet || typeof sheet.showModal !== 'function' || !installPromptWanted()) return;
 
     const snooze = () => rememberInstall(INSTALL_DISMISSED_KEY, String(Date.now()));
 
     const open = (variant) => {
-        if (sheet.open || !installPromptWanted()) return;
-        // One offer at a time: when the notification banner is up, this page is its turn.
-        const pushInvite = document.getElementById('push-invite');
-        if (pushInvite && !pushInvite.classList.contains('d-none')) return;
+        if (!sheet || sheet.open) return;
         sheet.querySelectorAll('[data-install-variant]').forEach((body) => {
             body.hidden = body.dataset.installVariant !== variant;
         });
-        sheet.showModal();
+        if (typeof sheet.showModal === 'function') {
+            sheet.showModal();
+        }
     };
 
-    if (deferredInstallPrompt) {
-        setTimeout(() => open('prompt'), INSTALL_DELAY_MS);
-    } else if (isIosDevice()) {
-        setTimeout(() => open('ios'), INSTALL_DELAY_MS);
-    } else {
-        document.addEventListener('bitesite:installable',
-            () => setTimeout(() => open('prompt'), INSTALL_DELAY_MS), { once: true });
+    // Wire up all manual install buttons (e.g. Navigation drawer, Account page)
+    document.querySelectorAll('[data-install-trigger]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            haptic('tap');
+            if (deferredInstallPrompt) {
+                const promptEvent = deferredInstallPrompt;
+                deferredInstallPrompt = null;
+                promptEvent.prompt();
+                promptEvent.userChoice
+                    .then((choice) => {
+                        if (choice?.outcome === 'accepted') {
+                            rememberInstall(INSTALL_DONE_KEY, '1');
+                        }
+                        updateInstallButtons();
+                    })
+                    .catch(() => {});
+            } else if (isIosDevice()) {
+                open('ios');
+            } else {
+                open('prompt');
+            }
+        });
+    });
+
+    // Automatic bottom sheet prompt when desired
+    if (installPromptWanted()) {
+        if (deferredInstallPrompt) {
+            setTimeout(() => open('prompt'), INSTALL_DELAY_MS);
+        } else if (isIosDevice()) {
+            setTimeout(() => open('ios'), INSTALL_DELAY_MS);
+        } else {
+            document.addEventListener('bitesite:installable',
+                () => setTimeout(() => open('prompt'), INSTALL_DELAY_MS), { once: true });
+        }
     }
+
+    if (!sheet) return;
 
     sheet.querySelector('[data-install-accept]')?.addEventListener('click', () => {
         const promptEvent = deferredInstallPrompt;
-        // The event can be used once; Chrome sends a fresh one if the site is still installable.
         deferredInstallPrompt = null;
         sheet.close();
         if (!promptEvent) return;
@@ -1427,9 +1474,9 @@ function initInstallPrompt() {
                 if (choice?.outcome === 'accepted') {
                     rememberInstall(INSTALL_DONE_KEY, '1');
                 } else {
-                    // Declining the browser's dialog is the same answer as "Not now".
                     snooze();
                 }
+                updateInstallButtons();
             })
             .catch(() => {});
     });
@@ -1441,12 +1488,8 @@ function initInstallPrompt() {
         });
     });
 
-    // Escape closes a modal dialog through `cancel`; that is a "Not now" too.
     sheet.addEventListener('cancel', snooze);
 
-    // A modal dialog ignores taps on its backdrop by default. On a phone, tapping the
-    // dimmed page is how people say "not this", so treat it that way. The backdrop's
-    // clicks are delivered to the dialog itself, outside its box.
     sheet.addEventListener('click', (event) => {
         if (event.target !== sheet) return;
         const box = sheet.getBoundingClientRect();
@@ -1926,51 +1969,60 @@ function initFormBusyStates() {
  * will not say how far along a navigation is. Creeping is honest about that; it says
  * "working", not "62% done".
  */
+let pageTransitionTimer = null;
+
+function showPageTransitionLoader(icon = 'restaurant', msg = 'Loading...') {
+    // 1. Top progress bar
+    let bar = document.querySelector('.route-progress');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.className = 'route-progress';
+        document.body.appendChild(bar);
+    }
+    bar.classList.add('is-active');
+    bar.style.width = '35%';
+
+    // 2. Animated transition card & skeleton overlay
+    const overlay = document.getElementById('page-transition-overlay');
+    if (overlay) {
+        const iconEl = overlay.querySelector('#page-transition-icon');
+        const msgEl = overlay.querySelector('#page-transition-msg');
+        if (iconEl) iconEl.textContent = icon;
+        if (msgEl) msgEl.textContent = msg;
+
+        clearTimeout(pageTransitionTimer);
+        pageTransitionTimer = setTimeout(() => {
+            overlay.classList.add('is-visible');
+            overlay.setAttribute('aria-hidden', 'false');
+            if (bar) bar.style.width = '80%';
+        }, 70);
+    }
+}
+
+function hidePageTransitionLoader() {
+    clearTimeout(pageTransitionTimer);
+    const overlay = document.getElementById('page-transition-overlay');
+    if (overlay) {
+        overlay.classList.remove('is-visible');
+        overlay.setAttribute('aria-hidden', 'true');
+    }
+    const bar = document.querySelector('.route-progress');
+    if (bar) {
+        bar.style.width = '100%';
+        bar.classList.remove('is-active');
+        setTimeout(() => { if (bar) bar.style.width = '0'; }, 240);
+    }
+    document.querySelectorAll('.bottom-nav-item.is-loading, .outlet-card.is-loading').forEach((el) => {
+        el.classList.remove('is-loading');
+    });
+}
+
+window.showPageTransitionLoader = showPageTransitionLoader;
+window.hidePageTransitionLoader = hidePageTransitionLoader;
+
 function initRouteProgress() {
-    let bar = null;
-    let creep = null;
-    let startTimer = null;
-    let width = 0;
-
-    function element() {
-        if (!bar) {
-            bar = document.createElement('div');
-            bar.className = 'route-progress';
-            document.body.appendChild(bar);
-        }
-        return bar;
-    }
-
-    function start() {
-        if (creep) return;
-        // Same reasoning as the button spinner: a navigation that resolves in 100ms
-        // should not leave a bar flickering across the top of the screen.
-        startTimer = setTimeout(() => {
-            const el = element();
-            el.classList.add('is-active');
-            width = 8;
-            el.style.width = width + '%';
-            creep = setInterval(() => {
-                // Approaches 90% and never arrives, because arriving would be a lie.
-                width += Math.max(0.4, (90 - width) / 14);
-                el.style.width = Math.min(width, 90) + '%';
-            }, 220);
-        }, BUSY_SPINNER_DELAY_MS);
-    }
-
-    function stop() {
-        clearTimeout(startTimer);
-        if (creep) {
-            clearInterval(creep);
-            creep = null;
-        }
-        if (bar) {
-            bar.style.width = '100%';
-            bar.classList.remove('is-active');
-            setTimeout(() => { if (bar) bar.style.width = '0'; }, 260);
-        }
-        width = 0;
-    }
+    window.addEventListener('pageshow', hidePageTransitionLoader);
+    window.addEventListener('beforeunload', () => {});
 
     document.addEventListener('click', (event) => {
         const link = event.target.closest && event.target.closest('a[href]');
@@ -1978,7 +2030,6 @@ function initRouteProgress() {
             return;
         }
         const href = link.getAttribute('href');
-        // Anchors, downloads, new tabs and javascript: links never replace this page.
         if (!href || href.startsWith('#') || href.startsWith('javascript:')
             || link.target === '_blank' || link.hasAttribute('download')) {
             return;
@@ -1986,24 +2037,44 @@ function initRouteProgress() {
         if (link.origin && link.origin !== window.location.origin) {
             return;
         }
-        start();
+
+        let icon = 'restaurant';
+        let msg = 'Loading...';
+        if (href.includes('/student/cart')) {
+            icon = 'shopping_cart';
+            msg = 'Opening your cart...';
+        } else if (href.includes('/student/menu?outletId=')) {
+            icon = 'storefront';
+            msg = 'Opening canteen menu...';
+        } else if (href.includes('/student/menu/select')) {
+            icon = 'storefront';
+            msg = 'Finding canteens...';
+        } else if (href.includes('/student/menu')) {
+            icon = 'restaurant';
+            msg = "Loading today's menu...";
+        } else if (href.includes('/student/orders')) {
+            icon = 'receipt_long';
+            msg = 'Fetching your orders...';
+        } else if (href.includes('/student/account')) {
+            icon = 'account_circle';
+            msg = 'Loading account...';
+        } else if (href.includes('/student/item/')) {
+            icon = 'lunch_dining';
+            msg = 'Loading item details...';
+        }
+
+        showPageTransitionLoader(icon, msg);
     });
 
     document.addEventListener('submit', (event) => {
         const form = event.target;
-        // defaultPrevented means a fetch handler took it: no navigation, so no bar.
         if (event.defaultPrevented || !(form instanceof HTMLFormElement)) {
             return;
         }
         if (typeof form.checkValidity !== 'function' || form.checkValidity()) {
-            start();
+            showPageTransitionLoader('hourglass_top', 'Processing...');
         }
     });
-
-    // Fires on a normal load and on a bfcache restore, which is what clears the bar when
-    // someone navigates back to a page that was mid-flight.
-    window.addEventListener('pageshow', stop);
-    window.addEventListener('beforeunload', () => clearTimeout(startTimer));
 }
 
 /**

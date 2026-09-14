@@ -7,7 +7,6 @@
 
 <!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
-<dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>
 
 <div class="container" style="max-width: 560px;"
      th:attr="data-order-id=${order.id},data-order-status=${order.status.name()}">

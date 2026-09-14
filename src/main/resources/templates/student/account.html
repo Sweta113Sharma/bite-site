@@ -7,7 +7,6 @@
 
 <!--/* Mobile Bottom Nav */-->
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
-<dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>
 
 <div class="container" style="max-width: 600px;">
     
@@ -24,6 +23,16 @@
     <!--/* Swiggy-style sectioned list */-->
     <div class="account-section">
         <div class="account-section-title">My Account</div>
+
+        <!--/* PWA Install row (revealed when installable or on mobile) */-->
+        <div class="account-row account-row--install d-none" id="account-install-row" role="button" data-install-trigger="data-install-trigger">
+            <span class="material-symbols-outlined" style="color: var(--color-primary);">download</span>
+            <div class="account-row-content">
+                <div class="account-row-label">Install BiteSite App</div>
+                <div class="account-row-detail">Add to home screen for faster ordering</div>
+            </div>
+            <span class="material-symbols-outlined account-row-chevron">chevron_right</span>
+        </div>
         
         <a th:href="@{/student/orders}" class="account-row">
             <span class="material-symbols-outlined">receipt_long</span>

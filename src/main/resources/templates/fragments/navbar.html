@@ -225,6 +225,7 @@
                 <a class="nav-drawer__link" th:href="@{/student/account}"><span class="material-symbols-outlined">manage_accounts</span>Account</a>
                 <a class="nav-drawer__link" th:href="@{/student/privacy}"><span class="material-symbols-outlined">privacy_tip</span>Privacy &amp; data</a>
                 <a class="nav-drawer__link" th:href="@{/student/grievances}"><span class="material-symbols-outlined">support_agent</span>Support</a>
+                <a class="nav-drawer__link nav-drawer__install d-none" id="nav-drawer-install" href="#" role="button" data-install-trigger="data-install-trigger"><span class="material-symbols-outlined">download</span>Install app</a>
             </div>
 
             <!--/* Outlet */-->
@@ -295,6 +296,22 @@
             </button>
         </form>
     </aside>
+    <!--/* Global Page Transition Loader & Skeleton Overlay */-->
+    <div id="page-transition-overlay" class="page-transition-overlay" aria-hidden="true">
+        <div class="page-transition-card">
+            <div class="page-transition-spinner-wrap">
+                <div class="page-transition-spinner"></div>
+                <span class="material-symbols-outlined page-transition-icon" id="page-transition-icon">restaurant</span>
+            </div>
+            <p class="page-transition-msg" id="page-transition-msg">Loading...</p>
+            <div class="page-transition-shimmer-lines">
+                <div class="transition-shimmer-bar"></div>
+                <div class="transition-shimmer-bar"></div>
+            </div>
+        </div>
+    </div>
+    <!--/* Global Install Prompt Modal (present on all student pages via navbar) */-->
+    <dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>
 </div>
 
 <!--/* ============================================================
