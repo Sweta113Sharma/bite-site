@@ -52,6 +52,30 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
+### `ebf15e7` — Show out-of-stock items on outlet menu with restock action
+**Date:** 2026-09-15 · **Scope:** 6 files · **Deployed:** no
+
+**What changed**
+- The outlet menu management screen (`/canteen/menu`) now checks `item.availableNow` rather than only general `item.available`:
+  - Items marked out of stock today (from queue cancellations or daily stockouts) now visibly display the hatched `is-off` row styling and an explicit red `Out of stock today` badge.
+  - The stock action button displays `Restock` (with `check_circle` icon and vibrant `btn-accent` styling) instead of confusingly showing `Sold out` with a cancel icon.
+  - Toggling availability clears `out_of_stock_on` and restores the dish to sale immediately, with a flash confirmation message (`"<Item> is back on sale."` / `"<Item> is marked out of stock."`).
+  - The header "Restock all" button now detects today's out-of-stock items (`items.?[!availableNow]`) and reappears whenever any dish is unavailable.
+  - Filtering by "Out of stock" (`data-stock="OFF"`) now includes dishes marked out of stock for today.
+- Direct URL visits on `student/item-detail.html` now display the `Sold out for today — it'll be back tomorrow.` banner when `item.outOfStockToday` is true.
+- Added `MenuItem.isAvailableNow()` getter for clean JavaBean and SpEL compatibility.
+
+**Why**
+- When kitchen staff removed an unavailable item from a queue order and marked it out of stock for today (`out_of_stock_on = CURDATE()`), the outlet menu page still showed the dish as active and displayed a "Sold out" button, leaving staff with no visible way to put it back in stock when ingredients were replenished.
+
+**Verified by**
+- Full test suite: 577 tests passed, 0 failures, 0 errors (`mvn test`).
+- Added unit tests in `MenuControllerTest` verifying out-of-stock-today restock, general toggle, and restock-all flash notices.
+- Added unit tests in `MenuItemTest` for `availableNow()`, `isAvailableNow()`, and `orderable()` with `outOfStockToday`.
+
+**Watch out for**
+- Nothing. Zero schema changes; strictly template and controller availability condition alignment.
+
 ### `1a7aa66` — Let kitchens remove unavailable items and refund them partially
 **Date:** 2026-09-15 · **Scope:** 41 files · **Deployed:** yes (2026-09-14 20:23 UTC, run 34892478188)
 
