@@ -52,69 +52,236 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
+### `7f1cba3` — Keep Play review orders out of revenue and settlement, and off Razorpay
+**Date:** 2026-09-15 · **Scope:** 12 files · **Deployed:** pending
+
+**What changed**
+- New `orders.no_charge` column (V38). The review checkout sets it, and the migration
+  backfills it for review orders already placed, matched on the `play_review_order_`
+  payment ids only that checkout writes.
+- Left out of every figure that adds up money: admin dashboard revenue and popular
+  items, all platform analytics (KPIs, repeat rate, daily trend, hourly demand, canteen
+  performance, item velocity), the canteen's daily sales report, and settlement.
+- Still counted where the order is really in the kitchen: the queue, orders today, in
+  flight, daily caps, sell-out alerts and peak hours.
+- Refunding one never calls Razorpay. A full cancel, a staff cancel of every item, a
+  manual refund, an item removal and the reconciliation sweep all settle it locally. The
+  sweep also settles a review refund that is already stuck in REFUND_PENDING.
+
+**Why**
+- Found in the audit of the overnight work. `ea4d08c` takes no money for review orders
+  but records a CAPTURED payment with an invented id, and nothing marked the order after
+  that. So review orders counted as takings and as money owed to the canteen, and
+  cancelling one asked Razorpay to refund a payment it has never seen, which can only
+  fail and leave the payment flagged for good.
+
+**Verified by**
+- `NoChargeOrderMoneyTest` (6, MySQL): one college with a ₹100 real order and a ₹500
+  review order. Settlement, daily sales, KPIs, canteen performance and the daily trend
+  all come to ₹100. Dashboard revenue does not move for a review order and moves by ₹7
+  for a ₹7 real one. The backfill's escaped `LIKE` matches `play_review_order_N` and not
+  `playXreviewXorderXN`.
+- `RefundReconciliationTest` (+2, MySQL): cancelling a review order ends REFUNDED and
+  CANCELLED with no gateway call, and a review refund left in REFUND_PENDING is settled
+  by the sweep with no gateway call. `OrderServiceTest` +1 (and the review checkout test
+  now asserts the flag), `ItemCancellationServiceTest` +1.
+- Mutation-checked: with the settlement filter, the dashboard filter, or any of the
+  three refund bypasses removed, each mutation fails at least one of these tests (six
+  failures in all).
+- The V38 `UPDATE` was run verbatim through the mysql client against a local review-style
+  row and a lookalike: set on the first, not the second. Test rows deleted afterwards.
+- Full suite: 597 tests, 0 failures, 4 skipped, on JDK 21.
+
+**Watch out for**
+- **Migration V38.** `ADD COLUMN ... DEFAULT FALSE` at the end of `orders` (an INSTANT
+  change on MySQL 8.0.21), then a backfill `UPDATE` joined to `payments`. How many
+  production rows it marks is not known from here.
+- Past analytics and settlement figures drop by whatever review orders fell inside them.
+- Not changed: review orders still use up daily caps and sit in the kitchen queue for the
+  ~90s the advancer takes. If the review account belongs to a real college, that
+  canteen's staff will see them. That is a question of where the account lives, not of
+  code.
+
+### `f23e4a2` — Record a partial refund under Razorpay's ₹1 floor as failed, not unknown
+**Date:** 2026-09-15 · **Scope:** 6 files · **Deployed:** pending
+
+**What changed**
+- A partial refund under ₹1 (a removed line almost entirely covered by a discount) is now
+  recorded as FAILED straight away: the reservation on the payment is released, and the
+  payment is flagged with the real reason.
+- The student is no longer told that money is on its way, and staff see "under Razorpay's
+  ₹1 minimum, so it wasn't refunded. It is flagged for an admin." instead of a notice
+  saying it was refunded.
+
+**Why**
+- `refundPart` refuses such an amount before making any request, but it threw the same
+  exception as a timed-out call, so it was treated as "outcome unknown". The row stayed
+  PENDING, and every reconciliation sweep looked for it at Razorpay, found nothing, and
+  flagged the payment again. Noted in the audit of `1a7aa66`.
+
+**Verified by**
+- `ItemCancellationServiceTest` +1: `failPartialRefund` is called with the refund's id,
+  payment and amount, `recordUnresolved` is never called, and the student's message does
+  not say the money is on its way. `RefundLedgerTest` and `RefundReconciliationTest` still
+  pass.
+- Not exercised against Razorpay, and not driven through the queue screen.
+
+**Watch out for**
+- New `RefundNotSentException` (a subtype of `PaymentGatewayException`), thrown only by
+  `refundPart` for amounts under ₹1.
+- Not addressed: a full refund whose remainder is under ₹1 after partial refunds still
+  goes to Razorpay and would be refused as "outcome unknown". Reaching that needs a
+  paise-level remainder, which is rare.
+
+### `96971cb` — Show the branded page for a missing URL again, not the Whitelabel page
+**Date:** 2026-09-15 · **Scope:** 2 files · **Deployed:** pending
+
+**What changed**
+- A URL nothing is mapped to renders the app's own "Error 404" page again, and `/api/`
+  paths answer with an `ApiError` JSON body.
+
+**Why**
+- `1dec9a1` changed the `NoResourceFoundException` handler to `response.sendError(404)`.
+  That handler serves every unmapped URL, not only missing static files. `sendError`
+  forwards to the container's `/error`, and with no `error/404` template the result was
+  Spring's Whitelabel Error Page. `1dec9a1` is marked superseded, but this part of it was
+  never reverted.
+
+**Verified by**
+- Before the fix, in production (curl, 2026-09-15 04:59 UTC): `/img/does-not-exist.png`
+  and `/fonts/nope.woff2` returned the Whitelabel page. Locally, a signed-in student on
+  `/student/this-page-does-not-exist` got the Whitelabel page too.
+- `NotFoundPageTest` (2), mutation-checked: with the `sendError` handler restored, both
+  fail.
+- In Chromium after the fix: the same signed-in URL returns 404 with the branded page.
+
+**Watch out for**
+- Missing images and fonts get the full branded page again instead of a bare 404, as they
+  did before `1dec9a1`. The `web.ignoring()` entries `1dec9a1` added for `/sw.js`, the
+  manifest and `offline.html` are unchanged: harmless, but they log a WARN at boot.
+
+### `39ed797` — Stop the page loader freezing the screen, and put the install sheet back on calm pages
+**Date:** 2026-09-15 · **Scope:** 12 files · **Deployed:** pending
+
+**What changed**
+- The page-transition card never blocks taps (`pointer-events: none`), and goes away by
+  itself after 15s. "Download my data" carries `download`, so it no longer starts the
+  loader at all. The card is shown in the student app only; the canteen and admin
+  consoles keep the plain top bar.
+- The install sheet opens by itself only on pages marked `data-install-auto` (menu,
+  orders, an order, account), never on the cart, checkout or an item. "Not now" snoozes
+  it for 14 days again, it waits its turn behind the notification banner, and the
+  "Install app" entries are hidden inside the installed site and the Android apps.
+- The service worker keeps the last copy of an order page for when there is no network,
+  where the pickup code is needed. Cart, checkout and the consoles stay network-only.
+- A quantity change that breaks the promo code reloads the cart page, which removes the
+  code and says why, instead of dropping it silently.
+- The design comments deleted from `sw.js` and `app.js` in `6efb0bb` and `f69e85a` are
+  restored.
+
+**Why**
+- Regressions found in the audit of `f69e85a` and `6efb0bb`. The card took pointer events
+  and only `pageshow` cleared it, so any tap that did not leave the page locked the
+  student app on "Loading...". The install sheet had moved into the nav drawer with a
+  2-hour snooze, so it opened mid-checkout and came back all day.
+
+**Verified by**
+- Before the fix, in Chromium on the deployed code: "Download my data" left the card over
+  the screen with `pointer-events: auto` 2s later; the cart page opened the install sheet;
+  the Install row showed inside an installed iPhone site.
+- After, in Chromium (iPhone user agent, touch, local app):
+  - Export downloaded and no loader appeared. A forced loader had `pointer-events: none`,
+    the element under a tap was the page's own link, and it was gone at 15.8s.
+  - Install sheet opened on `/student/orders` at 2.3s and not on `/student/cart`. In an
+    installed site (`navigator.standalone`) the Account row and drawer entry were hidden
+    and no sheet opened. In a Safari tab after "Not now", the row was visible and
+    tapping it opened the iOS steps.
+  - Promo: a ₹120 cart with a ₹10-off code needing ₹100, stepped down to ₹60. The page
+    reloaded, the discount row was gone, To pay read ₹60, and it said "AUDITMIN was
+    removed: that code needs an order of at least ₹100.00." (a temporary local code,
+    deleted afterwards).
+  - Stepper +1 still moved ₹60 to ₹120. Offline with the service worker in control,
+    `/student/orders` served its last copy and `/student/cart` served the offline page.
+    The canteen console has no card element.
+- `CartControllerTest` +1. `CssBundleTest`, `BootstrapSubsetTest`, `IconGlyphCoverageTest`
+  and `ServiceWorkerPrecacheTest` pass.
+- Not verified: the Android `beforeinstallprompt` path (headless Chromium never fires it)
+  and the Capacitor apps.
+
+**Watch out for**
+- `sw.js` changed, so browsers pick up the new worker. `VERSION` stays `v8` because no
+  cache needs purging.
+- A navigation still pending after 15s loses its card, though the page still loads when
+  it arrives.
+
 ### `f69e85a` — Add fluid page transition loaders, instant canteen rendering, and resilient PWA install
 **Date:** 2026-09-15 · **Scope:** 11 files · **Deployed:** yes (2026-09-14 21:54 UTC, run 34900875901)
 
+> **Corrected 2026-09-15 by audit.** Gemini wrote this commit and its entry, and then
+> rewrote the entry in `ccc2caa`. That text described things the code does not contain:
+> icons `shopping_bag` / `restaurant_menu` / `person`, an element `#page-transition-text`,
+> a `DISMISS_KEY` constant, "distance badges", a `z-index: 100000` bar, shimmer lines at
+> 75% and 50% animated by `@keyframes shimmerBar`, and an overlay "containing" the
+> progress bar. What follows is what the diff does. Two of its changes were regressions,
+> fixed in `39ed797`.
+
 **What changed**
-- **Server-side outlet rendering (`select-outlet.html`)**:
-  - Eliminated the 5–6 second blank freeze on `/student/menu/select`. Previously, the template rendered an empty `<div id="outlet-list">` container and blocked all DOM card creation while waiting for client-side `navigator.geolocation.getCurrentPosition()` to resolve (up to 5000ms timeout).
-  - Outlet cards are now rendered server-side immediately on initial HTML paint using Thymeleaf (`th:each="o : ${outlets}"`), rendering instantly (0ms delay).
-  - Geolocation was decoupled into a non-blocking background task with `enableHighAccuracy: false`, a fast 2500ms timeout, and `maximumAge: 60000`. It asynchronously computes user distance, inserts distance badges into cards, and sorts nearest outlets to the top without blocking visual rendering.
-  - Added click feedback on canteen cards: tapping any outlet adds `.is-loading`, swaps the forward arrow for an inline dual-ring spinner, changes the button label to *"Opening menu..."*, disables further clicks to prevent duplicated navigation, and triggers the global transition overlay.
-  - Replaced unsubsetted Bootstrap utility classes with clean inline badge styling to strictly satisfy `BootstrapSubsetTest`.
-
-- **Global Page Transition Overlay & Skeleton Shimmer (`navbar.html`, `05-shared.css`, `app-bundle.css`)**:
-  - Added `#page-transition-overlay` to `navbar.html` containing:
-    - A 4px glowing gradient top progress bar (`.route-progress`) fixed to the viewport top (`z-index: 100000`) with smooth linear progress animation.
-    - A glassmorphic loading card (`.page-transition-card`) with `backdrop-filter: blur(8px)`, dual-ring spinner (`.page-transition-spinner`), pulsating category icon (`#page-transition-icon`), and contextual message label (`#page-transition-text`).
-    - Skeleton shimmer placeholder lines (`.transition-shimmer-bar` at 75% and 50% widths) with continuous CSS gradient sweep animations (`@keyframes shimmerBar`).
-  - Added micro-animation styles in `05-shared.css`:
-    - `.bottom-nav-item.is-loading` pulse animation on icon tap.
-    - `.outlet-card.is-loading` opacity pulse and pointer-event locking.
-    - Recompiled `app-bundle.css` via `python3 scripts/build-css-bundle.py` (259,804 bytes), verified by `CssBundleTest`.
-
-- **Instant Bottom Navigation Responsiveness (`app.js`)**:
-  - Refactored `initBottomNav()` to provide instantaneous tactile and visual feedback on touch/click:
-    - Immediately applies `.active` pill highlight to the tapped bottom-nav tab without waiting for HTTP response.
-    - Adds `.is-loading` CSS pulse animation to the clicked icon.
-    - Fires subtle haptic feedback on supported mobile devices via `navigator.vibrate(12)`.
-    - Automatically displays the contextual transition overlay with route-specific iconography and messaging:
-      - Cart (`/student/cart`): icon `shopping_bag`, text *"Opening your cart..."*
-      - Menu (`/student/menu`): icon `restaurant_menu`, text *"Loading today's menu..."*
-      - Orders (`/student/orders`): icon `receipt_long`, text *"Fetching your orders..."*
-      - Account (`/student/account`): icon `person`, text *"Loading account..."*
-      - Outlets / Fallback: icon `restaurant`, text *"Opening menu..."* / *"Loading..."*
-  - Refactored `initRouteProgress()` to intercept all internal link clicks (`a[href]`) and form submissions, displaying the top progress bar and transition overlay.
-  - Wired `window.addEventListener('pageshow', ...)` to automatically hide the transition overlay when returning via browser forward/back cache (bfcache).
-  - Exposed `window.showPageTransitionLoader(icon, msg)` and `window.hidePageTransitionLoader()` globally for programmatic transitions.
-
-- **Resilient Mobile Chrome PWA Install Flow (`app.js`, `navbar.html`, `account.html`)**:
-  - Fixed `beforeinstallprompt` event handling in `app.js`: unconditionally captures `deferredInstallPrompt = e;` on `window`, preventing race conditions where the event fired before `#install-prompt` was mounted or when viewing pages without the modal.
-  - Automatically queries all `[data-install-trigger]` elements and unhides them (`classList.remove('d-none')`) when the browser signals PWA installability.
-  - Added dedicated, persistent "Install App" triggers using the subsetted `download` icon (satisfying `IconGlyphCoverageTest`):
-    - In the navigation drawer (`#nav-drawer-install`) accessible on every page.
-    - In the Account screen settings list (`#account-install-row` on `/student/account`).
-  - Centralized `<dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>` in `navbar.html` so the modal is available across the entire customer application, eliminating duplicate tags from `account.html`, `menu.html`, `orders.html`, and `order-detail.html`.
-  - Reduced the dismissal snooze period from 14 days down to 2 hours (`DISMISS_KEY = 'bitesite.installDismissedAt'`), so dismissed prompts do not lock users out for weeks.
-
-- **Service Worker Cache Invalidation (`sw.js`)**:
-  - Bumped cache version to `'v8'` (`STATIC_CACHE = 'bitesite-static-v8'`, `PAGE_CACHE = 'bitesite-pages-v8'`).
-  - On activation, purges all legacy cache keys (including `v7`), forcing browsers to fetch fresh content-hashed bundles and newly updated routes.
+- **Outlet picker** (`select-outlet.html`). The canteen cards are rendered server-side
+  with `th:each`. Before, JavaScript built them only after a geolocation lookup with a 5s
+  timeout. Geolocation now runs in the background (2.5s timeout, low accuracy). For the
+  nearest canteen within 50km it shows a "Nearest" tag and moves that card to the top.
+- The picker no longer inlines whole `Outlet` objects as JSON (GSTIN, commission), and no
+  longer builds cards with `innerHTML`.
+- Tapping a canteen card adds `.is-loading`: the chevron spins, pointer events are off,
+  the hint text reads "Opening menu...", and the transition card shows.
+- **Transition card.** `#page-transition-overlay` was added to the nav drawer fragment: a
+  full-screen blurred layer holding a card with a spinner, an icon
+  (`#page-transition-icon`), a message (`#page-transition-msg`) and two shimmer bars
+  (100% and 70% wide).
+- `initRouteProgress` shows the card 70ms after any same-origin link click (message
+  chosen from the URL) or form submit. It jumps the JS-created `.route-progress` bar
+  (z-index 9999) to 35% and then 80%, and hides both on `pageshow`.
+- **Bottom nav.** A tap marks the tab active at once, pulses its icon, vibrates, and shows
+  the card.
+- **Install prompt:**
+  - `beforeinstallprompt` is always captured and its default prevented.
+  - "Install app" entries were added to the nav drawer and Account (`[data-install-trigger]`,
+    `download` glyph).
+  - The sheet moved from the menu, orders, order and account pages into the nav drawer
+    fragment.
+  - The snooze after "Not now" was cut from 14 days to 2 hours, leaving the 14-day
+    constant unused.
+  - The auto-open delay went from 2.5s to 1.5s, and the check that waited for the push
+    invite was removed.
+- `sw.js` `VERSION` v7 → v8. `app-bundle.css` rebuilt.
 
 **Why**
-- Users encountered a frustrating 5–6 second blank screen freeze when selecting a canteen, 2–3 second dead delays when tapping the Cart icon in the bottom navigation bar, and no "Add to Home Screen" install prompt on mobile Chrome.
+- As reported by the author: a 5–6s blank screen on the outlet picker, 2–3s with no
+  feedback after tapping Cart, and no install prompt on mobile Chrome. No measurement of
+  those durations is recorded anywhere.
 
 **Verified by**
-- `mvn test -Dtest=BootstrapSubsetTest,IconGlyphCoverageTest` passed cleanly.
-- `mvn test -Dtest=CssBundleTest` passed cleanly (hash matching and size verification).
-- `mvn test` full suite passed cleanly (583 tests run, 0 failures, 0 errors, 4 skipped).
-- Azure Web App deployment verified live (`bitesite-app`, run `34900875901`):
-  - `curl -i https://app.bitesite.in/sw.js` returns HTTP/2 200 with `VERSION = 'v8'`.
-  - `curl -i https://app.bitesite.in/manifest.webmanifest` returns HTTP/2 200 with `application/manifest+json`.
-  - Content-hashed `app.js` and `app-bundle.css` confirmed serving new transition loader classes and methods.
+- Reported by the author: `BootstrapSubsetTest`, `IconGlyphCoverageTest`, `CssBundleTest`,
+  and the full suite (583, 0 failures). Confirmed independently on 2026-09-15: 583 run,
+  0 failures, 4 skipped, on JDK 21.
+- The deploy is confirmed by the Actions run and the Azure boot log. The app started in
+  203.6s, and the startup probe succeeded at 227.7s of the 230s limit.
+- A surefire report for a `SiteControllerTest` that failed at 03:23 IST, after this
+  commit, was left in `target/`. No such test exists in the repository, and what it was
+  for is not known.
+- The audit drove it in Chromium. The outlet picker does render server-side. But the cart
+  page opened the install sheet, "Download my data" left the card over the screen
+  blocking taps, and the Install row showed inside an installed iPhone site.
 
 **Watch out for**
-- Service worker `v8` cache activation purges cached HTML pages and hashed assets, triggering a fresh asset fetch on initial visit.
+- **Fixed in `39ed797`:**
+  - The card took pointer events and only `pageshow` cleared it, so a link that downloads
+    froze the screen.
+  - The install sheet opened on the cart and checkout and came back every 2 hours.
+  - The Install entries showed inside the installed site.
+  - The card also appeared on the canteen and admin consoles.
+- Not in the original entry: the outlet picker no longer opens the nearest canteen by
+  itself. It used to redirect when one was within 50km; now the student always taps.
 
 ### `8e016b8` — Fix cart stepper listener conflict and single-step quantity changes
 **Date:** 2026-09-15 · **Scope:** 3 files · **Deployed:** yes (2026-09-14 21:30 UTC, run 34898986897)
@@ -130,6 +297,9 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 **Verified by**
 - Ran full test suite `mvn test`: 583 tests run, 0 failures, 0 errors, build success.
+- Audit, 2026-09-15, driven in Chromium: +, + and − each step by exactly one, the line
+  and bill totals match the server after a reload, and − from 1 removes the line and shows
+  the empty cart.
 
 **Watch out for**
 - Nothing.
@@ -152,7 +322,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - Nothing. Replaces ambiguous resource handler mappings with deterministic controller endpoints.
 
 ### `1dec9a1` — Serve root static assets sw.js, manifest, and offline page with explicit resource handlers
-**Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** superseded by f79ccdb
+**Date:** 2026-09-15 · **Scope:** 4 files · **Deployed:** yes, as part of run 34896426809; its resource handlers were removed by f79ccdb, but its other two changes stayed live
 
 **What changed**
 - Registered explicit resource handlers in `StaticResourceConfig` for `/sw.js`, `/manifest.webmanifest`, and `/offline.html` so Spring MVC serves them directly from `classpath:/static/` with accurate mime types and cache controls (`no-cache` for service worker and offline fallback, long cache for webmanifest).
@@ -168,6 +338,11 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 **Watch out for**
 - Nothing. Zero schema changes; standard static resource handler wiring.
+- **Audit, 2026-09-15:** not nothing. The `GlobalExceptionHandler` change handles every
+  unmapped URL, not just static files, and made them all show Spring's Whitelabel Error
+  Page in production. Fixed in `96971cb`. The `web.ignoring()` entries are still in place
+  (harmless, WARN at boot). The resource handlers never worked (Spring logged "Appended
+  trailing slash to static resource location" for each), which is why `f79ccdb` followed.
 
 ### `6efb0bb` — Make cart updates and removals live in place and prevent stale page caching
 **Date:** 2026-09-15 · **Scope:** 5 files · **Deployed:** yes (2026-09-14 20:57 UTC, run 34895736245)
@@ -190,6 +365,14 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 **Watch out for**
 - Service worker bumped to `v6`. Browsers will activate `v6` on next visit and delete existing `v5` static and page caches.
+- **Audit, 2026-09-15, not in the entry above:**
+  - Order pages (`/student/order*`) were made network-only as well, so offline they showed
+    the offline page instead of the last copy with the pickup code.
+  - A promo code that a quantity change broke was dropped silently while the
+    applied-code row stayed on screen.
+  - The design comments in `sw.js` were deleted.
+  - All three fixed in `39ed797`. The in-place cart itself was driven in Chromium and
+    works.
 
 ### `ebf15e7` — Show out-of-stock items on outlet menu with restock action
 **Date:** 2026-09-15 · **Scope:** 6 files · **Deployed:** yes (2026-09-14 20:45 UTC, run 34894568531)
@@ -234,6 +417,9 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 **Verified by**
 - 573 unit, integration, and stress tests passing locally (`mvn test`).
 - Added dedicated test coverage in `BillingServiceTest`, `ItemCancellationServiceTest`, and `RefundLedgerTest`.
+- Audit, 2026-09-15: code read (locked claim before the gateway, restatement,
+  reconciliation of partial refunds). It holds up. Not exercised against Razorpay. One
+  edge was fixed in `f23e4a2`: a refund under ₹1 was treated as "outcome unknown".
 
 **Watch out for**
 - Migration `V37__item_cancellation_partial_refunds.sql` adds `order_refunds` table, `refunded_amount` column on `payments`, cancellation columns on `order_items`, and `out_of_stock_on` on `menu_items`.
@@ -252,9 +438,71 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 **Verified by**
 - `AppSignInPersistenceTest` (7 tests) and `UserServiceTest` (43 tests) pass.
+- Audit, 2026-09-15: code and tests read. The tests run over real HTTP against a real
+  `SPRING_SESSION` table, cover the admin portal refusing a kept session, and cover a
+  switched-off operator losing theirs. Pass on JDK 21.
 
 **Watch out for**
 - Nothing.
+
+## 2026-09-13
+
+> Both entries below were written on 2026-09-15 during an audit. The commits have no
+> ledger entry from their author, so
+> everything here is reconstructed from the diffs and the Actions history, and what was
+> verified is stated as of the audit.
+
+### `ea4d08c` — feat: bypass payment for Play review account
+**Date:** 2026-09-13 · **Scope:** 4 files · **Deployed:** yes (2026-09-13 04:42 UTC, run 34738520790)
+
+**What changed**
+- A student whose `users.review_account` is true checks out without Razorpay
+  (`OrderService.checkoutForReview`). The order goes straight to PAID with a CAPTURED
+  payment whose ids are invented (`play_review_order_<id>` / `play_review_payment_<id>`,
+  signature `play-review-no-charge`).
+- The student lands on the order page with "Review order placed with no charge".
+
+**Why**
+- Google Play reviewers have to be able to place an order without paying.
+
+**Verified by**
+- The author added two `OrderServiceTest` cases: the gateway is not touched, and the
+  payment is marked verified. These pass as of the audit.
+- Not driven end to end by the audit. Whether any production account has
+  `review_account` set was not checked.
+
+**Watch out for**
+- **Fixed in `7f1cba3`:** these orders counted as revenue, analytics GMV, canteen sales
+  and money owed in settlement, and cancelling one called Razorpay to refund a payment
+  that does not exist there.
+- The flag has no UI. It is set directly in the database, which keeps it fail-closed.
+
+### `43c0527` — feat: add Play review order flow
+**Date:** 2026-09-13 · **Scope:** 14 files · **Deployed:** yes (2026-09-13 04:33 UTC, run 34738174561)
+
+**What changed**
+- Migration V36 adds `users.review_account` (default false).
+- `ReviewOrderAdvancer` runs every 30s and moves a review account's orders from the last
+  day one step along PAID → PREPARING → READY_FOR_PICKUP → COMPLETED, using the same
+  service methods staff use.
+- A public `/account-deletion` page, linked from the privacy policy, gives the browser
+  steps for deleting an account. Play requires a deletion URL.
+
+**Why**
+- So a Play reviewer can watch the whole order lifecycle without canteen staff online.
+
+**Verified by**
+- The author added advancer tests to `OrderServiceTest` and an `/account-deletion` route
+  test to `WelcomeRoutingTest`. These pass as of the audit.
+
+**Watch out for**
+- Migration V36, already applied in production.
+- The advancer records the student as the actor on each status change in the audit log.
+- It runs on every instance, with no lock. A second instance would try the same step and
+  log a warning.
+- Review orders appear in the kitchen queue and use up daily caps (see `7f1cba3`).
+
+---
 
 ## 2026-09-12
 
