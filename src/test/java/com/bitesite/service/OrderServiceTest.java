@@ -209,6 +209,8 @@ class OrderServiceTest {
         verify(paymentDao).markVerified(7L, "play_review_payment_42",
                 "play-review-no-charge", PaymentStatus.CAPTURED);
         verify(orderDao).updateStatus(42L, TENANT_ID, OrderStatus.PAID);
+        // What keeps it out of revenue and settlement, and off the gateway if refunded.
+        assertThat(result.order().isNoCharge()).isTrue();
     }
 
     @Test
@@ -355,6 +357,30 @@ class OrderServiceTest {
         verify(paymentDao).updateStatus(1L, PaymentStatus.REFUNDED);
         verify(orderDao).cancel(42L, TENANT_ID, "Ingredients ran out");
         verify(auditService).record(eq(USER_ID), eq(TENANT_ID), eq("Order"), eq(42L), eq("STATUS_CANCELLED"), any(), any());
+    }
+
+    /**
+     * A review-account order's payment id is invented, so refunding it at Razorpay could
+     * only fail, and used to leave it REFUND_PENDING and flagged for good with the order
+     * never cancelled.
+     */
+    @Test
+    void cancellingANoChargeOrderRefundsItWithoutAskingTheGateway() {
+        Order review = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
+                .tokenNo("BITE-1234").totalAmount(new BigDecimal("60.00")).status(OrderStatus.PAID)
+                .noCharge(true).build();
+        when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(review));
+        Payment captured = Payment.builder().id(1L).tenantId(TENANT_ID).orderId(42L)
+                .razorpayPaymentId("play_review_payment_42").amount(new BigDecimal("60.00"))
+                .status(PaymentStatus.CAPTURED).build();
+        when(paymentDao.findByOrderId(42L, TENANT_ID)).thenReturn(Optional.of(captured));
+        when(refundLedger.claim(eq(1L), any(), any())).thenReturn(true);
+
+        orderService.cancelOrder(42L, TENANT_ID, USER_ID, "Reviewer cancelled");
+
+        verify(paymentGateway, never()).refund(any(), any());
+        verify(paymentDao).updateStatus(1L, PaymentStatus.REFUNDED);
+        verify(orderDao).cancel(42L, TENANT_ID, "Reviewer cancelled");
     }
 
     @Test

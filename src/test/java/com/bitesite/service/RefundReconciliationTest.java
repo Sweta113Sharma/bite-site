@@ -124,6 +124,7 @@ class RefundReconciliationTest {
     @Autowired private PaymentDao paymentDao;
     @Autowired private OrderService orderService;
     @Autowired private RefundReconciliationService reconciliation;
+    @Autowired private RefundLedger refundLedger;
 
     private Long tenantId;
     private Long outletId;
@@ -167,6 +168,22 @@ class RefundReconciliationTest {
                 .razorpayOrderId("rp_o_" + runId).amount(new BigDecimal("60.00"))
                 .status(PaymentStatus.CREATED).build());
         paymentDao.markVerified(payment.getId(), "rp_p_" + runId, null, PaymentStatus.CAPTURED);
+        return paymentDao.findByOrderId(order.getId(), tenantId).orElseThrow();
+    }
+
+    /** An order placed the way the Play review account's checkout places one. */
+    private Payment noChargeOrder() {
+        String runId = UUID.randomUUID().toString().substring(0, 8);
+        Order order = orderDao.createOrder(Order.builder()
+                .tenantId(tenantId).outletId(outletId).userId(studentId)
+                .tokenNo("NC-" + runId).totalAmount(new BigDecimal("60.00")).noCharge(true)
+                .status(OrderStatus.PAID).items(List.of()).build());
+        orderDao.updateStatus(order.getId(), tenantId, OrderStatus.PAID);
+        Payment payment = paymentDao.save(Payment.builder().tenantId(tenantId).orderId(order.getId())
+                .razorpayOrderId("play_review_order_" + order.getId()).amount(new BigDecimal("60.00"))
+                .status(PaymentStatus.CREATED).build());
+        paymentDao.markVerified(payment.getId(), "play_review_payment_" + order.getId(),
+                "play-review-no-charge", PaymentStatus.CAPTURED);
         return paymentDao.findByOrderId(order.getId(), tenantId).orElseThrow();
     }
 
@@ -328,6 +345,38 @@ class RefundReconciliationTest {
         assertThat(flagged.getReconciliationReason()).contains("matches no refund BiteSite sent");
         assertThat(refundCallsFor(payment.getId()))
                 .as("never top up a partial refund automatically").isEqualTo(1);
+    }
+
+    /** A review order has no payment at Razorpay, so cancelling it must not ask for one. */
+    @Test
+    void cancellingANoChargeOrderSettlesWithoutTheGateway() {
+        Payment payment = noChargeOrder();
+
+        orderService.cancelOrder(payment.getOrderId(), tenantId, studentId, "Reviewer cancelled");
+
+        assertThat(reload(payment.getId()).getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(reload(payment.getId()).isNeedsReconciliation()).isFalse();
+        assertThat(orderStatus(payment.getOrderId())).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(refundCallsFor(payment.getId())).isZero();
+    }
+
+    /**
+     * One cancelled before this fix is stuck REFUND_PENDING: the refund call failed on its
+     * invented payment id. The sweep settles it and finishes the cancellation instead of
+     * asking Razorpay about it every five minutes forever.
+     */
+    @Test
+    void aStuckNoChargeRefundIsSettledBySweepingWithoutTheGateway() {
+        Payment payment = noChargeOrder();
+        assertThat(refundLedger.claim(payment.getId(), "Cancelled before the fix", studentId)).isTrue();
+        assertThat(reload(payment.getId()).getStatus()).isEqualTo(PaymentStatus.REFUND_PENDING);
+
+        reconciliation.reconcilePending(0);
+
+        assertThat(reload(payment.getId()).getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(orderStatus(payment.getOrderId())).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(refundCallsFor(payment.getId())).isZero();
+        assertThat(heldByGateway).doesNotContainKey("play_review_payment_" + payment.getOrderId());
     }
 
     /** Razorpay's payload shape, as documented for refund.* events. */

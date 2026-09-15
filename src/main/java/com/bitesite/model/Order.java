@@ -47,6 +47,14 @@ public class Order {
     private String promoCode;
     private BigDecimal discountAmount;
     private String discountFundedBy;
+
+    /**
+     * Placed without taking any money: the Play review account's checkout
+     * (OrderService.checkoutForReview). It still runs through the kitchen and the order
+     * lifecycle like any order, but it is not takings, so it stays out of revenue,
+     * analytics and settlement, and refunding it must never call the gateway.
+     */
+    private boolean noCharge;
     private OrderStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime paidAt;

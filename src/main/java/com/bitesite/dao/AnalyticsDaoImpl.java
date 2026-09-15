@@ -12,6 +12,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Platform analytics. Every query here leaves out no-charge orders (the Play review
+ * account, see Order.noCharge): they took no money, so they are not GMV, revenue, sales or
+ * customers.
+ */
 @Repository
 @RequiredArgsConstructor
 public class AnalyticsDaoImpl implements AnalyticsDao {
@@ -33,6 +38,7 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
               COALESCE(SUM(CASE WHEN status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED') AND discount_funded_by = 'CANTEEN' THEN discount_amount ELSE 0 END), 0) AS promo_canteen
             FROM orders
             WHERE token_day >= ? AND token_day <= ?
+              AND no_charge = FALSE
         """);
 
         List<Object> args = new ArrayList<>();
@@ -72,6 +78,7 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
               FROM orders
               WHERE token_day >= ? AND token_day <= ?
                 AND status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED')
+                AND no_charge = FALSE
         """);
 
         List<Object> args = new ArrayList<>();
@@ -110,6 +117,7 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
             FROM orders
             WHERE token_day >= ? AND token_day <= ?
               AND status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED')
+              AND no_charge = FALSE
         """);
 
         List<Object> args = new ArrayList<>();
@@ -186,6 +194,7 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
             FROM orders
             WHERE token_day >= ? AND token_day <= ?
               AND status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED')
+              AND no_charge = FALSE
         """);
 
         List<Object> args = new ArrayList<>();
@@ -255,6 +264,7 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
             JOIN tenants t ON o.tenant_id = t.id
             LEFT JOIN orders ord ON ord.outlet_id = o.id
               AND ord.token_day >= ? AND ord.token_day <= ?
+              AND ord.no_charge = FALSE
             WHERE 1=1
         """);
 
@@ -325,6 +335,7 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
             JOIN outlets o ON ord.outlet_id = o.id
             WHERE ord.token_day >= ? AND ord.token_day <= ?
               AND ord.status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED')
+              AND ord.no_charge = FALSE
               AND oi.cancelled_at IS NULL
         """);
 

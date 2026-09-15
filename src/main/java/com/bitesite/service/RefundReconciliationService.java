@@ -143,6 +143,12 @@ public class RefundReconciliationService {
     }
 
     private boolean reconcile(Payment payment, int olderThanMinutes) {
+        if (isNoCharge(payment)) {
+            // A review-account order that was cancelled before no-charge refunds were settled
+            // locally. Its payment id was never Razorpay's, so asking would fail on every
+            // sweep. No money was taken, so there is nothing to send: settle it.
+            return settle(payment, "no-charge order, nothing to refund at the gateway");
+        }
         if (payment.getRazorpayPaymentId() == null || payment.getRazorpayPaymentId().isBlank()) {
             // Nothing to ask Razorpay about: this payment has no gateway reference, so no
             // refund can ever have been sent for it and no sweep will ever resolve it.
@@ -214,6 +220,13 @@ public class RefundReconciliationService {
      * way. Returns false if the payment was not pending, which means someone else settled
      * it first and has already done all of this.
      */
+    /** The payment belongs to a no-charge order (Order.noCharge): the review account's. */
+    private boolean isNoCharge(Payment payment) {
+        return orderDao.findByIdAndTenantId(payment.getOrderId(), payment.getTenantId())
+                .map(Order::isNoCharge)
+                .orElse(false);
+    }
+
     private boolean settle(Payment payment, String via) {
         if (!paymentDao.transitionStatus(payment.getId(), PaymentStatus.REFUND_PENDING, PaymentStatus.REFUNDED)) {
             return false;
@@ -368,6 +381,12 @@ public class RefundReconciliationService {
         for (OrderRefund refund : orderRefundDao.findPendingOlderThan(olderThanMinutes)) {
             try {
                 Optional<Payment> payment = paymentDao.findByOrderId(refund.getOrderId(), refund.getTenantId());
+                if (payment.isPresent() && isNoCharge(payment.get())) {
+                    // Same as reconcile: nothing was taken, so nothing is owed at the gateway.
+                    settlePartial(payment.get(), refund, null, "no-charge order");
+                    settled++;
+                    continue;
+                }
                 if (payment.isEmpty() || payment.get().getRazorpayPaymentId() == null) {
                     continue;
                 }

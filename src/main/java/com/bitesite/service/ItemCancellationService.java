@@ -79,8 +79,9 @@ public class ItemCancellationService {
             boolean refundNotSent,
             boolean markedOutOfStock) {}
 
-    /** How a partial refund's gateway call ended. */
-    private enum RefundOutcome { SENT, UNKNOWN, NOT_SENT }
+    /** How a partial refund's gateway call ended. NOT_CHARGED: a no-charge order, where
+     * there was no money to send back and the gateway was never asked. */
+    private enum RefundOutcome { SENT, UNKNOWN, NOT_SENT, NOT_CHARGED }
 
     /**
      * @param outletId the staff member's own outlet. Tenant scoping alone would let a
@@ -138,7 +139,12 @@ public class ItemCancellationService {
                 claim.orderBefore().getTotalAmount(), names + " (" + reason.name() + "), refund " + claim.refund());
 
         RefundOutcome outcome = RefundOutcome.SENT;
-        if (claim.refundId() != null) {
+        if (claim.refundId() != null && order.isNoCharge()) {
+            // The review account's order took no money and its payment id is invented, so
+            // Razorpay cannot be asked. The refund row is settled with no gateway id.
+            orderRefundDao.markRefunded(claim.refundId(), null);
+            outcome = RefundOutcome.NOT_CHARGED;
+        } else if (claim.refundId() != null) {
             outcome = sendRefund(claim, order.getTokenNo());
         }
 
@@ -148,7 +154,8 @@ public class ItemCancellationService {
         log.info("Removed {} line(s) from order {} ({}), refund {} {}", names.size(), orderId, reason,
                 claim.refund(), outcome);
         return new Result(order.getTokenNo(), names, false, claim.refund(),
-                outcome == RefundOutcome.SENT, outcome == RefundOutcome.NOT_SENT, marked);
+                outcome == RefundOutcome.SENT || outcome == RefundOutcome.NOT_CHARGED,
+                outcome == RefundOutcome.NOT_SENT, marked);
     }
 
     private RefundOutcome sendRefund(RefundLedger.ItemClaim claim, String tokenNo) {
@@ -193,7 +200,7 @@ public class ItemCancellationService {
             BigDecimal refund, RefundOutcome outcome) {
         String items = String.join(", ", names);
         String money;
-        if (refund.signum() <= 0) {
+        if (refund.signum() <= 0 || outcome == RefundOutcome.NOT_CHARGED) {
             money = "";
         } else if (outcome == RefundOutcome.NOT_SENT) {
             // Never promise money that was not sent.

@@ -185,6 +185,7 @@ public class OrderService {
                 .gstPercent(charges.gstPercent())
                 .tokenNo(generateUniqueToken(tenantId))
                 .totalAmount(charges.total())
+                .noCharge(reviewCheckout)
                 .status(OrderStatus.AWAITING_PAYMENT)
                 .items(orderItems)
                 .build();
@@ -436,13 +437,21 @@ public class OrderService {
      * whether or not our call heard the answer, and the sweep asks Razorpay directly for
      * anything the webhook missed. A human only sees what neither could decide.
      */
-    private void refundThroughGateway(Payment payment) {
+    private void refundThroughGateway(Order order, Payment payment) {
         // What is left, not the original amount: items the kitchen already took off this
         // order were refunded separately, and Razorpay refuses a refund above what remains.
         BigDecimal amount = payment.refundableAmount();
         if (amount.signum() <= 0) {
             // Every rupee already went back through partial refunds. Nothing to send.
             paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
+            return;
+        }
+        if (order.isNoCharge()) {
+            // The review account's order: no money was taken, and its payment id is one we
+            // made up, so asking Razorpay would fail and leave it REFUND_PENDING and flagged
+            // for good. Settled here, with nothing to send.
+            paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
+            log.info("No-charge order {} refunded locally without contacting the gateway", order.getId());
             return;
         }
         try {
@@ -790,7 +799,7 @@ public class OrderService {
                 // Re-read after the claim, not before: a partial refund that committed in
                 // the meantime changed how much is left, and the claim is what shut the door
                 // on any more of them.
-                refundThroughGateway(getPaymentForOrder(orderId, tenantId));
+                refundThroughGateway(order, getPaymentForOrder(orderId, tenantId));
             }
         }
 
@@ -869,7 +878,7 @@ public class OrderService {
         }
         // Re-read for the same reason as in cancelWithRefund: partial refunds may have
         // claimed part of this capture before ours committed.
-        refundThroughGateway(getPaymentForOrder(orderId, tenantId));
+        refundThroughGateway(order, getPaymentForOrder(orderId, tenantId));
         auditService.record(actorUserId, tenantId, "Payment", payment.getId(), "REFUND_MANUAL",
                 PaymentStatus.CAPTURED, PaymentStatus.REFUNDED);
 

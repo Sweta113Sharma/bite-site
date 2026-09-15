@@ -47,6 +47,7 @@ public class OrderDaoImpl implements OrderDao {
             .promoCode(rs.getString("promo_code"))
             .discountAmount(rs.getBigDecimal("discount_amount"))
             .discountFundedBy(rs.getString("discount_funded_by"))
+            .noCharge(rs.getBoolean("no_charge"))
             .status(OrderStatus.valueOf(rs.getString("status")))
             .createdAt(rs.getObject("created_at", LocalDateTime.class))
             .paidAt(rs.getObject("paid_at", LocalDateTime.class))
@@ -85,8 +86,8 @@ public class OrderDaoImpl implements OrderDao {
                     "INSERT INTO orders (tenant_id, outlet_id, user_id, token_no, total_amount, status, "
                             + "food_amount, platform_fee, platform_fee_shown, tip_amount, "
                             + "commission_percent, commission_amount, gst_percent, "
-                            + "promo_code, discount_amount, discount_funded_by) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            + "promo_code, discount_amount, discount_funded_by, no_charge) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, order.getTenantId());
             ps.setLong(2, order.getOutletId());
@@ -105,6 +106,7 @@ public class OrderDaoImpl implements OrderDao {
             ps.setString(14, order.getPromoCode());
             ps.setBigDecimal(15, orZero(order.getDiscountAmount(), java.math.BigDecimal.ZERO));
             ps.setString(16, order.getDiscountFundedBy());
+            ps.setBoolean(17, order.isNoCharge());
             return ps;
         }, keyHolder);
         long orderId = keyHolder.getKey().longValue();
@@ -281,6 +283,8 @@ public class OrderDaoImpl implements OrderDao {
                 "SELECT token_day, COUNT(*) AS order_count, COALESCE(SUM(total_amount), 0) AS revenue "
                         + "FROM orders WHERE tenant_id = ? AND outlet_id = ? "
                         + "AND status NOT IN ('CANCELLED','EXPIRED','PAYMENT_FAILED','AWAITING_PAYMENT') "
+                        // Review-account orders took no money; see Order.noCharge.
+                        + "AND no_charge = FALSE "
                         + "AND token_day >= CURDATE() - INTERVAL ? DAY "
                         + "GROUP BY token_day ORDER BY token_day DESC",
                 (rs, n) -> new DailySales(
@@ -462,7 +466,8 @@ public class OrderDaoImpl implements OrderDao {
      *
      * <p>Only PAID, PREPARING, READY_FOR_PICKUP and COMPLETED count: those are the states
      * where money was taken and kept. An abandoned, expired or refunded order moved no
-     * money to this canteen and must not inflate a payout.
+     * money to this canteen and must not inflate a payout. Neither did a no-charge
+     * review order, which is left out for the same reason.
      *
      * <p>food_amount rather than total_amount, because total includes the platform's own
      * fee and the student's tip — neither of which is the canteen's, and neither of which
@@ -488,6 +493,8 @@ public class OrderDaoImpl implements OrderDao {
                 JOIN outlets ou ON ou.id = o.outlet_id
                 JOIN tenants t  ON t.id  = o.tenant_id
                 WHERE o.status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED')
+                  -- Took no money (the Play review account), so nothing to settle.
+                  AND o.no_charge = FALSE
                 """);
         List<Object> args = new ArrayList<>();
         if (from != null) {

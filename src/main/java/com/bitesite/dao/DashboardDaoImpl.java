@@ -30,7 +30,10 @@ public class DashboardDaoImpl implements DashboardDao {
     private static final String IN_FLIGHT = "('PAID','PREPARING','READY_FOR_PICKUP')";
 
     /** Cancelled and expired orders are excluded from revenue for the same reason
-     * dailySales excludes them: money that was refunded or never taken is not takings. */
+     * dailySales excludes them: money that was refunded or never taken is not takings.
+     * No-charge review orders (Order.noCharge) are excluded from revenue and popular items
+     * for the same reason. Order counts, in-flight and sell-outs keep them: those describe
+     * the kitchen, and the order really is in it. */
     private static final String EARNING = "('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED')";
 
     private final JdbcTemplate jdbcTemplate;
@@ -40,7 +43,7 @@ public class DashboardDaoImpl implements DashboardDao {
         return new PlatformSnapshot(
                 count("SELECT COUNT(*) FROM orders WHERE token_day = CURDATE()"),
                 money("SELECT COALESCE(SUM(total_amount), 0) FROM orders "
-                        + "WHERE token_day = CURDATE() AND status IN " + EARNING),
+                        + "WHERE token_day = CURDATE() AND status IN " + EARNING + " AND no_charge = FALSE"),
                 count("SELECT COUNT(*) FROM orders WHERE status IN " + IN_FLIGHT),
                 count("SELECT COUNT(*) FROM payments WHERE status = 'FAILED' AND DATE(created_at) = CURDATE()"),
                 // Money held against an order that cannot be honoured. Not time-boxed to
@@ -83,6 +86,7 @@ public class DashboardDaoImpl implements DashboardDao {
                         + "WHERE ord.token_day = CURDATE() "
                         + "  AND ord.status IN ('PAID','PREPARING','READY_FOR_PICKUP','COMPLETED') "
                         + "  AND oi.cancelled_at IS NULL "
+                        + "  AND ord.no_charge = FALSE "
                         + "GROUP BY mi.id, mi.name, o.name "
                         + "ORDER BY sold_today DESC, revenue DESC "
                         + "LIMIT 5",
