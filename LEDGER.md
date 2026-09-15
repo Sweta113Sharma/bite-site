@@ -53,7 +53,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 ## 2026-09-15
 
 ### `576c4cd` — Close the payment and refund holes found by auditing them for abuse
-**Date:** 2026-09-15 · **Scope:** 20 files · **Deployed:** no (committed; push awaiting the owner's go-ahead)
+**Date:** 2026-09-15 · **Scope:** 20 files · **Deployed:** yes (2026-09-15 06:19 UTC, run 34936116033)
 
 **What changed**
 - **Replayed capture confirmations.** A payment is marked captured only if it has never
@@ -145,6 +145,11 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - Not verified: anything against real Razorpay; that Razorpay rejects a refund above
   what remains (taken from its documentation, and not relied on any more); timing-safety
   of the SDK's signature comparison.
+- **Deployed 2026-09-15** on the owner's go-ahead, run 34936116033. No migration. The app
+  started in 127.9s and the startup probe succeeded at 153.9s. Health is UP, `/login`
+  answers 200, an unsigned webhook is refused with 400, and there were no application
+  errors in the log after boot. None of the fixed flows was exercised in production: they
+  need real payments and signed-in accounts.
 
 **Watch out for**
 - `confirmPayment` and the promo code lock run at READ_COMMITTED. Checkouts that use the
