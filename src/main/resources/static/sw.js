@@ -62,13 +62,23 @@ function isStaticAsset(url) {
             || url.pathname.startsWith('/fonts/'));
 }
 
-function isDynamicPage(pathname) {
+/* Pages that change with every tap made on them, or that act on money and the kitchen:
+   never answered from the page cache, not even when offline. A stale cart total here is
+   the bug that made removing an item look like it did nothing for 15 seconds. */
+function isNeverCachedPage(pathname) {
     return pathname.startsWith('/student/cart')
         || pathname.startsWith('/student/checkout')
-        || pathname.startsWith('/student/order')
         || pathname.startsWith('/canteen')
         || pathname.startsWith('/admin')
         || pathname.startsWith('/api');
+}
+
+/* The order list and an order's own page. Too live for the 2.5-second race below: a
+   cached "Preparing" shown while the kitchen has marked it ready sends a student to wait
+   at the wrong moment. But the pickup code lives on this page, and a student at the
+   counter with no signal still needs it, so the last copy is kept for a dead network. */
+function isOrderPage(pathname) {
+    return pathname.startsWith('/student/order');
 }
 
 // How long a navigation waits for the network before falling back to a cached copy.
@@ -81,10 +91,22 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(request.url);
 
     if (request.method !== 'GET') {
-        /* Anything that changes WHO the user is or changes cart/order state has to
-           empty the page cache. Cached pages are keyed by URL and nothing else.
-           Cart and checkout state changes must immediately invalidate PAGE_CACHE so
-           future navigations never serve stale cart totals or line items. */
+        /* Anything that changes WHO the user is has to empty the page cache. Cached pages
+           are keyed by URL and nothing else, so on a shared phone — which here is most of
+           them — the next person could be handed the previous student's order page out of
+           the cache while the network catches up.
+
+           All three of these matter, and logout alone is not enough:
+             /logout           the tidy case, and the least common one on a shared device
+             /login            someone signs in WITHOUT the previous person having signed
+                               out, which is the normal way a shared phone changes hands
+             /api/role/switch  same person, different portal, different pages
+
+           Purging on a failed login attempt too is harmless: it costs one cache miss.
+
+           Cart, checkout and console actions purge too. The pages they change are never
+           cached (isNeverCachedPage), but cached pages such as the menu carry the cart
+           badge and the sticky cart bar, which would otherwise come back stale. */
         if (url.pathname === '/logout' || url.pathname === '/login'
                 || url.pathname === '/api/role/switch'
                 || url.pathname.startsWith('/student/cart')
@@ -96,15 +118,45 @@ self.addEventListener('fetch', (event) => {
         return; // never intercept POST/PUT/DELETE — checkout, cart, order actions pass straight through
     }
 
-    /* Page navigations:
-       Dynamic pages whose contents change on every user action (cart, checkout, orders, canteen, admin)
-       must NEVER be served from a stale HTML cache. Fall back only to offline page if network fails outright. */
+    /* Page navigations: network-first, but not network-ONLY-until-it-answers.
+       The old handler awaited the network however long it took, so on a slow campus
+       connection a student stared at a blank screen for the full round trip even when a
+       perfectly good copy of that page was sitting in the cache.
+
+       So the network races a short timer. If it answers within the timeout the student
+       gets fresh content, which on any decent connection is every time. If it does not,
+       they get the cached page immediately and the network request keeps running to
+       refresh the cache for next time.
+
+       Deliberately NOT stale-while-revalidate, which would show the cached copy first on
+       every navigation. Two kinds of page opt out of the race entirely, see
+       isNeverCachedPage and isOrderPage. */
     if (request.mode === 'navigate') {
-        if (isDynamicPage(url.pathname)) {
+        if (isNeverCachedPage(url.pathname)) {
             event.respondWith(
                 fetch(request).catch(async () => {
                     return (await caches.match(OFFLINE_URL)) || Response.error();
                 })
+            );
+            return;
+        }
+
+        if (isOrderPage(url.pathname)) {
+            // However slow the network, wait for it; the cached copy is only for no network.
+            event.respondWith(
+                fetch(request)
+                    .then((response) => {
+                        if (response.ok) {
+                            const copy = response.clone();
+                            event.waitUntil(caches.open(PAGE_CACHE).then((cache) => cache.put(request, copy)));
+                        }
+                        return response;
+                    })
+                    .catch(async () => {
+                        return (await caches.match(request))
+                            || (await caches.match(OFFLINE_URL))
+                            || Response.error();
+                    })
             );
             return;
         }

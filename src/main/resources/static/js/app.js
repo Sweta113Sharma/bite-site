@@ -444,6 +444,10 @@ function initBottomNav() {
 
         if (isActive) {
             item.classList.add('active');
+            // The filled icon is CSS's job now: .bottom-nav-item.active sets
+            // font-variation-settings 'FILL' 1 on the Material Symbol. This used to
+            // rewrite Phosphor class names, which a variable font cannot express and
+            // which silently stopped matching anything when the icons changed.
         }
 
         // Instant visual feedback and fluid transition screen on tab click
@@ -891,6 +895,14 @@ function initCartPageControls() {
 
     const applyCartState = (data, changedItemId) => {
         if (!data) return;
+
+        // The change took the cart out of its promo code's terms (below the minimum, say).
+        // The cart page render drops the code and says why, so let it: patching the totals
+        // in place would leave the applied-code row showing a discount that is gone.
+        if (data.promoNoLongerApplies) {
+            window.location.reload();
+            return;
+        }
 
         // Update line subtotal for the modified item
         if (changedItemId) {
@@ -1357,14 +1369,33 @@ const INSTALL_DELAY_MS = 1500;
 
 let deferredInstallPrompt = null;
 
+/** The site is already installed here, or is the Android app itself, so there is nothing
+ * left to offer. */
+function alreadyInstalled() {
+    if (isNativeShell() || isInstalledWebApp()) return true;
+    try {
+        return localStorage.getItem(INSTALL_DONE_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+}
+
+/* The "Install app" entries (nav drawer, Account) show only where a tap can do something:
+   Android once the browser has said the site is installable, iPhone always, since Safari
+   never says. Never inside the installed site or the app, where the offer is nonsense. */
 function updateInstallButtons() {
-    const isAvailable = !!deferredInstallPrompt || isIosDevice();
+    const isAvailable = !alreadyInstalled() && (!!deferredInstallPrompt || isIosDevice());
     document.querySelectorAll('[data-install-trigger]').forEach(btn => {
         btn.classList.toggle('d-none', !isAvailable);
     });
 }
 
-// ALWAYS capture beforeinstallprompt event unconditionally so Chrome doesn't drop it
+/* Registered at the top level, not in initInstallPrompt: Chrome can decide the site is
+   installable before DOMContentLoaded, and a listener added later would miss it.
+
+   preventDefault on every page, not only where our sheet opens by itself. It stops
+   Chrome's own mini-infobar, and the drawer and Account entries are now the way in
+   everywhere else, so keeping the event is what lets those buttons work. */
 window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
@@ -1391,18 +1422,22 @@ function isIosDevice() {
     return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 }
 
+/** Whether the sheet may open by itself. The "Install app" entries ignore this: someone
+ * who taps one has asked. */
 function installPromptWanted() {
     if (isNativeShell() || isInstalledWebApp()) return false;
-    // Allow coarse pointer or any mobile user agent
+    // A home screen is a phone or tablet thing; a desktop window has its own install icon.
+    // The user-agent check covers phones that report no coarse pointer.
     const isMobile = window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
     if (!isMobile) return false;
     try {
         if (localStorage.getItem(INSTALL_DONE_KEY) === '1') return false;
         const dismissedAt = Number(localStorage.getItem(INSTALL_DISMISSED_KEY));
-        // Snooze for 2 hours if explicitly dismissed, so user can easily retry
-        const SNOOZE_MS = 2 * 60 * 60 * 1000;
-        return !(dismissedAt && Date.now() - dismissedAt < SNOOZE_MS);
+        // Two weeks, not hours. The drawer and Account entries stay available to anyone
+        // who changes their mind, so a short snooze would only mean asking again and again.
+        return !(dismissedAt && Date.now() - dismissedAt < INSTALL_SNOOZE_MS);
     } catch (e) {
+        // With nowhere to remember "Not now", the sheet would return on every page.
         return false;
     }
 }
@@ -1448,15 +1483,23 @@ function initInstallPrompt() {
         });
     });
 
-    // Automatic bottom sheet prompt when desired
-    if (installPromptWanted()) {
+    // Opening by itself: only on a page that asks for it (data-install-auto, the calm pages),
+    // and re-checked when the timer fires, since "Not now" or an install may land meanwhile.
+    const autoOpen = (variant) => {
+        if (!installPromptWanted()) return;
+        // One offer at a time: when the notification banner is up, this page is its turn.
+        const pushInvite = document.getElementById('push-invite');
+        if (pushInvite && !pushInvite.classList.contains('d-none')) return;
+        open(variant);
+    };
+    if (sheet && document.querySelector('[data-install-auto]') && installPromptWanted()) {
         if (deferredInstallPrompt) {
-            setTimeout(() => open('prompt'), INSTALL_DELAY_MS);
+            setTimeout(() => autoOpen('prompt'), INSTALL_DELAY_MS);
         } else if (isIosDevice()) {
-            setTimeout(() => open('ios'), INSTALL_DELAY_MS);
+            setTimeout(() => autoOpen('ios'), INSTALL_DELAY_MS);
         } else {
             document.addEventListener('bitesite:installable',
-                () => setTimeout(() => open('prompt'), INSTALL_DELAY_MS), { once: true });
+                () => setTimeout(() => autoOpen('prompt'), INSTALL_DELAY_MS), { once: true });
         }
     }
 
@@ -1464,6 +1507,7 @@ function initInstallPrompt() {
 
     sheet.querySelector('[data-install-accept]')?.addEventListener('click', () => {
         const promptEvent = deferredInstallPrompt;
+        // The event can be used once; Chrome sends a fresh one if the site is still installable.
         deferredInstallPrompt = null;
         sheet.close();
         if (!promptEvent) return;
@@ -1474,6 +1518,7 @@ function initInstallPrompt() {
                 if (choice?.outcome === 'accepted') {
                     rememberInstall(INSTALL_DONE_KEY, '1');
                 } else {
+                    // Declining the browser's dialog is the same answer as "Not now".
                     snooze();
                 }
                 updateInstallButtons();
@@ -1488,8 +1533,12 @@ function initInstallPrompt() {
         });
     });
 
+    // Escape closes a modal dialog through `cancel`; that is a "Not now" too.
     sheet.addEventListener('cancel', snooze);
 
+    // A modal dialog ignores taps on its backdrop by default. On a phone, tapping the
+    // dimmed page is how people say "not this", so treat it that way. The backdrop's
+    // clicks are delivered to the dialog itself, outside its box.
     sheet.addEventListener('click', (event) => {
         if (event.target !== sheet) return;
         const box = sheet.getBoundingClientRect();
@@ -1959,17 +2008,23 @@ function initFormBusyStates() {
 }
 
 /**
- * A thin bar at the top of the screen while a full page navigation is in flight.
+ * Feedback while a full page navigation is in flight: a bar at the top of the screen on
+ * every page, and on the student app a card naming where the tap is going.
  *
  * <p>Server-rendered pages give no feedback between the tap and the next paint, and on a
- * slow connection that gap is long enough to look like nothing happened. A bar is enough:
- * it does not cover the page the reader can still use.
+ * slow connection that gap is long enough to look like nothing happened.
  *
- * <p>It creeps rather than tracks, because there is no progress to report — the browser
- * will not say how far along a navigation is. Creeping is honest about that; it says
- * "working", not "62% done".
+ * <p>Nothing here may ever block the page. A click is not proof that the page will be
+ * replaced: a link that answers with a download (the privacy export), a form a later
+ * handler cancels, or a request the browser drops all leave the reader on this page with
+ * no pageshow to clear the loader. The card therefore never takes pointer events (see
+ * .page-transition-overlay), and anything still showing after NAV_LOADER_MAX_MS is taken
+ * down, because a navigation that slow has lost the reader anyway.
  */
+const NAV_LOADER_MAX_MS = 15000;
+
 let pageTransitionTimer = null;
+let pageTransitionGiveUp = null;
 
 function showPageTransitionLoader(icon = 'restaurant', msg = 'Loading...') {
     // 1. Top progress bar
@@ -1997,10 +2052,14 @@ function showPageTransitionLoader(icon = 'restaurant', msg = 'Loading...') {
             if (bar) bar.style.width = '80%';
         }, 70);
     }
+
+    clearTimeout(pageTransitionGiveUp);
+    pageTransitionGiveUp = setTimeout(hidePageTransitionLoader, NAV_LOADER_MAX_MS);
 }
 
 function hidePageTransitionLoader() {
     clearTimeout(pageTransitionTimer);
+    clearTimeout(pageTransitionGiveUp);
     const overlay = document.getElementById('page-transition-overlay');
     if (overlay) {
         overlay.classList.remove('is-visible');
@@ -2021,8 +2080,9 @@ window.showPageTransitionLoader = showPageTransitionLoader;
 window.hidePageTransitionLoader = hidePageTransitionLoader;
 
 function initRouteProgress() {
+    // Fires on a normal load and on a bfcache restore, which is what clears the loader when
+    // someone navigates back to a page that was mid-flight.
     window.addEventListener('pageshow', hidePageTransitionLoader);
-    window.addEventListener('beforeunload', () => {});
 
     document.addEventListener('click', (event) => {
         const link = event.target.closest && event.target.closest('a[href]');
@@ -2030,6 +2090,7 @@ function initRouteProgress() {
             return;
         }
         const href = link.getAttribute('href');
+        // Anchors, downloads, new tabs and javascript: links never replace this page.
         if (!href || href.startsWith('#') || href.startsWith('javascript:')
             || link.target === '_blank' || link.hasAttribute('download')) {
             return;
@@ -2068,6 +2129,7 @@ function initRouteProgress() {
 
     document.addEventListener('submit', (event) => {
         const form = event.target;
+        // defaultPrevented means a fetch handler took it: no navigation, so no loader.
         if (event.defaultPrevented || !(form instanceof HTMLFormElement)) {
             return;
         }

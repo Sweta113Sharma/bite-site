@@ -42,7 +42,9 @@
         <p class="mb-3 small text-muted">
             A JSON file with your profile, every order, your support requests, and your consent history.
         </p>
-        <a class="btn btn-outline-secondary w-100" th:href="@{/student/privacy/export}">
+        <!--/* download: the export answers as an attachment and never replaces this page, so
+             it must not start the page-transition loader (initRouteProgress skips these). */-->
+        <a class="btn btn-outline-secondary w-100" th:href="@{/student/privacy/export}" download="bitesite-my-data.json">
             <span class="material-symbols-outlined">download</span> Download my data
         </a>
     </div></div>

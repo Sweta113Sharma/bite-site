@@ -100,4 +100,26 @@ class CartControllerTest {
         assertThat(new BigDecimal(body.get("total").toString())).isEqualByComparingTo("0");
         assertThat(body.get("empty")).isEqualTo(true);
     }
+
+    /** The in-place update used to drop the code silently, leaving the applied-code row on
+     * screen. The flag makes the page reload, and the cart render explains the removal. */
+    @Test
+    void aQuantityChangeThatBreaksThePromoFlagsItAndLeavesTheCodeForTheCartPageToExplain() throws Exception {
+        cart.ensureOutlet(5L);
+        cart.add(101L, 2);
+        cart.setPromoCode("LUNCH50");
+
+        when(menuService.get(eq(101L), anyLong()))
+                .thenReturn(MenuItem.builder().id(101L).price(new BigDecimal("90.00")).build());
+        when(promoCodeService.validate(eq("LUNCH50"), eq(10L), eq(1L), eq(5L), eq(new BigDecimal("90.00"))))
+                .thenThrow(new com.bitesite.exception.BusinessException("This code needs a cart of at least ₹150."));
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        controller.update(principal, 101L, 1, MediaType.APPLICATION_JSON_VALUE, response);
+
+        Map<String, Object> body = objectMapper.readValue(response.getContentAsString(), new TypeReference<>() {});
+        assertThat(body.get("promoNoLongerApplies")).isEqualTo(true);
+        assertThat(new BigDecimal(body.get("discount").toString())).isEqualByComparingTo("0");
+        assertThat(cart.getPromoCode()).isEqualTo("LUNCH50");
+    }
 }

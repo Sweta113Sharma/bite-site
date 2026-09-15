@@ -274,13 +274,17 @@ public class CartController {
             }
         }
         BigDecimal discount = BigDecimal.ZERO;
+        boolean promoNoLongerApplies = false;
         if (cart.getPromoCode() != null && cart.getOutletId() != null) {
             try {
                 discount = promoCodeService
                         .validate(cart.getPromoCode(), user.getId(), user.getTenantId(), cart.getOutletId(), itemTotal)
                         .discount();
             } catch (BusinessException e) {
-                cart.setPromoCode(null);
+                // Left on the cart on purpose. The page reloads on this flag, and the cart
+                // render is what drops the code AND tells the student why; dropping it here
+                // would take it away silently, with the applied-code row still showing.
+                promoNoLongerApplies = true;
             }
         }
         BigDecimal payable = itemTotal.subtract(discount);
@@ -300,6 +304,7 @@ public class CartController {
         body.put("fee", fee);
         body.put("grandTotal", grandTotal);
         body.put("empty", cart.isEmpty());
+        body.put("promoNoLongerApplies", promoNoLongerApplies);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getWriter(), body);
     }

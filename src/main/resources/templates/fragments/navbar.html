@@ -296,8 +296,11 @@
             </button>
         </form>
     </aside>
-    <!--/* Global Page Transition Loader & Skeleton Overlay */-->
-    <div id="page-transition-overlay" class="page-transition-overlay" aria-hidden="true">
+    <!--/* Page transition card, student app only. The staff and admin consoles keep the
+         plain top bar: they are worked on desktops, where a card over the whole screen on
+         every click is in the way. initRouteProgress in app.js shows and clears it. */-->
+    <div id="page-transition-overlay" class="page-transition-overlay" aria-hidden="true"
+         sec:authorize="hasRole('USER')">
         <div class="page-transition-card">
             <div class="page-transition-spinner-wrap">
                 <div class="page-transition-spinner"></div>
@@ -310,7 +313,9 @@
             </div>
         </div>
     </div>
-    <!--/* Global Install Prompt Modal (present on all student pages via navbar) */-->
+    <!--/* The install sheet is in the DOM on every student page so the "Install app"
+         entries in this drawer and on Account can open it anywhere. Whether it opens by
+         itself is decided per page: see data-install-auto. */-->
     <dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>
 </div>
 
@@ -334,11 +339,14 @@
 <!--/* ============================================================
      INSTALL PROMPT
 
-     "Add BiteSite to your home screen", for the website. Never opened by the server:
-     initInstallPrompt in app.js opens it only on a touch device, outside the Android app,
-     when the site is not already installed and "Not now" was not pressed in the last 14
-     days. Included only on calm pages (menu, orders, account), never mid-task on an item,
-     the cart or checkout.
+     "Add BiteSite to your home screen", for the website. Never opened by the server.
+     initInstallPrompt in app.js opens it by itself only on a touch device, outside the
+     Android app, when the site is not already installed, "Not now" was not pressed in the
+     last 14 days, and the page carries data-install-auto. Only calm pages carry it (menu,
+     orders, an order, account), never mid-task on an item, the cart or checkout.
+
+     The "Install app" entries (nav drawer, Account) open it on request from any page, and
+     are shown only where installing is actually possible.
 
      Two bodies, one shown. Android browsers get a real Install button, which opens the
      browser's own install dialog. iPhone Safari has no install API at all, so it gets the
