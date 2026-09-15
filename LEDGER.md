@@ -56,28 +56,65 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 **Date:** 2026-09-15 · **Scope:** 11 files · **Deployed:** yes (2026-09-14 21:54 UTC, run 34900875901)
 
 **What changed**
-- Rendered outlet cards server-side with Thymeleaf on `/student/menu/select`. Previously, the page rendered an empty container and waited up to 5 seconds for `navigator.geolocation.getCurrentPosition()` to resolve before creating DOM cards, causing a blank frozen screen. Now outlet cards render in 0ms on initial page paint, while geolocation runs in the background with a 2.5s timeout purely to update distance badges.
-- Added instant click feedback (`.is-loading`, button spinner, and "Opening menu..." status text) when tapping any canteen card.
-- Implemented global `#page-transition-overlay` with a vibrant gradient progress bar (`.route-progress`), glassmorphic loading card, pulsating category icon, spinner, and animated skeleton shimmer lines.
-- Updated `initBottomNav()` in `app.js` to immediately apply the `.active` highlight, pulse the clicked icon, trigger haptic feedback, and display contextual loading overlays (e.g. "Opening your cart...", "Loading today's menu...", "Fetching your orders...", "Loading account...").
-- Enhanced `initRouteProgress()` to catch all internal navigation clicks and form submissions, preventing dead time and visually confirming every user action.
-- Centralized `<dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>` in `navbar.html` so the PWA install modal is present across all authenticated student pages, and eliminated redundant duplicate dialog tags in `account.html`, `menu.html`, `orders.html`, and `order-detail.html`.
-- Added persistent "Install App" triggers with the standard subsetted `download` icon to the navigation drawer (`#nav-drawer-install`) and the Account settings screen (`#account-install-row`), allowing mobile Chrome users to trigger the install prompt manually at any time.
-- Fixed `beforeinstallprompt` handling in `app.js`: unconditionally captures `deferredInstallPrompt` regardless of whether `#install-prompt` is currently mounted, unhides all `[data-install-trigger]` buttons, and reduces dismiss snooze to 2 hours instead of 14 days.
-- Bumped Service Worker cache version in `sw.js` to `'v8'`.
-- Rebuilt `app-bundle.css` via `scripts/build-css-bundle.py`.
+- **Server-side outlet rendering (`select-outlet.html`)**:
+  - Eliminated the 5–6 second blank freeze on `/student/menu/select`. Previously, the template rendered an empty `<div id="outlet-list">` container and blocked all DOM card creation while waiting for client-side `navigator.geolocation.getCurrentPosition()` to resolve (up to 5000ms timeout).
+  - Outlet cards are now rendered server-side immediately on initial HTML paint using Thymeleaf (`th:each="o : ${outlets}"`), rendering instantly (0ms delay).
+  - Geolocation was decoupled into a non-blocking background task with `enableHighAccuracy: false`, a fast 2500ms timeout, and `maximumAge: 60000`. It asynchronously computes user distance, inserts distance badges into cards, and sorts nearest outlets to the top without blocking visual rendering.
+  - Added click feedback on canteen cards: tapping any outlet adds `.is-loading`, swaps the forward arrow for an inline dual-ring spinner, changes the button label to *"Opening menu..."*, disables further clicks to prevent duplicated navigation, and triggers the global transition overlay.
+  - Replaced unsubsetted Bootstrap utility classes with clean inline badge styling to strictly satisfy `BootstrapSubsetTest`.
+
+- **Global Page Transition Overlay & Skeleton Shimmer (`navbar.html`, `05-shared.css`, `app-bundle.css`)**:
+  - Added `#page-transition-overlay` to `navbar.html` containing:
+    - A 4px glowing gradient top progress bar (`.route-progress`) fixed to the viewport top (`z-index: 100000`) with smooth linear progress animation.
+    - A glassmorphic loading card (`.page-transition-card`) with `backdrop-filter: blur(8px)`, dual-ring spinner (`.page-transition-spinner`), pulsating category icon (`#page-transition-icon`), and contextual message label (`#page-transition-text`).
+    - Skeleton shimmer placeholder lines (`.transition-shimmer-bar` at 75% and 50% widths) with continuous CSS gradient sweep animations (`@keyframes shimmerBar`).
+  - Added micro-animation styles in `05-shared.css`:
+    - `.bottom-nav-item.is-loading` pulse animation on icon tap.
+    - `.outlet-card.is-loading` opacity pulse and pointer-event locking.
+    - Recompiled `app-bundle.css` via `python3 scripts/build-css-bundle.py` (259,804 bytes), verified by `CssBundleTest`.
+
+- **Instant Bottom Navigation Responsiveness (`app.js`)**:
+  - Refactored `initBottomNav()` to provide instantaneous tactile and visual feedback on touch/click:
+    - Immediately applies `.active` pill highlight to the tapped bottom-nav tab without waiting for HTTP response.
+    - Adds `.is-loading` CSS pulse animation to the clicked icon.
+    - Fires subtle haptic feedback on supported mobile devices via `navigator.vibrate(12)`.
+    - Automatically displays the contextual transition overlay with route-specific iconography and messaging:
+      - Cart (`/student/cart`): icon `shopping_bag`, text *"Opening your cart..."*
+      - Menu (`/student/menu`): icon `restaurant_menu`, text *"Loading today's menu..."*
+      - Orders (`/student/orders`): icon `receipt_long`, text *"Fetching your orders..."*
+      - Account (`/student/account`): icon `person`, text *"Loading account..."*
+      - Outlets / Fallback: icon `restaurant`, text *"Opening menu..."* / *"Loading..."*
+  - Refactored `initRouteProgress()` to intercept all internal link clicks (`a[href]`) and form submissions, displaying the top progress bar and transition overlay.
+  - Wired `window.addEventListener('pageshow', ...)` to automatically hide the transition overlay when returning via browser forward/back cache (bfcache).
+  - Exposed `window.showPageTransitionLoader(icon, msg)` and `window.hidePageTransitionLoader()` globally for programmatic transitions.
+
+- **Resilient Mobile Chrome PWA Install Flow (`app.js`, `navbar.html`, `account.html`)**:
+  - Fixed `beforeinstallprompt` event handling in `app.js`: unconditionally captures `deferredInstallPrompt = e;` on `window`, preventing race conditions where the event fired before `#install-prompt` was mounted or when viewing pages without the modal.
+  - Automatically queries all `[data-install-trigger]` elements and unhides them (`classList.remove('d-none')`) when the browser signals PWA installability.
+  - Added dedicated, persistent "Install App" triggers using the subsetted `download` icon (satisfying `IconGlyphCoverageTest`):
+    - In the navigation drawer (`#nav-drawer-install`) accessible on every page.
+    - In the Account screen settings list (`#account-install-row` on `/student/account`).
+  - Centralized `<dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>` in `navbar.html` so the modal is available across the entire customer application, eliminating duplicate tags from `account.html`, `menu.html`, `orders.html`, and `order-detail.html`.
+  - Reduced the dismissal snooze period from 14 days down to 2 hours (`DISMISS_KEY = 'bitesite.installDismissedAt'`), so dismissed prompts do not lock users out for weeks.
+
+- **Service Worker Cache Invalidation (`sw.js`)**:
+  - Bumped cache version to `'v8'` (`STATIC_CACHE = 'bitesite-static-v8'`, `PAGE_CACHE = 'bitesite-pages-v8'`).
+  - On activation, purges all legacy cache keys (including `v7`), forcing browsers to fetch fresh content-hashed bundles and newly updated routes.
 
 **Why**
-- Users experienced a 5-6 second blank freeze when selecting a canteen, 2-3 second blank waits when switching to Cart via the bottom nav bar, and missing "Add to Home Screen" popups on Chrome mobile.
+- Users encountered a frustrating 5–6 second blank screen freeze when selecting a canteen, 2–3 second dead delays when tapping the Cart icon in the bottom navigation bar, and no "Add to Home Screen" install prompt on mobile Chrome.
 
 **Verified by**
-- `mvn test -Dtest=BootstrapSubsetTest,IconGlyphCoverageTest` passed.
-- `mvn test -Dtest=CssBundleTest` passed.
-- Full `mvn test` suite passed (583 tests, 0 failures, 0 errors).
-- Geolocation non-blocking fallback and server-side Thymeleaf card rendering verified.
+- `mvn test -Dtest=BootstrapSubsetTest,IconGlyphCoverageTest` passed cleanly.
+- `mvn test -Dtest=CssBundleTest` passed cleanly (hash matching and size verification).
+- `mvn test` full suite passed cleanly (583 tests run, 0 failures, 0 errors, 4 skipped).
+- Azure Web App deployment verified live (`bitesite-app`, run `34900875901`):
+  - `curl -i https://app.bitesite.in/sw.js` returns HTTP/2 200 with `VERSION = 'v8'`.
+  - `curl -i https://app.bitesite.in/manifest.webmanifest` returns HTTP/2 200 with `application/manifest+json`.
+  - Content-hashed `app.js` and `app-bundle.css` confirmed serving new transition loader classes and methods.
 
 **Watch out for**
-- Service worker cache bump will invalidate `'v7'` caches and download fresh bundles on client visit.
+- Service worker `v8` cache activation purges cached HTML pages and hashed assets, triggering a fresh asset fetch on initial visit.
 
 ### `8e016b8` — Fix cart stepper listener conflict and single-step quantity changes
 **Date:** 2026-09-15 · **Scope:** 3 files · **Deployed:** yes (2026-09-14 21:30 UTC, run 34898986897)
