@@ -81,6 +81,12 @@ public class RefundReconciliationService {
             settlePartial(payment, partial.get(), refund.id(), "webhook refund.processed " + refund.id());
             return;
         }
+        if (payment.getStatus() == PaymentStatus.CAPTURED && refund.id() != null
+                && refund.amountRupees().signum() > 0
+                && refund.amountRupees().compareTo(payment.refundableAmount()) < 0) {
+            recordOutsidePartial(payment, refund);
+            return;
+        }
         if (!isFullAmount(payment, refund.amountRupees())) {
             flagAmountMismatch(payment, refund.amountRupees(), refund.status());
             return;
@@ -203,6 +209,14 @@ public class RefundReconciliationService {
         int attempt = payment.getRefundAttempts() + 1;
         try {
             paymentGateway.refund(payment.getRazorpayPaymentId(), payment.refundableAmount());
+        } catch (com.bitesite.exception.RefundNotSentException tooSmall) {
+            // Under Razorpay's ₹1 floor, refused before sending: retrying can never work.
+            // Settled so the order finishes cancelling, and flagged for the paise left over.
+            boolean settled = settle(payment, "reconciliation sweep, remainder under the gateway minimum");
+            paymentDao.flagForReconciliation(payment.getId(), clamp("₹"
+                    + payment.refundableAmount().toPlainString() + " left after partial refunds is under "
+                    + "Razorpay's ₹1 minimum, so it was not refunded; settle it with the student by hand"));
+            return settled;
         } catch (RuntimeException gatewayFailed) {
             paymentDao.flagForReconciliation(payment.getId(), clamp(
                     "Refund attempt " + attempt + " of " + MAX_ATTEMPTS + " failed, outcome unknown: "
@@ -220,6 +234,33 @@ public class RefundReconciliationService {
      * way. Returns false if the payment was not pending, which means someone else settled
      * it first and has already done all of this.
      */
+    /**
+     * A partial refund Razorpay processed that BiteSite did not send: someone refunded part
+     * of a live payment from the Razorpay dashboard.
+     *
+     * <p>It used to be flagged and nothing more, so {@code refunded_amount} still said the
+     * whole capture was held. A later cancellation then asked Razorpay for more than it
+     * still had, was refused, and sat in REFUND_PENDING with the student waiting. Now it is
+     * recorded against the payment, once (the gateway refund id is unique), so a later full
+     * refund asks only for the rest. Still flagged: money left without anyone in BiteSite
+     * pressing a button, and the order's own amounts were not restated.
+     */
+    private void recordOutsidePartial(Payment payment, GatewayRefund refund) {
+        if (!refundLedger.recordOutsidePartialRefund(payment, refund.id(), refund.amountRupees())) {
+            log.debug("Outside refund {} for payment {} already recorded; webhook is a no-op",
+                    refund.id(), payment.getId());
+            return;
+        }
+        paymentDao.flagForReconciliation(payment.getId(), clamp("₹" + refund.amountRupees().toPlainString()
+                + " was refunded at Razorpay outside BiteSite (" + refund.id()
+                + "); counted against this payment, order amounts not restated"));
+        auditService.record(null, payment.getTenantId(), "Payment", payment.getId(),
+                "PARTIAL_REFUND_AT_GATEWAY", payment.refundableAmount(),
+                payment.refundableAmount().subtract(refund.amountRupees()));
+        log.warn("Payment {}: ₹{} refunded at Razorpay outside BiteSite ({}); recorded and flagged",
+                payment.getId(), refund.amountRupees(), refund.id());
+    }
+
     /** The payment belongs to a no-charge order (Order.noCharge): the review account's. */
     private boolean isNoCharge(Payment payment) {
         return orderDao.findByIdAndTenantId(payment.getOrderId(), payment.getTenantId())

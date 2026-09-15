@@ -123,6 +123,30 @@ public class PaymentDaoImpl implements PaymentDao {
                 razorpayPaymentId, razorpaySignature, status.name(), id);
     }
 
+    /** Every status a payment can be in before money has been captured against it. */
+    private static final String NOT_YET_CAPTURED = "('CREATED','AUTHORIZED','FAILED')";
+
+    @Override
+    public boolean markCaptured(Long id, String razorpayPaymentId, String razorpaySignature) {
+        // The status condition is the whole point. A confirmation can arrive again long after
+        // the first: the student re-posting the ids and signature their browser was handed,
+        // or Razorpay redelivering payment.captured. Unconditionally, either one turned a
+        // REFUNDED or REFUND_PENDING payment back into CAPTURED, which made it refundable a
+        // second time and dropped a pending refund out of the reconciliation sweep.
+        return jdbcTemplate.update(
+                "UPDATE payments SET razorpay_payment_id = ?, razorpay_signature = ?, status = 'CAPTURED', "
+                        + "verified_at = CURRENT_TIMESTAMP WHERE id = ? AND status IN " + NOT_YET_CAPTURED,
+                razorpayPaymentId, razorpaySignature, id) == 1;
+    }
+
+    @Override
+    public boolean markSignatureRejected(Long id) {
+        // FAILED from CAPTURED, REFUND_PENDING or REFUNDED would erase money that did move.
+        return jdbcTemplate.update(
+                "UPDATE payments SET status = 'FAILED' WHERE id = ? AND status IN ('CREATED','AUTHORIZED')",
+                id) == 1;
+    }
+
     @Override
     public void flagForReconciliation(Long id, String reason) {
         jdbcTemplate.update(

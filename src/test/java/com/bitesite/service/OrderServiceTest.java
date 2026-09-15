@@ -224,6 +224,7 @@ class OrderServiceTest {
         assertThat(result).isTrue();
         verify(paymentGateway, never()).verifyPaymentSignature(any(), any(), any());
         verify(paymentDao, never()).markVerified(any(), any(), any(), any());
+        verify(paymentDao, never()).markCaptured(any(), any(), any());
     }
 
     @Test
@@ -236,7 +237,7 @@ class OrderServiceTest {
         boolean result = orderService.confirmPayment("rp_order_1", "rp_pay_1", "bad_sig");
 
         assertThat(result).isFalse();
-        verify(paymentDao).updateStatus(1L, PaymentStatus.FAILED);
+        verify(paymentDao).markSignatureRejected(1L);
         verify(orderDao, never()).updateStatus(anyLong(), anyLong(), eq(OrderStatus.PAID));
     }
 
@@ -249,11 +250,12 @@ class OrderServiceTest {
         Order awaitingPayment = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
                 .tokenNo("BITE-1234").totalAmount(new BigDecimal("60.00")).status(OrderStatus.AWAITING_PAYMENT).build();
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(awaitingPayment));
+        when(paymentDao.markCaptured(1L, "rp_pay_1", "good_sig")).thenReturn(true);
 
         boolean result = orderService.confirmPayment("rp_order_1", "rp_pay_1", "good_sig");
 
         assertThat(result).isTrue();
-        verify(paymentDao).markVerified(1L, "rp_pay_1", "good_sig", PaymentStatus.CAPTURED);
+        verify(paymentDao).markCaptured(1L, "rp_pay_1", "good_sig");
         verify(orderDao).updateStatus(42L, TENANT_ID, OrderStatus.PAID);
     }
 
@@ -265,6 +267,7 @@ class OrderServiceTest {
         Order awaitingPayment = Order.builder().id(42L).tenantId(TENANT_ID).outletId(OUTLET_ID).userId(USER_ID)
                 .tokenNo("BITE-1234").totalAmount(new BigDecimal("60.00")).status(OrderStatus.AWAITING_PAYMENT).build();
         when(orderDao.findByIdAndTenantId(42L, TENANT_ID)).thenReturn(Optional.of(awaitingPayment));
+        when(paymentDao.markCaptured(1L, "rp_pay_1", null)).thenReturn(true);
 
         boolean result = orderService.confirmPayment("rp_order_1", "rp_pay_1", null);
 
@@ -740,6 +743,7 @@ class OrderServiceTest {
         when(paymentDao.findByRazorpayOrderId("order_late")).thenReturn(Optional.of(payment));
         when(orderDao.findByIdAndTenantId(90L, TENANT_ID)).thenReturn(Optional.of(expired));
         when(paymentGateway.verifyPaymentSignature(any(), any(), any())).thenReturn(true);
+        when(paymentDao.markCaptured(any(), any(), any())).thenReturn(true);
 
         assertThat(orderService.confirmPayment("order_late", "pay_late", "sig")).isTrue();
 
@@ -758,6 +762,7 @@ class OrderServiceTest {
         when(paymentDao.findByRazorpayOrderId("order_late")).thenReturn(Optional.of(payment));
         when(orderDao.findByIdAndTenantId(91L, TENANT_ID)).thenReturn(Optional.of(cancelled));
         when(paymentGateway.verifyPaymentSignature(any(), any(), any())).thenReturn(true);
+        when(paymentDao.markCaptured(any(), any(), any())).thenReturn(true);
 
         assertThat(orderService.confirmPayment("order_late", "pay_late", "sig")).isTrue();
 

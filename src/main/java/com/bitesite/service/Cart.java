@@ -48,6 +48,11 @@ public class Cart {
 
     static final String SESSION_KEY = "bitesite.cart";
 
+    /** Most of one item a cart can hold, the same 20 the steppers offer. Checkout refuses
+     * anything outside 1..MAX_QUANTITY as well (OrderService), so this is not the only
+     * guard, but it stops a hand-made request storing a number that overflows. */
+    public static final int MAX_QUANTITY = 20;
+
     /** The part that is actually serialized into the session row. */
     static final class State implements Serializable {
         private static final long serialVersionUID = 1L;
@@ -132,7 +137,10 @@ public class Cart {
             return;
         }
         State state = state();
-        state.quantities.merge(menuItemId, qty, Integer::sum);
+        // Summed as longs and capped. Integer::sum on two large adds wrapped round to a
+        // negative quantity (Integer.MAX_VALUE twice is -2).
+        state.quantities.merge(menuItemId, Math.min(qty, MAX_QUANTITY),
+                (had, adding) -> (int) Math.min(MAX_QUANTITY, (long) had + adding));
         save(state);
     }
 
@@ -141,7 +149,7 @@ public class Cart {
         if (qty <= 0) {
             state.quantities.remove(menuItemId);
         } else {
-            state.quantities.put(menuItemId, qty);
+            state.quantities.put(menuItemId, Math.min(qty, MAX_QUANTITY));
         }
         save(state);
     }

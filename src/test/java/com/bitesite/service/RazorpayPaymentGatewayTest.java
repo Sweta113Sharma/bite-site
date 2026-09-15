@@ -48,6 +48,41 @@ class RazorpayPaymentGatewayTest {
                 .hasMessageNotContaining("under ₹1");
     }
 
+    /** What partial refunds leave behind can be a few paise; nothing may be sent for it,
+     * and the caller has to be able to tell that apart from a call that timed out. */
+    @Test
+    void aFullRefundUnderOneRupeeIsRefusedAsNotSent() {
+        assertThatThrownBy(() -> configured().refund("pay_x", new BigDecimal("0.50")))
+                .isInstanceOf(com.bitesite.exception.RefundNotSentException.class);
+        assertThatThrownBy(() -> configured().refundPart("pay_x", new BigDecimal("0.99")))
+                .isInstanceOf(com.bitesite.exception.RefundNotSentException.class);
+        assertThatThrownBy(() -> gatewayWith("", "").refund("pay_x", new BigDecimal("1.00")))
+                .as("exactly ₹1 passes the floor and fails later, as an ordinary gateway error")
+                .isInstanceOf(PaymentGatewayException.class)
+                .isNotInstanceOf(com.bitesite.exception.RefundNotSentException.class);
+    }
+
+    /**
+     * A blank webhook secret is treated as unset and every webhook refused. An empty one
+     * already failed inside the SDK ("Empty key"), but a whitespace-only one was used as a
+     * real HMAC key, which anyone who guesses it can sign with. Defence in depth: production
+     * has the secret set.
+     */
+    @Test
+    void aWebhookIsNeverTrustedWhenNoWebhookSecretIsConfigured() throws Exception {
+        String body = "{\"event\":\"payment.captured\"}";
+        // HMAC-SHA256 of the body under an empty key and under a key of three spaces,
+        // computed outside Java: what an attacker would send.
+        String emptyKeySignature = "a19950341d76024638d18b6848a6d0f1ceba66e6d706f5db0bb165d2e55c00a5";
+        String spacesKeySignature = "d0b8908d2b6ccb47f5e179a9849c5faa5889c31e6e3c14920af72823309358de";
+        org.assertj.core.api.Assertions.assertThat(new RazorpayPaymentGateway(new RazorpayProperties("k", "s", ""))
+                .verifyWebhookSignature(body, emptyKeySignature)).isFalse();
+        org.assertj.core.api.Assertions.assertThat(new RazorpayPaymentGateway(new RazorpayProperties("k", "s", "   "))
+                .verifyWebhookSignature(body, spacesKeySignature)).isFalse();
+        org.assertj.core.api.Assertions.assertThat(new RazorpayPaymentGateway(new RazorpayProperties("k", "s", null))
+                .verifyWebhookSignature(body, emptyKeySignature)).isFalse();
+    }
+
     @Test
     void refusesToBuildAClientWhenCredentialsAreMissing() {
         assertThatThrownBy(() -> gatewayWith("", "").createOrder(new BigDecimal("50.00"), "BITE-1234"))

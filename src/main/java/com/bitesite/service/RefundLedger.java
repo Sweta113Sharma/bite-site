@@ -190,6 +190,37 @@ public class RefundLedger {
     }
 
     /**
+     * Counts a refund that Razorpay processed but BiteSite never sent against the payment,
+     * as a settled order_refunds row plus the matching reservation, in one commit.
+     *
+     * <p>The payment row is locked first, as in {@link #claimItemCancellation}, so this and
+     * a partial refund claim cannot both read the same refundable amount.
+     *
+     * @return false when this gateway refund is already recorded (a redelivered webhook) or
+     *         no longer fits in what the payment holds; nothing is written then
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean recordOutsidePartialRefund(Payment payment, String gatewayRefundId, BigDecimal amount) {
+        Payment locked = paymentDao.lockByOrderId(payment.getOrderId(), payment.getTenantId()).orElse(null);
+        if (locked == null || !locked.getId().equals(payment.getId())
+                || amount.compareTo(locked.refundableAmount()) >= 0) {
+            return false;
+        }
+        boolean inserted = orderRefundDao.insertSettledFromGateway(OrderRefund.builder()
+                .tenantId(locked.getTenantId())
+                .orderId(locked.getOrderId())
+                .paymentId(locked.getId())
+                .amount(amount)
+                .reason("Refunded at Razorpay outside BiteSite")
+                .gatewayRefundId(gatewayRefundId)
+                .build());
+        if (inserted) {
+            paymentDao.reservePartialRefund(locked.getId(), amount);
+        }
+        return inserted;
+    }
+
+    /**
      * Records that the gateway refused a partial refund: the money is still with us. The
      * reservation is given back, so a later full cancellation would include it, and the
      * payment is flagged because the student was told a refund was on its way.

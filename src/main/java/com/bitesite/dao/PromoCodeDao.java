@@ -12,6 +12,10 @@ public interface PromoCodeDao {
 
     Optional<PromoCode> findById(Long id);
 
+    /** Locks the code's row for the rest of the transaction, so its usage limits can be
+     * counted and a redemption written without another checkout doing the same at once. */
+    Optional<PromoCode> lockById(Long id);
+
     /** Lookup for redemption. Case-insensitive: nobody types a code the way it was stored. */
     Optional<PromoCode> findByCode(String code);
 

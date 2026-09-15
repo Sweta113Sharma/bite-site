@@ -133,7 +133,9 @@ public class CheckoutController {
             RedirectAttributes redirectAttributes) {
         User user = principal.getUser();
         orderService.getForUser(orderId, user.getId(), user.getTenantId());
-        boolean confirmed = orderService.confirmPayment(gatewayOrderId, gatewayPaymentId, signature);
+        // Bound to this order: the gateway order id comes from the form, and a student must
+        // not be able to aim it at a payment that is not theirs.
+        boolean confirmed = orderService.confirmPayment(gatewayOrderId, gatewayPaymentId, signature, orderId);
         if (!confirmed) {
             redirectAttributes.addFlashAttribute("paymentError", "We couldn't verify that payment — please retry.");
             return "redirect:/student/checkout/" + orderId;

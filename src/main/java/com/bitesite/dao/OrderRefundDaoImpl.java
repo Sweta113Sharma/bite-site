@@ -57,6 +57,21 @@ public class OrderRefundDaoImpl implements OrderRefundDao {
     }
 
     @Override
+    public boolean insertSettledFromGateway(OrderRefund refund) {
+        try {
+            // uq_order_refunds_gateway_refund is what makes a redelivered webhook a no-op:
+            // the same refund cannot be counted against the payment twice.
+            return jdbcTemplate.update(
+                    "INSERT INTO order_refunds (tenant_id, order_id, payment_id, amount, status, reason, "
+                            + "gateway_refund_id, settled_at) VALUES (?, ?, ?, ?, 'REFUNDED', ?, ?, CURRENT_TIMESTAMP)",
+                    refund.getTenantId(), refund.getOrderId(), refund.getPaymentId(), refund.getAmount(),
+                    refund.getReason(), refund.getGatewayRefundId()) == 1;
+        } catch (org.springframework.dao.DuplicateKeyException alreadyRecorded) {
+            return false;
+        }
+    }
+
+    @Override
     public List<OrderRefund> findByOrderId(Long orderId, Long tenantId) {
         return jdbcTemplate.query(
                 "SELECT * FROM order_refunds WHERE order_id = ? AND tenant_id = ? ORDER BY id",

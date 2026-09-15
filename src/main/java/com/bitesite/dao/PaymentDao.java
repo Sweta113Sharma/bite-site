@@ -32,6 +32,16 @@ public interface PaymentDao {
     void markVerified(Long id, String razorpayPaymentId, String razorpaySignature, PaymentStatus status);
 
     /**
+     * Records a gateway capture, but only on a payment that has never been captured
+     * (CREATED, AUTHORIZED or FAILED). False when it already was: captured, mid-refund or
+     * refunded, where a replayed confirmation must change nothing.
+     */
+    boolean markCaptured(Long id, String razorpayPaymentId, String razorpaySignature);
+
+    /** Marks a signature that did not verify, only on a payment not yet captured. */
+    boolean markSignatureRejected(Long id);
+
+    /**
      * Moves CAPTURED to REFUND_PENDING, atomically. Returns true only for the caller that
      * won; everyone else gets false and must not touch the gateway.
      *

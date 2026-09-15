@@ -7,6 +7,7 @@ import com.bitesite.dto.Paged;
 import com.bitesite.dto.GatewayOrder;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.InvalidOrderStateException;
+import com.bitesite.exception.RefundNotSentException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.MenuItem;
 import com.bitesite.model.Order;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -127,6 +129,15 @@ public class OrderService {
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
         for (Map.Entry<Long, Integer> entry : cartQuantities.entrySet()) {
+            // The cart clamps what it stores, but this is where money is decided, so it does
+            // not rely on that. A quantity that overflowed to a negative number would
+            // otherwise price as a negative line and take money off the rest of the order;
+            // only the CHECK on order_items stopped that reaching the database.
+            Integer quantity = entry.getValue();
+            if (quantity == null || quantity < 1 || quantity > Cart.MAX_QUANTITY) {
+                throw new InvalidOrderStateException(
+                        "Each item can be ordered 1 to " + Cart.MAX_QUANTITY + " at a time.");
+            }
             MenuItem item = menuService.get(entry.getKey(), tenantId);
             if (!item.availableNow() || !item.getOutletId().equals(outletId)) {
                 throw new InvalidOrderStateException(item.getName() + " is no longer available.");
@@ -194,7 +205,15 @@ public class OrderService {
         // After the order row exists, because the redemption points at it. The unique
         // constraint on order_id is what actually stops one order redeeming twice.
         if (applied != null) {
-            promoCodeService.redeem(applied.code(), saved.getId(), userId, applied.discount());
+            try {
+                promoCodeService.redeem(applied.code(), saved.getId(), userId, applied.discount());
+            } catch (BusinessException usedUp) {
+                // Another checkout took the code's last use between validate() and here. The
+                // order is already written at the discounted price, so it is cancelled
+                // rather than left payable: failed, it could be retried at that price.
+                orderDao.cancel(saved.getId(), tenantId, "Promo code no longer available");
+                throw new InvalidOrderStateException(usedUp.getMessage());
+            }
         }
 
         if (reviewCheckout) {
@@ -456,6 +475,18 @@ public class OrderService {
         }
         try {
             paymentGateway.refund(payment.getRazorpayPaymentId(), amount);
+        } catch (RefundNotSentException tooSmall) {
+            // What partial refunds left is under Razorpay's ₹1 floor, refused before any
+            // request was made. It can never be sent, so waiting on it would leave the order
+            // uncancelled forever. The refund is as complete as the gateway allows; the
+            // paise left over are flagged for a person to settle with the student.
+            paymentDao.updateStatus(payment.getId(), PaymentStatus.REFUNDED);
+            paymentDao.flagForReconciliation(payment.getId(), "₹" + amount.toPlainString()
+                    + " left after partial refunds is under Razorpay's ₹1 minimum, so it was not refunded; "
+                    + "settle it with the student by hand");
+            log.warn("Payment {}: remaining ₹{} is under the gateway minimum; marked refunded and flagged",
+                    payment.getId(), amount);
+            return;
         } catch (RuntimeException gatewayFailed) {
             refundLedger.recordUnresolved(payment.getId(),
                     "Refund attempted, outcome unknown: " + gatewayFailed.getMessage());
@@ -526,16 +557,39 @@ public class OrderService {
      * instead, over a different header the caller must verify itself before calling this
      * method); pass {@code null} from there rather than fabricate a value to check.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public boolean confirmPayment(String gatewayOrderId, String gatewayPaymentId, String signature) {
+        return confirmPayment(gatewayOrderId, gatewayPaymentId, signature, null);
+    }
+
+    /**
+     * The client callback's confirmation, bound to the order in its URL.
+     *
+     * @param expectedOrderId the order the student is confirming. A gateway order that
+     *                        belongs to any other order is refused with nothing changed:
+     *                        without this a student could post their own order's URL with
+     *                        somebody else's gateway order id, and a bad signature then
+     *                        marked the other student's payment FAILED.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public boolean confirmPayment(String gatewayOrderId, String gatewayPaymentId, String signature,
+            Long expectedOrderId) {
         Payment payment = paymentDao.findByRazorpayOrderId(gatewayOrderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
-        if (payment.getStatus() == PaymentStatus.CAPTURED) {
-            // Both paths confirm the same payment, so this is the normal outcome of the
-            // slower one arriving second, not a fault. Logged at debug because it happens
-            // on most orders and would otherwise drown the line that matters.
-            log.debug("Payment {} already captured; confirmation via {} is a no-op",
-                    payment.getId(), signature == null ? "webhook" : "client callback");
+        if (expectedOrderId != null && !payment.getOrderId().equals(expectedOrderId)) {
+            log.warn("Rejected a confirmation for order {} naming gateway order {}, which belongs to order {}",
+                    expectedOrderId, gatewayOrderId, payment.getOrderId());
+            return false;
+        }
+        if (payment.getStatus() == PaymentStatus.CAPTURED
+                || payment.getStatus() == PaymentStatus.REFUND_PENDING
+                || payment.getStatus() == PaymentStatus.REFUNDED) {
+            // Captured once already. Both paths confirm the same payment, so the slower one
+            // arriving second is the normal case, and debug because it happens on most
+            // orders. A payment already being refunded or refunded is the same answer: a
+            // late webhook or a re-posted callback must not undo the refund.
+            log.debug("Payment {} already captured ({}); confirmation via {} is a no-op",
+                    payment.getId(), payment.getStatus(), signature == null ? "webhook" : "client callback");
             return true;
         }
 
@@ -544,11 +598,16 @@ public class OrderService {
             // and neither was: this returned false and left no trace.
             log.warn("Rejected payment {} for gateway order {} — signature did not verify",
                     payment.getId(), gatewayOrderId);
-            paymentDao.updateStatus(payment.getId(), PaymentStatus.FAILED);
+            paymentDao.markSignatureRejected(payment.getId());
             return false;
         }
 
-        paymentDao.markVerified(payment.getId(), gatewayPaymentId, signature, PaymentStatus.CAPTURED);
+        if (!paymentDao.markCaptured(payment.getId(), gatewayPaymentId, signature)) {
+            // The status moved between the read above and this write: the other
+            // confirmation path captured it first, so there is nothing left to do here.
+            log.debug("Payment {} was captured by a concurrent confirmation; no-op", payment.getId());
+            return true;
+        }
         Order order = getForTenant(payment.getOrderId(), payment.getTenantId());
         if (!order.getStatus().canTransitionTo(OrderStatus.PAID)) {
             // Money we hold against an order that cannot be honoured — a cancellation, or
@@ -562,6 +621,23 @@ public class OrderService {
                     "CAPTURE_UNAPPLIED", order.getStatus(), null);
             log.error("Payment {} captured for order {} which is {} — flagged for refund",
                     payment.getId(), order.getId(), order.getStatus());
+            return true;
+        }
+
+        if (order.getStatus() == OrderStatus.EXPIRED && order.getPromoCode() != null
+                && !promoCodeService.usesLeftToRevive(order.getPromoCode(), order.getUserId())) {
+            // The expiry gave the code's use back, and it has been used again since: most
+            // likely the same student let a discounted order lapse, used the code on a new
+            // one, and then paid for this one late. Honouring both would spend the code
+            // twice, so the money is held against the expired order like any capture that
+            // cannot be applied, and a person refunds it.
+            String reason = "Captured after the order expired, but promo code " + order.getPromoCode()
+                    + " has no uses left for it; needs refund";
+            paymentDao.flagForReconciliation(payment.getId(), reason);
+            auditService.record(null, order.getTenantId(), "Payment", payment.getId(),
+                    "CAPTURE_UNAPPLIED", order.getStatus(), null);
+            log.error("Payment {} captured for expired order {} whose promo code is used up — flagged for refund",
+                    payment.getId(), order.getId());
             return true;
         }
 
@@ -897,10 +973,16 @@ public class OrderService {
      * demand; call periodically (see {@link com.bitesite.config.OrderExpiryScheduler}). */
     public int expireStalePayments(int timeoutMinutes) {
         List<Order> stale = orderDao.findExpiredAwaitingPayment(timeoutMinutes);
+        int expired = 0;
         for (Order order : stale) {
-            orderDao.updateStatus(order.getId(), order.getTenantId(), OrderStatus.EXPIRED);
+            // Conditional: a payment confirmed between the read above and this write has
+            // already made the order PAID, and an unconditional write turned it back to
+            // EXPIRED, with the money captured and nothing flagged.
+            if (orderDao.expireIfStillAwaitingPayment(order.getId(), order.getTenantId())) {
+                expired++;
+            }
         }
-        return stale.size();
+        return expired;
     }
 
     /**

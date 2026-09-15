@@ -24,7 +24,8 @@ public interface PaymentGateway {
     /** Issues a full refund for a captured payment. Throws
      * {@link com.bitesite.exception.PaymentGatewayException} if the refund can't be
      * completed — callers must not mark anything cancelled/refunded on our side unless
-     * this returns normally. */
+     * this returns normally. {@link com.bitesite.exception.RefundNotSentException} (an
+     * amount under the gateway's floor) means certainly nothing was sent. */
     void refund(String gatewayPaymentId, BigDecimal amountRupees);
 
     /**

@@ -170,7 +170,9 @@ public class CartController {
         User user = principal.getUser();
         // menuService.get enforces the tenant boundary — a menuItemId from another tenant 404s here.
         MenuItem item = menuService.getWithTodayCount(menuItemId, user.getTenantId());
-        int wanted = Math.max(1, quantity);
+        // Capped here as well as in the cart: blockedReason adds this to what is already in
+        // the cart, and an uncapped int would overflow that sum past the daily limit check.
+        int wanted = Math.min(Cart.MAX_QUANTITY, Math.max(1, quantity));
         String blocked = blockedReason(user, item, outletId, wanted);
         if (blocked == null) {
             cart.ensureOutlet(outletId);
@@ -236,7 +238,7 @@ public class CartController {
             @RequestParam Long menuItemId, @RequestParam int quantity,
             @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String accept,
             HttpServletResponse response) throws IOException {
-        int clamped = Math.max(0, Math.min(20, quantity));
+        int clamped = Math.max(0, Math.min(Cart.MAX_QUANTITY, quantity));
         cart.setQuantity(menuItemId, clamped);
         cartPersistence.persist(principal.getUser(), cart);
 

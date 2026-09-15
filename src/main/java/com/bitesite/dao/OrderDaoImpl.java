@@ -576,6 +576,13 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    public boolean expireIfStillAwaitingPayment(Long id, Long tenantId) {
+        return jdbcTemplate.update(
+                "UPDATE orders SET status = 'EXPIRED' WHERE id = ? AND tenant_id = ? AND status = 'AWAITING_PAYMENT'",
+                id, tenantId) == 1;
+    }
+
+    @Override
     public List<Order> findExpiredAwaitingPayment(int timeoutMinutes) {
         // NOW() - INTERVAL rather than a cutoff computed in Java, for the same reason
         // sumQuantitiesByMenuItemToday() uses CURDATE(): created_at is written by the

@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -92,18 +94,72 @@ public class PromoCodeService {
     }
 
     /**
-     * Writes the redemption once the order exists.
+     * Writes the redemption once the order exists, re-checking the code's usage limits
+     * under a lock on the code.
      *
-     * <p>The unique constraint on order_id is what actually enforces one code per order:
-     * two requests racing the same checkout both pass validation, and the database refuses
-     * the second. A check-then-insert in Java would not.
+     * <p>{@link #validate} counts uses and the redemption is written afterwards, with the
+     * order insert in between. On its own that is check-then-act: six checkouts fired at
+     * once by one student all counted zero uses of a once-per-student code and all got the
+     * discount, and six students racing for a code's last use all got it too. Locking the
+     * code's row makes the count and the insert one step per code. READ_COMMITTED so the
+     * count, run after the lock is granted, sees the redemption the previous holder
+     * committed; under REPEATABLE READ it could read an older snapshot.
+     *
+     * <p>The unique constraint on order_id still enforces one code per order.
+     *
+     * @throws BusinessException when the limit was used up in the meantime; the caller
+     *         must not let the order go ahead at the discounted price
      */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void redeem(PromoCode code, Long orderId, Long userId, BigDecimal discount) {
+        PromoCode current = promoCodeDao.lockById(code.getId())
+                .orElseThrow(() -> new BusinessException("That code does not exist."));
+        requireUsesLeft(current, userId);
         try {
             promoCodeDao.recordRedemption(code.getId(), orderId, userId, discount);
         } catch (DuplicateKeyException e) {
             // Already recorded for this order — the other request won. Nothing to undo.
             log.warn("Duplicate redemption of {} for order {} ignored", code.getCode(), orderId);
+        }
+    }
+
+    /**
+     * Whether an order that used a code may come back to life, under the same lock as
+     * {@link #redeem}.
+     *
+     * <p>An expired order's redemption stops counting, so its use goes back to the pool.
+     * That is right for an abandoned checkout, but its Razorpay order can still be paid
+     * afterwards, and a late payment revives the order. Without this check a student could
+     * let a discounted order expire, use the code again, then pay the first one late and
+     * have both. The expired order's own redemption is not live, so it is not in the count.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public boolean usesLeftToRevive(String rawCode, Long userId) {
+        if (rawCode == null || rawCode.isBlank()) {
+            return true;
+        }
+        return promoCodeDao.findByCode(rawCode)
+                .flatMap(code -> promoCodeDao.lockById(code.getId()))
+                .map(code -> {
+                    try {
+                        requireUsesLeft(code, userId);
+                        return true;
+                    } catch (BusinessException exhausted) {
+                        return false;
+                    }
+                })
+                // A code deleted since cannot have been over-used through this order.
+                .orElse(true);
+    }
+
+    private void requireUsesLeft(PromoCode code, Long userId) {
+        if (code.getMaxRedemptions() != null
+                && promoCodeDao.countRedemptions(code.getId()) >= code.getMaxRedemptions()) {
+            throw new BusinessException("That code has just been fully claimed.");
+        }
+        if (code.getMaxPerUser() != null
+                && promoCodeDao.countRedemptionsByUser(code.getId(), userId) >= code.getMaxPerUser()) {
+            throw new BusinessException("You have already used that code.");
         }
     }
 

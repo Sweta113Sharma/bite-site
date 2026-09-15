@@ -90,6 +90,12 @@ public class RazorpayPaymentGateway implements PaymentGateway {
 
     @Override
     public boolean verifyWebhookSignature(String payload, String signatureHeader) {
+        if (properties.webhookSecret() == null || properties.webhookSecret().isBlank()) {
+            // An unset secret is an empty HMAC key, which anyone can sign with. Never trust
+            // a webhook then: payment.captured marks orders paid.
+            log.error("Rejected a Razorpay webhook: RAZORPAY_WEBHOOK_SECRET is not configured");
+            return false;
+        }
         try {
             return Utils.verifyWebhookSignature(payload, signatureHeader, properties.webhookSecret());
         } catch (RazorpayException e) {
@@ -101,6 +107,11 @@ public class RazorpayPaymentGateway implements PaymentGateway {
     @Override
     public void refund(String gatewayPaymentId, BigDecimal amountRupees) {
         long amountPaise = toPaise(amountRupees);
+        if (amountPaise < MIN_AMOUNT_PAISE) {
+            // Reachable for a full refund too: what partial refunds leave behind can be a few
+            // paise. Refused here, before any request, so the caller knows nothing was sent.
+            throw new RefundNotSentException("Refunds under ₹1 can't be sent through Razorpay.");
+        }
         try {
             JSONObject request = new JSONObject();
             request.put("amount", amountPaise);

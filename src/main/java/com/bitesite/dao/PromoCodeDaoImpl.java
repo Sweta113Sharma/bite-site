@@ -83,6 +83,12 @@ public class PromoCodeDaoImpl implements PromoCodeDao {
     }
 
     @Override
+    public Optional<PromoCode> lockById(Long id) {
+        return jdbcTemplate.query("SELECT * FROM promo_codes WHERE id = ? FOR UPDATE", ROW_MAPPER, id)
+                .stream().findFirst();
+    }
+
+    @Override
     public Optional<PromoCode> findByCode(String code) {
         // Stored uppercase and compared uppercase: students type codes off a poster.
         return jdbcTemplate.query("SELECT * FROM promo_codes WHERE code = ?",

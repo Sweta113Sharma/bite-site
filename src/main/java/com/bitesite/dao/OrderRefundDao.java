@@ -11,6 +11,15 @@ public interface OrderRefundDao {
 
     OrderRefund insertPending(OrderRefund refund);
 
+    /**
+     * Records a refund Razorpay has already processed that BiteSite did not send (made in
+     * the Razorpay dashboard), as REFUNDED with its gateway id.
+     *
+     * @return false if a row with that gateway refund id already exists, which is a
+     *         redelivered webhook
+     */
+    boolean insertSettledFromGateway(OrderRefund refund);
+
     List<OrderRefund> findByOrderId(Long orderId, Long tenantId);
 
     Optional<OrderRefund> findByGatewayRefundId(String gatewayRefundId);
