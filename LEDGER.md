@@ -53,7 +53,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 ## 2026-09-15
 
 ### `7f1cba3` — Keep Play review orders out of revenue and settlement, and off Razorpay
-**Date:** 2026-09-15 · **Scope:** 12 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 12 files · **Deployed:** yes (2026-09-15 05:47 UTC, run 34933884371)
 
 **What changed**
 - New `orders.no_charge` column (V38). The review checkout sets it, and the migration
@@ -91,6 +91,13 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - The V38 `UPDATE` was run verbatim through the mysql client against a local review-style
   row and a lookalike: set on the first, not the second. Test rows deleted afterwards.
 - Full suite: 597 tests, 0 failures, 4 skipped, on JDK 21.
+- **Deployed 2026-09-15**, run 34933884371, together with `39ed797`, `96971cb` and `f23e4a2`.
+  V38 applied in 533ms. The app started in 138.4s, the startup probe succeeded at 154.7s,
+  and health is UP. The old container logged `Zip 'Local File Header Record' not found`
+  for the old `app.js` hash while its jar was being replaced; that is the swap window,
+  and the new asset URLs answer 200.
+- Not checked in production: how many orders V38 marked, and any signed-in flow. There
+  are no production credentials on this machine, and none were created.
 
 **Watch out for**
 - **Migration V38.** `ADD COLUMN ... DEFAULT FALSE` at the end of `orders` (an INSTANT
@@ -103,7 +110,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
   code.
 
 ### `f23e4a2` — Record a partial refund under Razorpay's ₹1 floor as failed, not unknown
-**Date:** 2026-09-15 · **Scope:** 6 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 6 files · **Deployed:** yes (2026-09-15 05:47 UTC, run 34933884371)
 
 **What changed**
 - A partial refund under ₹1 (a removed line almost entirely covered by a discount) is now
@@ -134,7 +141,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
   paise-level remainder, which is rare.
 
 ### `96971cb` — Show the branded page for a missing URL again, not the Whitelabel page
-**Date:** 2026-09-15 · **Scope:** 2 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 2 files · **Deployed:** yes (2026-09-15 05:47 UTC, run 34933884371)
 
 **What changed**
 - A URL nothing is mapped to renders the app's own "Error 404" page again, and `/api/`
@@ -154,6 +161,8 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - `NotFoundPageTest` (2), mutation-checked: with the `sendError` handler restored, both
   fail.
 - In Chromium after the fix: the same signed-in URL returns 404 with the branded page.
+- In production after the deploy: `/img/does-not-exist.png` returns 404 with "Error 404"
+  and no Whitelabel text.
 
 **Watch out for**
 - Missing images and fonts get the full branded page again instead of a bare 404, as they
@@ -161,7 +170,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
   manifest and `offline.html` are unchanged: harmless, but they log a WARN at boot.
 
 ### `39ed797` — Stop the page loader freezing the screen, and put the install sheet back on calm pages
-**Date:** 2026-09-15 · **Scope:** 12 files · **Deployed:** pending
+**Date:** 2026-09-15 · **Scope:** 12 files · **Deployed:** yes (2026-09-15 05:47 UTC, run 34933884371)
 
 **What changed**
 - The page-transition card never blocks taps (`pointer-events: none`), and goes away by
@@ -207,6 +216,9 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
   and `ServiceWorkerPrecacheTest` pass.
 - Not verified: the Android `beforeinstallprompt` path (headless Chromium never fires it)
   and the Capacitor apps.
+- In production after the deploy, checked without signing in: the served `app.js` has the
+  15s give-up, `sw.js` has the order-page fallback, and the CSS bundle's visible card no
+  longer sets `pointer-events: auto`.
 
 **Watch out for**
 - `sw.js` changed, so browsers pick up the new worker. `VERSION` stays `v8` because no
