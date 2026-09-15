@@ -52,6 +52,125 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-15
 
+### `576c4cd` — Close the payment and refund holes found by auditing them for abuse
+**Date:** 2026-09-15 · **Scope:** 20 files · **Deployed:** no (committed; push awaiting the owner's go-ahead)
+
+**What changed**
+- **Replayed capture confirmations.** A payment is marked captured only if it has never
+  been captured (`markCaptured`: from CREATED, AUTHORIZED or FAILED). A signature
+  rejection marks it FAILED only from CREATED or AUTHORIZED. A confirmation for a
+  payment that is CAPTURED, REFUND_PENDING or REFUNDED changes nothing.
+- **Confirm bound to its order.** `/student/checkout/{id}/confirm` refuses a gateway order
+  id that belongs to a different order.
+- **Promo limits under concurrency.**
+  - `PromoCodeService.redeem` locks the code's row, then recounts global and per-student
+    uses under READ_COMMITTED before writing the redemption.
+  - A checkout that loses the race has its order cancelled, so it cannot be paid at the
+    discounted price.
+- **Late payment of an expired discounted order.**
+  - Before reviving, `confirmPayment` rechecks the code under the same lock.
+  - If the use has gone to another order meanwhile, the order is not revived and the
+    capture is flagged for refund, as a capture on a cancelled order is.
+- **Cart quantities.**
+  - The cart stores 1..20 per item; adds are summed as longs, so they can no longer
+    overflow.
+  - Checkout refuses any line outside 1..20. `CartController.add` caps the requested
+    quantity as well.
+- **Full refund remainder under ₹1.**
+  - `RazorpayPaymentGateway.refund` refuses under ₹1 with `RefundNotSentException`, as
+    `refundPart` already did.
+  - `OrderService` and the reconciliation retry then mark the payment REFUNDED, flag the
+    paise left over for a person, and let the cancellation finish.
+- **Partial refunds made in the Razorpay dashboard.** A `refund.processed` for less than
+  a live CAPTURED payment still holds, matching no refund BiteSite sent, is recorded:
+  - as a settled `order_refunds` row keyed by its gateway refund id (so counted once);
+  - with its amount reserved against `payments.refunded_amount`;
+  - and still flagged.
+
+  A later cancel refunds only what is left.
+- **Expiry sweep.** Expires an order only if it is still AWAITING_PAYMENT when written.
+- **Webhook secret.** A blank or whitespace-only webhook secret is treated as unset, and
+  every webhook is refused.
+
+**Why**
+- The owner asked for the ₹1 remainder to be fixed and every payment and refund path to
+  be audited for abuse. Each item above was reproduced before it was fixed.
+- **Replay.** A student can keep the order id, payment id and signature Razorpay Checkout
+  hands their browser. After being refunded they could post them again: the payment went
+  back to CAPTURED, was flagged "needs refund", and became refundable again through the
+  admin refund. Razorpay caps refunds at the captured amount, so a second payout should
+  be refused at the gateway, but that cap was the only thing standing between the flag
+  and a human paying twice. A redelivered `payment.captured` webhook did the same.
+  - A replay during REFUND_PENDING moved the payment out of the reconciliation sweep's
+    sight.
+  - A forged signature on a mid-refund payment set it FAILED.
+- **Promo.**
+  - Six parallel checkouts by one student all got a once-per-student code; six students
+    all got a code's last use.
+  - Let a discounted order expire, use the code again, then pay the first order's
+    Razorpay order late: both orders were honoured.
+- **Quantity overflow.** `Integer.MAX_VALUE` added twice is -2. Checkout never checked
+  the sign, so a negative line would have taken money off the rest of the order. The
+  `chk_order_items_qty` constraint was the only guard (MySQL enforces CHECK from 8.0.16;
+  production runs 8.0.21).
+- **Dashboard refunds.** A later cancel asked Razorpay for more than it still held, was
+  refused, and sat in REFUND_PENDING with the student unrefunded.
+- **Sweep race.** A payment confirmed between the sweep's read and its write had its PAID
+  order turned back to EXPIRED, with the money captured and nothing flagged.
+
+**Verified by**
+- `PaymentExploitTest` (12 tests, MySQL, Razorpay-like stand-in: signatures valid only for
+  their own ids, ₹1 refund floor, every refund amount recorded).
+  - Against the previous code, 10 of its first 11 tests failed for the exploit reasons:
+    - REFUNDED became CAPTURED, and REFUND_PENDING became CAPTURED, on replay;
+    - the victim's payment was set FAILED;
+    - the parallel checkouts produced 6 of 6 successes, twice (once per-student, once
+      last-use);
+    - the late-paid expired order was revived;
+    - the cart held -2;
+    - `refunded_amount` stayed 0.00 after the dashboard refund;
+    - the under-₹1 remainder threw.
+  - The one that passed, ₹40 of ₹100 food removed and then a full cancel, confirms
+    refunds of ₹40 and then exactly the rest: the full refund never exceeded the
+    remainder.
+  - All 12 pass after the fix.
+- `RazorpayPaymentGatewayTest` +2. Both failed on the previous gateway code. A
+  whitespace-only webhook secret accepted an HMAC computed outside Java under that key;
+  an empty secret was already refused inside the SDK ("Empty key").
+- `OrderServiceTest`: five confirm tests updated to the conditional DAO methods.
+- Full suite: 611 tests, 0 failures, 4 skipped, on JDK 21.
+- Local MySQL rejected a hand-inserted `quantity = -2` line with `chk_order_items_qty`.
+- Production has `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET`
+  set. Only the setting names were read, not the values.
+- Not verified: anything against real Razorpay; that Razorpay rejects a refund above
+  what remains (taken from its documentation, and not relied on any more); timing-safety
+  of the SDK's signature comparison.
+
+**Watch out for**
+- `confirmPayment` and the promo code lock run at READ_COMMITTED. Checkouts that use the
+  same promo code now queue behind each other for the length of one count and one
+  insert.
+- A student who pays late for an expired discounted order, after the code's use went to
+  another order, gets no food for that payment. It is flagged "needs refund" for an
+  admin. This is deliberate: the alternative honours the code twice.
+- Payments marked REFUNDED with a sub-₹1 remainder carry a reconciliation flag until a
+  person settles the paise.
+- Dashboard partial refunds reduce what a later refund sends, but the order's own
+  amounts (food, commission, settlement) are not restated. The flag says so.
+- Accepted, not changed: canteen staff can cancel and refund orders at their own outlet,
+  and a SUPER_ADMIN can refund any order. That is insider trust, recorded in the audit
+  log.
+- Checked, no hole found:
+  - tip validation (offered amounts only);
+  - checkout re-pricing from the database, and outlet and tenant scoping of cart items;
+  - self-cancel window anchoring (set once, only while hidden);
+  - staff endpoints' own-outlet checks;
+  - refund claims under concurrency (locked);
+  - the webhook signature check before any event is handled;
+  - CSRF on every money endpoint except the signed webhook;
+  - no request binding onto `User` (so `review_account` cannot be set);
+  - commission changes limited to FULL_ADMIN.
+
 ### `7f1cba3` — Keep Play review orders out of revenue and settlement, and off Razorpay
 **Date:** 2026-09-15 · **Scope:** 12 files · **Deployed:** yes (2026-09-15 05:47 UTC, run 34933884371)
 
