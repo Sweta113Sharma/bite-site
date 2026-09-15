@@ -31,7 +31,9 @@ public interface PaymentGateway {
      * Refunds part of a captured payment and returns the refund the gateway created, whose
      * id is how its later {@code refund.processed} webhook is matched back to the lines it
      * paid for. Same failure contract as {@link #refund}: an exception means the outcome is
-     * unknown, not that no money moved.
+     * unknown, not that no money moved. The one exception is
+     * {@link com.bitesite.exception.RefundNotSentException}, thrown before any request is
+     * made (an amount under the gateway's floor): that refund certainly did not happen.
      *
      * <p>The default exists for gateway stand-ins in tests that predate partial refunds; it
      * reports no id, which the caller treats as "matched later by amount".

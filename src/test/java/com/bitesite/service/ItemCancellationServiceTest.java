@@ -184,4 +184,41 @@ class ItemCancellationServiceTest {
         verify(refundLedger).recordUnresolved(eq(777L), anyString());
         verify(orderRefundDao, never()).markRefunded(anyLong(), anyString());
     }
+
+    /**
+     * A removed line almost entirely covered by a discount can leave a refund under ₹1,
+     * which Razorpay's floor refuses before any request is made. That used to be recorded as
+     * "outcome unknown": the row stayed PENDING, the student was told money was coming, and
+     * every sweep looked for it at Razorpay and flagged it again.
+     */
+    @Test
+    void aRefundUnderTheGatewayFloorIsRecordedAsFailedNotUnknown() {
+        OrderItem item1 = line(1L, 101L, "Burger", new BigDecimal("100.00"));
+        OrderItem item2 = line(2L, 102L, "Ketchup", new BigDecimal("5.00"));
+        Order order = sampleOrder(OrderStatus.PAID, 10L, List.of(item1, item2));
+        when(orderService.getForTenant(100L, 1L)).thenReturn(order);
+
+        RefundLedger.ItemClaim claim = new RefundLedger.ItemClaim(
+                order, List.of(item2), new BigDecimal("0.50"), 555L, 777L, "pay_rzp_123");
+        when(refundLedger.claimItemCancellation(eq(100L), eq(1L), eq(List.of(2L)), anyString(), anyString(), eq(5L)))
+                .thenReturn(claim);
+        when(paymentGateway.refundPart("pay_rzp_123", new BigDecimal("0.50")))
+                .thenThrow(new com.bitesite.exception.RefundNotSentException("Refunds under ₹1 can't be sent through Razorpay."));
+
+        ItemCancellationService.Result result = itemCancellationService.cancelItems(
+                100L, 1L, 10L, List.of(2L), ItemCancelReason.CANNOT_MAKE, 5L);
+
+        assertThat(result.refundNotSent()).isTrue();
+        assertThat(result.refundConfirmed()).isFalse();
+        org.mockito.ArgumentCaptor<com.bitesite.model.OrderRefund> failed =
+                org.mockito.ArgumentCaptor.forClass(com.bitesite.model.OrderRefund.class);
+        verify(refundLedger).failPartialRefund(failed.capture(), eq(null), anyString());
+        assertThat(failed.getValue().getId()).isEqualTo(555L);
+        assertThat(failed.getValue().getPaymentId()).isEqualTo(777L);
+        assertThat(failed.getValue().getAmount()).isEqualByComparingTo("0.50");
+        verify(refundLedger, never()).recordUnresolved(anyLong(), anyString());
+        org.mockito.ArgumentCaptor<String> message = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(orderNotifier).notifyOrderUpdate(eq(50L), anyString(), message.capture());
+        assertThat(message.getValue()).doesNotContain("on its way back");
+    }
 }

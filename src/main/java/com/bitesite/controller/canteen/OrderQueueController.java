@@ -113,7 +113,10 @@ public class OrderQueueController {
             ItemCancellationService.Result result = itemCancellationService.cancelItems(orderId,
                     user.getTenantId(), user.getOutletId(), lineIds, reason, user.getId());
             redirectAttributes.addFlashAttribute("queueNotice", noticeFor(result));
-            if (!result.refundConfirmed()) {
+            if (result.refundNotSent()) {
+                redirectAttributes.addFlashAttribute("queueError", "₹" + result.refund().toPlainString()
+                        + " is under Razorpay's ₹1 minimum, so it wasn't refunded. It is flagged for an admin.");
+            } else if (!result.refundConfirmed()) {
                 redirectAttributes.addFlashAttribute("queueError", "Razorpay didn't confirm the refund of ₹"
                         + result.refund().toPlainString() + ". It is recorded and flagged, and will be checked "
                         + "automatically. Don't refund it again by hand.");
@@ -132,9 +135,13 @@ public class OrderQueueController {
                     .append(", so the whole order was cancelled and refunded in full.");
         } else {
             notice.append("Removed ").append(items).append(" from ").append(result.tokenNo());
-            notice.append(result.refund().signum() > 0
-                    ? " and refunded ₹" + result.refund().toPlainString() + "."
-                    : ". A discount covered them, so there was nothing to refund.");
+            if (result.refund().signum() <= 0) {
+                notice.append(". A discount covered them, so there was nothing to refund.");
+            } else if (result.refundNotSent()) {
+                notice.append(".");
+            } else {
+                notice.append(" and refunded ₹").append(result.refund().toPlainString()).append(".");
+            }
         }
         if (result.markedOutOfStock()) {
             notice.append(" Marked out of stock until tomorrow: ").append(items).append(".");

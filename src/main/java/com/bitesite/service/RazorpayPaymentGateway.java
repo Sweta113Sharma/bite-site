@@ -4,6 +4,7 @@ import com.bitesite.config.RazorpayProperties;
 import com.bitesite.dto.GatewayOrder;
 import com.bitesite.dto.GatewayRefund;
 import com.bitesite.exception.PaymentGatewayException;
+import com.bitesite.exception.RefundNotSentException;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
@@ -116,7 +117,8 @@ public class RazorpayPaymentGateway implements PaymentGateway {
         if (amountPaise < MIN_AMOUNT_PAISE) {
             // Razorpay's floor applies to refunds too, and its own rejection is opaque.
             // Reachable when a removed line was almost entirely covered by a discount.
-            throw new PaymentGatewayException("Refunds under ₹1 can't be sent through Razorpay.");
+            // Nothing was sent, which is why this is not a plain PaymentGatewayException.
+            throw new RefundNotSentException("Refunds under ₹1 can't be sent through Razorpay.");
         }
         try {
             JSONObject request = new JSONObject();

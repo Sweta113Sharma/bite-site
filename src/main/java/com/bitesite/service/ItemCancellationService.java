@@ -3,10 +3,12 @@ package com.bitesite.service;
 import com.bitesite.dao.OrderRefundDao;
 import com.bitesite.dto.GatewayRefund;
 import com.bitesite.exception.InvalidOrderStateException;
+import com.bitesite.exception.RefundNotSentException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.ItemCancelReason;
 import com.bitesite.model.Order;
 import com.bitesite.model.OrderItem;
+import com.bitesite.model.OrderRefund;
 import com.bitesite.model.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -65,6 +67,8 @@ public class ItemCancellationService {
      *                            discount covered them. Meaningless for a whole cancellation.
      * @param refundConfirmed     false when the gateway call did not report success; the
      *                            refund is then pending and flagged, not lost
+     * @param refundNotSent       the gateway refused the refund before sending it (under
+     *                            ₹1), so it is recorded as failed and flagged for an admin
      */
     public record Result(
             String tokenNo,
@@ -72,7 +76,11 @@ public class ItemCancellationService {
             boolean wholeOrderCancelled,
             BigDecimal refund,
             boolean refundConfirmed,
+            boolean refundNotSent,
             boolean markedOutOfStock) {}
+
+    /** How a partial refund's gateway call ended. */
+    private enum RefundOutcome { SENT, UNKNOWN, NOT_SENT }
 
     /**
      * @param outletId the staff member's own outlet. Tenant scoping alone would let a
@@ -115,7 +123,7 @@ public class ItemCancellationService {
             String why = clamp(reason.label() + ": " + String.join(", ", names));
             orderService.cancelUnmakeable(orderId, tenantId, actorUserId, why);
             boolean marked = markOutOfStockIfAsked(reason, removedLines, outletId, tenantId, actorUserId);
-            return new Result(order.getTokenNo(), names, true, BigDecimal.ZERO, true, marked);
+            return new Result(order.getTokenNo(), names, true, BigDecimal.ZERO, true, false, marked);
         }
 
         RefundLedger.ItemClaim claim = refundLedger.claimItemCancellation(orderId, tenantId, selected,
@@ -129,31 +137,46 @@ public class ItemCancellationService {
         auditService.record(actorUserId, tenantId, "Order", orderId, "ITEMS_REMOVED",
                 claim.orderBefore().getTotalAmount(), names + " (" + reason.name() + "), refund " + claim.refund());
 
-        boolean confirmed = true;
+        RefundOutcome outcome = RefundOutcome.SENT;
         if (claim.refundId() != null) {
-            confirmed = sendRefund(claim, order.getTokenNo());
+            outcome = sendRefund(claim, order.getTokenNo());
         }
 
         orderNotifier.notifyOrderUpdate(order.getUserId(),
                 names.size() == 1 ? "An item in your order is unavailable" : "Some items in your order are unavailable",
-                studentMessage(order.getTokenNo(), names, reason, claim.refund()));
+                studentMessage(order.getTokenNo(), names, reason, claim.refund(), outcome));
         log.info("Removed {} line(s) from order {} ({}), refund {} {}", names.size(), orderId, reason,
-                claim.refund(), confirmed ? "sent" : "pending");
-        return new Result(order.getTokenNo(), names, false, claim.refund(), confirmed, marked);
+                claim.refund(), outcome);
+        return new Result(order.getTokenNo(), names, false, claim.refund(),
+                outcome == RefundOutcome.SENT, outcome == RefundOutcome.NOT_SENT, marked);
     }
 
-    private boolean sendRefund(RefundLedger.ItemClaim claim, String tokenNo) {
+    private RefundOutcome sendRefund(RefundLedger.ItemClaim claim, String tokenNo) {
         try {
             GatewayRefund issued = paymentGateway.refundPart(claim.gatewayPaymentId(), claim.refund());
             orderRefundDao.markRefunded(claim.refundId(), issued == null ? null : issued.id());
-            return true;
+            return RefundOutcome.SENT;
+        } catch (RefundNotSentException refused) {
+            // Refused before any request left, so no money moved: a known failure, not an
+            // unknown outcome. Left PENDING, every reconciliation sweep would look for it at
+            // Razorpay, find nothing, and flag it again. Failing it gives the reservation
+            // back, so a later full cancellation refunds this amount with the rest.
+            refundLedger.failPartialRefund(OrderRefund.builder()
+                    .id(claim.refundId())
+                    .paymentId(claim.paymentId())
+                    .amount(claim.refund())
+                    .build(), null, clamp("Partial refund of ₹" + claim.refund().toPlainString()
+                    + " for items removed from " + tokenNo + " not sent: " + refused.getMessage()));
+            log.warn("Partial refund {} of {} for payment {} not sent: {}", claim.refundId(), claim.refund(),
+                    claim.paymentId(), refused.getMessage());
+            return RefundOutcome.NOT_SENT;
         } catch (RuntimeException gatewayFailed) {
             refundLedger.recordUnresolved(claim.paymentId(), clamp("Partial refund of ₹"
                     + claim.refund().toPlainString() + " for items removed from " + tokenNo
                     + " attempted, outcome unknown: " + gatewayFailed.getMessage()));
             log.error("Partial refund {} outcome unknown for payment {}; left PENDING and flagged",
                     claim.refundId(), claim.paymentId(), gatewayFailed);
-            return false;
+            return RefundOutcome.UNKNOWN;
         }
     }
 
@@ -167,11 +190,18 @@ public class ItemCancellationService {
     }
 
     private static String studentMessage(String tokenNo, List<String> names, ItemCancelReason reason,
-            BigDecimal refund) {
+            BigDecimal refund, RefundOutcome outcome) {
         String items = String.join(", ", names);
-        String money = refund.signum() > 0
-                ? " ₹" + refund.toPlainString() + " is on its way back to how you paid."
-                : "";
+        String money;
+        if (refund.signum() <= 0) {
+            money = "";
+        } else if (outcome == RefundOutcome.NOT_SENT) {
+            // Never promise money that was not sent.
+            money = " ₹" + refund.toPlainString() + " is below the smallest amount that can be refunded "
+                    + "automatically, so BiteSite support has been told.";
+        } else {
+            money = " ₹" + refund.toPlainString() + " is on its way back to how you paid.";
+        }
         return items + " from order " + tokenNo + (names.size() == 1 ? " was" : " were")
                 + " removed (" + reason.label().toLowerCase() + ")." + money
                 + " The rest of your order is still being made.";
