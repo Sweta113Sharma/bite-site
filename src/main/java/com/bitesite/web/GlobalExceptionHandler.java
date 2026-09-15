@@ -69,11 +69,15 @@ public class GlobalExceptionHandler {
 
     // A missing static file (image, css, js) is routine — not an application error. Without this,
     // it falls through to generic() below and gets logged as ERROR + reported to Sentry on every hit.
+    //
+    // Also the handler for every URL nothing is mapped to, since Boot's /** static mapping is what
+    // answers those. So it renders through respond() like the rest, never response.sendError():
+    // that hands the request to the container's /error, and with no error/404 template there that
+    // is Spring's "Whitelabel Error Page" for a mistyped link, and HTML instead of ApiError on /api.
     @ExceptionHandler(NoResourceFoundException.class)
     public ModelAndView noStaticResource(NoResourceFoundException e, HttpServletRequest request, HttpServletResponse response)
             throws IOException {
-        response.sendError(HttpServletResponse.SC_NOT_FOUND, "Not found.");
-        return null;
+        return respond(HttpStatus.NOT_FOUND, "Not found.", request, response);
     }
 
     @ExceptionHandler(Exception.class)
