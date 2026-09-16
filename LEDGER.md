@@ -50,6 +50,137 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ---
 
+## 2026-09-17
+
+### `70910e5` — Expire failed payments, which never expired at all
+**Date:** 2026-09-17 · **Scope:** 7 files · **Deployed:** no
+
+**What changed**
+- A declined payment left a red "Payment failed — Pay now" bar on every customer page
+  for ever. It is now swept like any other unpaid order.
+- Payment window 20 minutes → 15, covering both unpaid states with one number.
+- `expireIfStillAwaitingPayment` → `expireIfStillUnpaid`, `findExpiredAwaitingPayment`
+  → `findExpiredUnpaid`.
+
+**Why**
+- The sweep's SELECT was widened to cover PAYMENT_FAILED in an earlier fix — the comment
+  there describes this exact banner and an order stuck for two weeks — but the conditional
+  UPDATE it feeds still named only AWAITING_PAYMENT. The sweep read those orders every
+  minute and wrote nothing. The names were renamed because they had become false, and a
+  name that lies is how this survived being "fixed" once already.
+- 15 rather than 20: one window for both states, since both mean no money arrived. A
+  shorter window for failures specifically would need a `payment_failed_at` column —
+  `orders` has no `updated_at` and `updateStatus` stamps only paid_at/ready_at/completed_at
+  — and measuring it from `created_at` would expire a payment that failed at minute 14
+  almost immediately.
+
+**Verified by**
+- Driven against the running app: two orders aged 90 minutes, one AWAITING_PAYMENT and one
+  PAYMENT_FAILED. Before the fix only the first became EXPIRED; after it, both did.
+- The regression test was confirmed to FAIL against the old UPDATE (`Tests run: 7,
+  Failures: 1`) and pass against the new one, so it genuinely catches this rather than
+  passing by construction.
+- A second test pins the other half: the write must stay conditional, or a payment
+  confirmed mid-sweep would be reset to EXPIRED with the money captured.
+- Full suite 621 tests, exit 0.
+
+**Watch out for**
+- **First run in production will expire a backlog.** Every PAYMENT_FAILED order older than
+  15 minutes goes to EXPIRED on the first sweep after deploy — a one-time batch, not a
+  trickle. That is the intended cleanup, but it will show as a burst of status changes.
+- Shortening the window is safe in the way that matters: a capture landing after the sweep
+  revives the order (the EXPIRED branch in `confirmPayment`) rather than stranding money.
+- `PAYMENT_TIMEOUT_MINUTES` overrides 15 per environment if it proves wrong in practice.
+
+### `e2aabd7` — Stop the app re-fetching things it already has
+**Date:** 2026-09-17 · **Scope:** 12 files · **Deployed:** no
+
+**What changed**
+- Back is a bfcache restore instead of a full page rebuild: `no-store` → `no-cache,
+  must-revalidate, private` on authenticated HTML.
+- Uploaded images cached for a year, immutable. They were revalidating on every navigation.
+- Six photo render sites now request the size they draw (card 600, thumb 200, detail 1200)
+  instead of the stored 1600px.
+- Favicon 66,290 bytes → 799.
+- Service worker navigation wait 2500ms → 800ms.
+
+**Why**
+- `no-store` is the single token that bars a page from the back/forward cache, so every
+  Back press was a server round trip and a full re-render.
+- Uploads are content-identity URLs — every upload gets a fresh UUID, so replacing a photo
+  produces a new URL. StaticResourceConfig claimed the opposite (that staff replace photos
+  too often to cache them); that reasoning predated the UUID naming and the note has been
+  corrected in place.
+- A menu card is ~190px and was being sent a 1600px file, several per screen.
+
+**Verified by**
+- Measured: uploaded images return `transferSize: 0` on a repeat visit; ordinary pages
+  still carry `no-cache`; uploads still carry `nosniff` (they stay inside the filter chain
+  deliberately — that is what stamps it).
+- The bfcache session guard driven both ways: valid session → no reload; session cleared →
+  reloads and lands on /login.
+- All six photo sites driven in a browser, including a cart line with a real photo, no
+  4xx/5xx anywhere.
+- 621 tests, exit 0.
+
+**Watch out for**
+- **The bfcache restore itself was never observed.** Playwright attaches CDP, which
+  suppresses bfcache, and forcing it with flags did not help. What is measured is that
+  `no-store` is gone and Back now serves with zero bytes transferred. The restore is
+  expected on a real device but is inference, not something seen.
+- **A now load-bearing, unguarded invariant:** uploaded URLs are cached for a year, which
+  is only safe because filenames are UUIDs. Nothing in the code stops a future change from
+  reusing a filename; that image would be stranded on devices for a year.
+- Local disk storage returns paths unchanged, so development cannot show the image sizing
+  working — it is pinned by tests instead.
+- A page can be one navigation stale on a slow connection. Cart, checkout, canteen, admin
+  and api are excluded from page caching entirely, so the money path is unaffected.
+
+### `a40de1c` — Give categories and colleges their own artwork
+**Date:** 2026-09-17 · **Scope:** 23 files · **Deployed:** no
+
+**What changed**
+- The canteen picker leads with the student's college crest instead of a storefront glyph.
+- Menu category chips can carry a real picture, resolved in three rungs: the outlet's own
+  upload, the platform default an admin set for that category name, then the previous
+  behaviour (first dish's photo, then a glyph) unchanged.
+- New screens: image upload per category in the canteen console, and an admin screen
+  listing category names in use that nobody has illustrated yet.
+- New `CATEGORY_IMAGE` upload kind at 400px rather than reusing MENU_PHOTO's 1600px.
+
+**Why**
+- The chips borrowed the first dish's photo, so a canteen that photographed one samosa got
+  a samosa as the face of "Snacks". Nobody chose that.
+- Two tables, not one: an outlet's image is keyed on `category_id` (a real FK that
+  cascades), but a platform default cannot be — "Snacks" is a different row per outlet and
+  the point of a default is that one upload covers all of them, so it keys on the
+  normalised name.
+
+**Verified by**
+- Driven in a browser end to end against MySQL: all three rungs visible in a single render;
+  an outlet upload superseding an admin default and falling back to it again on removal;
+  uploads stored as resized WebP with the right owner prefix (`category-1-…` for an outlet,
+  `category-platform-…` for an admin).
+- Two bugs found by that driving and fixed: `th:if` on a `th:replace` never fires
+  (Thymeleaf precedence), which rendered the crest AND the old medallion; and `.step__n`
+  was absolutely positioned on the base class, so How-it-works lost its stage numbers to
+  the corner of the section.
+- `IconGlyphCoverageTest` rejected `imagesmode` as absent from the subsetted font — swapped
+  for `image`, which is present.
+- 621 tests, exit 0.
+
+**Watch out for**
+- **Migration V39** creates `category_images` and `category_default_images`. Applied
+  locally in 78ms; not yet run in production.
+- Rendering a menu costs one extra indexed query. Platform defaults are held in memory for
+  5 minutes and invalidated on write — so a change made through the admin screen is
+  immediate, but editing `category_default_images` directly in the database lags by up to
+  the TTL. Same trade TenantCache already makes.
+- Nothing changes for a canteen that uploads nothing: every rung falls through to the
+  behaviour that was there before.
+
+---
+
 ## 2026-09-15
 
 ### `576c4cd` — Close the payment and refund holes found by auditing them for abuse
