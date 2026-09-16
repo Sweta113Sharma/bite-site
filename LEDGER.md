@@ -52,6 +52,56 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-17
 
+### Infrastructure — close the HTTP login path, add a probe and two alerts
+**Date:** 2026-09-16 · **Scope:** Azure config only, no commit · **Deployed:** n-a (applied directly)
+
+**What changed**
+- `httpsOnly: false → true` on the `bitesite-app` Web App. All three portals now 301 from
+  http:// to https://.
+- `healthCheckPath` set to `/actuator/health/liveness` (was unset).
+- Action group `bitesite-alerts` (email) plus two metric alerts: `bitesite-app-unhealthy`
+  (HealthCheckStatus < 100, severity 1) and `bitesite-app-5xx` (>10 Http5xx in 5 min,
+  severity 2). There were **no alerts of any kind** before this.
+
+**Why**
+- **All three portals served a working login form over plain HTTP.** Confirmed by request:
+  `http://app.bitesite.in/login` returned 200, scheme HTTP, with a real username field —
+  and the same for outlet and admin. Anyone typing the host without a scheme got a genuine
+  login page and posted their password in cleartext. HSTS does not cover this: it is only
+  sent over HTTPS and this domain is not preloaded, so first contact was unprotected. The
+  session cookie is Secure, so the login would then silently fail — which is worse, because
+  it reads as a glitch and invites a retry. Admin was the same, with SUPER_ADMIN
+  credentials.
+- Nothing was being told when the site broke. Sentry catches exceptions; nothing noticed an
+  outage.
+- With a health path set, App Service restarts a wedged instance itself rather than waiting
+  for someone to notice.
+
+**Verified by**
+- Before flipping: confirmed both Capacitor apps already point at https with
+  `cleartext: false`, so forcing HTTPS could not break the Android clients; Razorpay only
+  accepts HTTPS webhook URLs, so the webhook was never on the http path.
+- Confirmed `/actuator/health/liveness` answers 200 `{"status":"UP"}` unauthenticated
+  before pointing Azure at it — it is in the permitAll list, and it is deliberately
+  liveness rather than the aggregate, so a transient database or SMTP fault cannot turn
+  into a restart loop.
+- After: app/outlet/admin all http=301 → https, https=200; liveness UP; marketing site
+  200; the app still serving the build deployed earlier today
+  (`cache-control: no-cache, must-revalidate, private`).
+
+**Watch out for**
+- The action group emails the operator's own account address. Change the receiver if alerts
+  should go somewhere else.
+- `HealthCheckStatus` only produces data now that a health path exists, so that alert has
+  no history to compare against for its first window.
+- Health check on a **Basic** tier with one instance means an unhealthy probe restarts the
+  only instance — a ~2.5 minute cold start. That is the intended behaviour for a wedged
+  JVM, but it is not a rolling restart and there is no second instance to take traffic.
+- Still open, deliberately not addressed here: no deployment slots (no rollback without a
+  redeploy), MySQL is single-AZ Burstable with 7-day local-only backups and no HA, and
+  `business.ts` on the public marketing site still has `address` and `pricingDetail` empty.
+
+
 ### Deployment — `a40de1c`, `e2aabd7`, `70910e5`
 **Date:** 2026-09-16 20:33 UTC · **Run:** 35146776926 · **Outcome:** success
 
