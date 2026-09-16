@@ -5,13 +5,17 @@ import com.bitesite.config.PortalGuard;
 import com.bitesite.exception.BusinessException;
 import com.bitesite.model.StaffScope;
 import com.bitesite.model.User;
+import com.bitesite.service.CategoryImageService;
 import com.bitesite.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 /** Menu sections. Manager-only: this is the menu's structure, not today's stock. */
 @Controller
@@ -20,12 +24,23 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final CategoryImageService categoryImageService;
 
     @GetMapping
     public String list(@AuthenticationPrincipal AppUserPrincipal principal, Model model) {
         PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
         User user = principal.getUser();
-        model.addAttribute("categories", categoryService.listForOutlet(user.getOutletId(), user.getTenantId()));
+        List<com.bitesite.model.Category> categories =
+                categoryService.listForOutlet(user.getOutletId(), user.getTenantId());
+        model.addAttribute("categories", categories);
+        // What each section currently shows a student, and — separately — whether that
+        // picture is this canteen's own. The screen offers different things for the two:
+        // an inherited platform image can be overridden but not deleted, because it was
+        // never this outlet's to remove.
+        model.addAttribute("categoryImages",
+                categoryImageService.resolveForCategories(categories, user.getOutletId(), user.getTenantId()));
+        model.addAttribute("ownImageCategoryIds",
+                categoryImageService.outletOwnedCategoryIds(user.getOutletId(), user.getTenantId()));
         model.addAttribute("pageTitle", "Categories");
         return "canteen/categories";
     }
@@ -84,6 +99,41 @@ public class CategoryController {
         } catch (BusinessException e) {
             redirectAttributes.addFlashAttribute("categoryError", e.getMessage());
         }
+        return "redirect:/canteen/categories";
+    }
+
+    /**
+     * Sets this canteen's own picture for one of its sections.
+     *
+     * <p>The category id arrives from the form, so the service re-reads it scoped to the
+     * tenant before writing — a posted id is never trusted to decide whose category it is.
+     */
+    @PostMapping("/{id}/image")
+    public String setImage(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @RequestParam("image") MultipartFile image, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
+        User user = principal.getUser();
+        if (image == null || image.isEmpty()) {
+            redirectAttributes.addFlashAttribute("categoryError", "Choose an image first.");
+            return "redirect:/canteen/categories";
+        }
+        try {
+            categoryImageService.setOutletImage(id, user.getTenantId(), image);
+            redirectAttributes.addFlashAttribute("categoryNotice", "Category image updated.");
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("categoryError", e.getMessage());
+        }
+        return "redirect:/canteen/categories";
+    }
+
+    /** Drops this canteen's own picture, falling back to the platform default if there is one. */
+    @PostMapping("/{id}/image/remove")
+    public String removeImage(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
+        User user = principal.getUser();
+        categoryImageService.clearOutletImage(id, user.getTenantId());
+        redirectAttributes.addFlashAttribute("categoryNotice", "Category image removed.");
         return "redirect:/canteen/categories";
     }
 }

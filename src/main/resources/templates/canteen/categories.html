@@ -26,6 +26,44 @@
             <button type="submit" class="btn btn-sm btn-outline-secondary">Rename</button>
         </form>
 
+        <!--/* The picture students see on this section's chip.
+
+             Three states, and the wording changes with them, because "replace" and
+             "override" are not the same offer: the image may be this canteen's own, or one
+             the platform supplies for every canteen using this name, or absent entirely —
+             in which case the chip still falls back to the first dish's photo as it always
+             has, and nothing here is broken. Only an image this outlet uploaded can be
+             removed. */-->
+        <div class="d-flex align-items-center gap-3 mb-2">
+            <span class="category-image-preview">
+                <img th:if="${categoryImages[c.id] != null}" th:src="@{${categoryImages[c.id]}}" alt=""/>
+                <span th:if="${categoryImages[c.id] == null}" class="material-symbols-outlined">restaurant</span>
+            </span>
+            <div class="flex-grow-1">
+                <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center"
+                      th:action="@{/canteen/categories/{id}/image(id=${c.id})}">
+                    <input type="file" name="image" class="form-control form-control-sm"
+                           accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"
+                           th:aria-label="'Image for ' + ${c.name}"/>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Upload</button>
+                </form>
+                <div class="small text-muted mt-1">
+                    <span th:if="${ownImageCategoryIds.contains(c.id)}">Your own image.</span>
+                    <span th:if="${!ownImageCategoryIds.contains(c.id) and categoryImages[c.id] != null}">
+                        Using the platform image — upload one to override it here.
+                    </span>
+                    <span th:if="${categoryImages[c.id] == null}">
+                        No image yet — the chip borrows the first item's photo.
+                    </span>
+                </div>
+            </div>
+            <form method="post" th:if="${ownImageCategoryIds.contains(c.id)}"
+                  th:action="@{/canteen/categories/{id}/image/remove(id=${c.id})}"
+                  onsubmit="return confirm('Remove your image for this category?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+            </form>
+        </div>
+
         <div class="d-flex gap-2 flex-wrap">
             <form method="post" class="d-flex gap-2" th:action="@{/canteen/categories/{id}/order(id=${c.id})}">
                 <input type="number" name="sortOrder" class="form-control form-control-sm" style="width:90px;"

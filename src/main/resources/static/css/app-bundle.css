@@ -1214,6 +1214,29 @@ body.has-drawer-open { overflow: hidden; }
    OUTLET PICKER (choose-your-canteen screen)
    ============================================================ */
 
+/* The college crest above the picker.
+
+   Same hard-bordered tile as the outlet logos in the cards below, one size up, so the
+   screen reads as "your college, then its counters" rather than two unrelated marks.
+   contain rather than cover: a crest is a mark with its own padding built in, and
+   cropping one to fill a square reads as a bug. */
+.college-crest {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto var(--stack-md);
+    padding: 8px;
+    background: var(--color-field);
+    border: var(--border-w) solid var(--color-ink);
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    place-items: center;
+}
+.college-crest img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 .outlet-card {
     display: flex;
     align-items: center;
@@ -8684,4 +8707,35 @@ body.console--has-sidebar .console-main > .container {
 
 .analytics-slot-empty.is-rush {
     background: rgba(255, 201, 24, 0.35);
+}
+
+
+/* ============================================================
+   CATEGORY IMAGE PREVIEW (canteen + admin category screens)
+
+   Shows what a student would actually see on the category chip, at roughly the size they
+   see it, so the person choosing the picture is judging the thing being shipped rather
+   than a full-bleed version of it that flatters a bad crop.
+   ============================================================ */
+
+.category-image-preview {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    background: var(--color-field);
+    border: var(--border-w) solid var(--color-ink);
+    overflow: hidden;
+}
+
+.category-image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.category-image-preview .material-symbols-outlined {
+    font-size: 24px;
+    color: var(--color-ink-muted);
 }

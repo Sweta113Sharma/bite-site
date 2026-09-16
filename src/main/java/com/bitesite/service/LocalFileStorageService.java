@@ -58,6 +58,26 @@ public class LocalFileStorageService implements FileStorageService {
         return "/uploads/menu-photos/" + filename;
     }
 
+    @Override
+    public String storeCategoryImage(Long tenantId, MultipartFile file) {
+        // Alongside the menu photos: same kind of thing (food imagery a canteen supplies),
+        // same directory, told apart by the filename prefix.
+        String owner = tenantId == null ? "platform" : String.valueOf(tenantId);
+        String filename = store(file, ImageUploadProcessor.Kind.CATEGORY_IMAGE, menuPhotoDir, "category-" + owner);
+        return "/uploads/menu-photos/" + filename;
+    }
+
+    /**
+     * Returned unchanged. Local disk serves whatever file was written and has no resizing
+     * layer in front of it, so producing a thumbnail would mean writing a second file at
+     * upload time and backfilling every existing one. Not worth it for the backend that
+     * only runs in development — production is Cloudinary, which does this in the URL.
+     */
+    @Override
+    public String thumbnailUrl(String path, int edgePx) {
+        return path;
+    }
+
     private String store(MultipartFile file, ImageUploadProcessor.Kind kind, Path dir, String filenamePrefix) {
         ImageUploadProcessor.ProcessedImage image = ImageUploadProcessor.process(file, kind);
         String filename = filenamePrefix + "-" + UUID.randomUUID() + ImageUploadProcessor.EXTENSION;

@@ -132,6 +132,11 @@
             <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/outlets}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/outlets')} ? 'page' : null">
                 <span class="material-symbols-outlined">storefront</span>Canteens</a>
+            <!--/* Platform artwork for menu sections. Sits next to Canteens because it is
+                 about what canteens show, not about money or oversight. */-->
+            <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN')" class="console-nav__link" th:href="@{/admin/category-images}"
+               th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/category-images')} ? 'page' : null">
+                <span class="material-symbols-outlined">image</span>Category images</a>
             <a sec:authorize="hasAnyRole('SUPER_ADMIN','ADMIN','TECH_MANAGER')" class="console-nav__link" th:href="@{/admin/orders}"
                th:attrappend="aria-current=${currentPath != null and #strings.startsWith(currentPath, '/admin/orders')} ? 'page' : null">
                 <span class="material-symbols-outlined">receipt_long</span>Orders</a>

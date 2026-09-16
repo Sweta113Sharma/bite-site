@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body class="console">
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="container" style="max-width: 760px;">
+    <div class="console-head">
+        <h3 class="console-head__title">Category images</h3>
+        <p class="console-head__blurb">
+            The picture a menu section shows when the canteen has not set one of its own.
+            One upload covers every canteen using that name, including colleges added later.
+        </p>
+    </div>
+
+    <div class="alert alert-success" th:if="${imageNotice}" th:text="${imageNotice}"></div>
+    <div class="alert alert-danger" th:if="${imageError}" th:text="${imageError}"></div>
+
+    <!--/* Needs attention first. This is the whole point of the screen: a canteen invents a
+         section name nobody has drawn, and it surfaces here rather than being noticed by
+         a student looking at a fork-and-knife glyph. */-->
+    <h6 class="mt-4">Waiting for an image</h6>
+    <p class="text-muted small" th:if="${#lists.isEmpty(needsImage)}">
+        Every category name in use has a default image.
+    </p>
+    <div class="outlet-admin-card" th:each="c : ${needsImage}">
+        <div class="outlet-admin-card__head">
+            <span class="outlet-admin-card__name" th:text="${c.displayName()}">Category</span>
+            <span class="badge bg-secondary"
+                  th:text="${c.outletCount()} + (${c.outletCount()} == 1 ? ' canteen' : ' canteens')">0 canteens</span>
+        </div>
+        <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center"
+              th:action="@{/admin/category-images}">
+            <!--/* The normalised key travels, not the prettified label, so the row written
+                 matches what the menu will look up. */-->
+            <input type="hidden" name="categoryName" th:value="${c.nameKey()}"/>
+            <input type="file" name="image" class="form-control form-control-sm"
+                   accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"
+                   th:aria-label="'Image for ' + ${c.displayName()}"/>
+            <button type="submit" class="btn btn-sm btn-primary">Set image</button>
+        </form>
+    </div>
+
+    <h6 class="mt-4">Already set</h6>
+    <p class="text-muted small" th:if="${#lists.isEmpty(defaults)}">
+        No default images yet.
+    </p>
+    <div class="outlet-admin-card" th:each="d : ${defaults}">
+        <div class="d-flex align-items-center gap-3">
+            <span class="category-image-preview">
+                <img th:src="@{${d.imagePath}}" alt=""/>
+            </span>
+            <div class="flex-grow-1">
+                <div class="outlet-admin-card__name" th:text="${d.displayName}">Category</div>
+                <div class="text-muted small">
+                    Any canteen with a section called this, unless it uploaded its own.
+                </div>
+            </div>
+            <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center"
+                  th:action="@{/admin/category-images}">
+                <input type="hidden" name="categoryName" th:value="${d.nameKey}"/>
+                <input type="file" name="image" class="form-control form-control-sm"
+                       accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"
+                       th:aria-label="'Replace image for ' + ${d.displayName}"/>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Replace</button>
+            </form>
+            <form method="post" th:action="@{/admin/category-images/remove}"
+                  onsubmit="return confirm('Remove this default? Canteens using their own image keep it.');">
+                <input type="hidden" name="categoryName" th:value="${d.nameKey}"/>
+                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+            </form>
+        </div>
+    </div>
+
+    <!--/* A name can be illustrated before any canteen uses it — useful when a college is
+         being onboarded and its menu is known in advance. */-->
+    <h6 class="mt-4">Add an image for a name not in use yet</h6>
+    <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center"
+          th:action="@{/admin/category-images}">
+        <input type="text" name="categoryName" class="form-control" placeholder="e.g. Beverages"
+               maxlength="80" required="required"/>
+        <input type="file" name="image" class="form-control"
+               accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"
+               aria-label="Image file"/>
+        <button type="submit" class="btn btn-primary">Set image</button>
+    </form>
+</div>
+</body>
+</html>

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MenuItem {
+public class MenuItem implements com.bitesite.service.CategoryImageService.MenuItemPhoto {
     private Long id;
     private Long tenantId;
     private Long outletId;

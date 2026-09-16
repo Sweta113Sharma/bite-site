@@ -7,9 +7,30 @@
 <div th:replace="~{fragments/navbar :: bottomNav}"></div>
 
 <div class="container" style="max-width: 640px;">
+    <!--/* The college's own crest, not a generic storefront glyph.
+
+         A student only ever sees their own college here, so this is the one screen where
+         naming it is worth the space: it confirms the account landed in the right place
+         before they pick a counter. `currentTenant` is a global model attribute set from
+         the resolved tenant (GlobalModelAttributes), which the interceptor has already
+         put in TenantContext from cache — so this costs no query.
+
+         Colleges without an uploaded logo fall back to the medallion that was here
+         before, rather than to a broken image or an empty box. */-->
     <div class="text-center mb-4">
-        <div th:replace="~{fragments/state :: medallion('storefront','neutral')}"></div>
-        <p class="page-header-label" style="text-align:center;">Welcome back</p>
+        <div th:if="${currentTenant != null and currentTenant.logoPath != null}"
+             class="college-crest">
+            <img th:src="@{${currentTenant.logoPath}}" th:alt="${currentTenant.name}"/>
+        </div>
+        <!--/* The condition sits on a WRAPPER, not on the th:replace itself. Thymeleaf
+             processes th:replace at precedence 100 and th:if at 300, so a th:if on the
+             same tag is evaluated after the tag has already been replaced — the fragment
+             renders unconditionally and the screen shows a crest AND a medallion. */-->
+        <div th:if="${currentTenant == null or currentTenant.logoPath == null}">
+            <div th:replace="~{fragments/state :: medallion('storefront','neutral')}"></div>
+        </div>
+        <p class="page-header-label" style="text-align:center;"
+           th:text="${currentTenant != null ? currentTenant.name : 'Welcome back'}">Welcome back</p>
         <h3 class="page-header-title" style="text-align:center;">Which canteen today?</h3>
         <p class="text-muted small">Choose an outlet to browse today's menu</p>
     </div>

@@ -29,4 +29,26 @@ public interface FileStorageService {
 
     /** Same contract as {@link #storeLogo}, for a canteen's menu item photos. */
     String storeMenuItemPhoto(Long tenantId, MultipartFile file);
+
+    /**
+     * Same contract as {@link #storeLogo}, for the artwork on a menu category.
+     *
+     * <p>{@code tenantId} is nullable here and only here: a platform default set by an
+     * admin belongs to no college, and is filenamed {@code category-platform-...} so it is
+     * still tellable apart on disk from an outlet's own upload.
+     */
+    String storeCategoryImage(Long tenantId, MultipartFile file);
+
+    /**
+     * The same image at roughly {@code edgePx} across, for somewhere it is drawn small.
+     *
+     * <p>Exists because the student menu's category chips are ~56px circles that were being
+     * fed {@code MENU_PHOTO} files stored at up to 1600px — several per menu load, decoded
+     * at full size and thrown away. Whether that can be avoided is a property of where the
+     * file lives, which is why the question is asked here rather than in a controller.
+     *
+     * <p>Implementations must return something that renders. Returning the original
+     * unchanged is a valid answer for a backend that cannot resize on demand.
+     */
+    String thumbnailUrl(String path, int edgePx);
 }

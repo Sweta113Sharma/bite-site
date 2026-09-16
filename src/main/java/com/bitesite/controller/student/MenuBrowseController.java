@@ -7,6 +7,7 @@ import com.bitesite.model.MenuItem;
 import com.bitesite.model.Outlet;
 import com.bitesite.model.User;
 import com.bitesite.service.Cart;
+import com.bitesite.service.CategoryImageService;
 import com.bitesite.service.MenuService;
 import com.bitesite.service.OrderService;
 import com.bitesite.service.OutletService;
@@ -45,6 +46,7 @@ public class MenuBrowseController {
     private final MenuService menuService;
     private final OrderService orderService;
     private final OutletService outletService;
+    private final CategoryImageService categoryImageService;
     private final Cart cart;
     private final BusinessClock businessClock;
 
@@ -84,10 +86,23 @@ public class MenuBrowseController {
                 .limit(10)
                 .collect(Collectors.toList());
 
+        // Which picture each category wears: the outlet's own upload, else the platform
+        // default an admin set for that name, else nothing — in which case the chips keep
+        // doing exactly what they did before (first item's photo, then a glyph).
+        //
+        // The name → id mapping is built from items already in hand rather than by asking
+        // for the categories again, so this costs one indexed query and no more. Items are
+        // grouped in menu order and a category has one id, so the merge never fires.
+        Map<String, Long> categoryIdByName = items.stream()
+                .filter(i -> i.getCategoryId() != null)
+                .collect(Collectors.toMap(MenuItem::getCategory, MenuItem::getCategoryId, (a, b) -> a));
+
         model.addAttribute("outlets", outlets);
         model.addAttribute("selectedOutlet", selected);
         model.addAttribute("ordersOpen", selected.isAcceptingOrders());
         model.addAttribute("itemsByCategory", byCategory);
+        model.addAttribute("categoryImages", categoryImageService.chipImages(
+                selected.getId(), user.getTenantId(), categoryIdByName, byCategory));
         model.addAttribute("dealItems", dealItems);
         model.addAttribute("reorderItems", reorderRail(user, selected, items));
         // Drives the Add-vs-stepper swap on each card: a card only shows a quantity

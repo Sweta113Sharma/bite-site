@@ -61,6 +61,56 @@ public class CloudinaryFileStorageService implements FileStorageService {
         return upload(file, ImageUploadProcessor.Kind.MENU_PHOTO, "bitesite/menu-photos", "menu-" + tenantId);
     }
 
+    @Override
+    public String storeCategoryImage(Long tenantId, MultipartFile file) {
+        // Null tenant means an admin's platform-wide default, which belongs to no college.
+        String owner = tenantId == null ? "platform" : String.valueOf(tenantId);
+        return upload(file, ImageUploadProcessor.Kind.CATEGORY_IMAGE,
+                "bitesite/category-images", "category-" + owner);
+    }
+
+    /**
+     * Inserts a resize transformation into the delivery URL.
+     *
+     * <p>Cloudinary derives this on first request and caches it on the CDN, so an existing
+     * 1600px upload can be served at 160px without re-uploading anything or storing a
+     * second file — which is what makes fixing the oversized category chips a URL change
+     * rather than a migration.
+     *
+     * <p>{@code c_fill} crops to a square (a chip is a circle, so the edges are masked
+     * anyway), {@code f_auto} lets the CDN pick AVIF where the browser takes it, and
+     * {@code q_auto} picks a quality for the size actually being delivered.
+     *
+     * <p>Anything that is not a Cloudinary upload URL is returned untouched: seeded rows
+     * point at static assets under {@code /img/}, and a transformation spliced into one of
+     * those would produce a 404 instead of a picture.
+     */
+    @Override
+    public String thumbnailUrl(String path, int edgePx) {
+        return withThumbnailTransformation(path, edgePx);
+    }
+
+    /**
+     * The rewrite itself, static and package-private so it can be tested without standing
+     * up a Cloudinary client. Constructing this service needs three credentials and builds
+     * that client eagerly, which a test of pure string work has no business doing — and a
+     * test that copies the logic instead would keep passing after the real one changed.
+     */
+    static String withThumbnailTransformation(String path, int edgePx) {
+        if (path == null || !path.contains(UPLOAD_SEGMENT)) {
+            return path;
+        }
+        // c_limit, not c_fill: scale to FIT inside the box and never upscale. c_fill crops
+        // to the exact box, which is right for a circular chip and wrong for the 4:3 menu
+        // cards — it would centre-crop every dish. The chip still looks right because its
+        // CSS already applies object-fit: cover to whatever it is given.
+        String transformation = "c_limit,f_auto,q_auto,w_" + edgePx + ",h_" + edgePx + "/";
+        return path.replaceFirst(UPLOAD_SEGMENT, UPLOAD_SEGMENT + transformation);
+    }
+
+    /** Where a transformation goes in a Cloudinary delivery URL. */
+    private static final String UPLOAD_SEGMENT = "/image/upload/";
+
     private String upload(MultipartFile file, ImageUploadProcessor.Kind kind, String folder, String publicIdPrefix) {
         // Re-encoded here rather than by Cloudinary's own transformations so that what is
         // stored is identical whichever backend is active, and the free tier's storage and

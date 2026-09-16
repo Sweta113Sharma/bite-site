@@ -63,7 +63,13 @@ final class ImageUploadProcessor {
         LOGO("Logo", 512, 0.90f),
         /** Full-width on a phone at most: 1600 covers a 3x-DPR screen on a 500px-wide
          * card, and the item page shows nothing wider. */
-        MENU_PHOTO("Photo", 1600, 0.80f);
+        MENU_PHOTO("Photo", 1600, 0.80f),
+        /** A category chip is a ~56px circle and the widest this is ever drawn is the
+         * management list at ~120px. 400 covers that at 3x DPR with headroom and nothing
+         * more — deliberately NOT MENU_PHOTO's 1600, because several of these load at once
+         * on the menu screen and the whole point of the feature is the rail looking right,
+         * not it costing four times as much to do so. */
+        CATEGORY_IMAGE("Category image", 400, 0.85f);
 
         final String label;
         final int maxEdge;
