@@ -162,11 +162,27 @@ app:
       api-key: ${CLOUDINARY_API_KEY:}
       api-secret: ${CLOUDINARY_API_SECRET:}
   order:
+    # How long an unpaid order lives before the sweep drops it — and therefore how long
+    # the student's "Payment pending" / "Payment failed" strip stays on screen.
+    #
+    # One window covers both unpaid states. They mean the same thing: no money arrived.
+    # The only difference is whether the gateway said so out loud, which is not a reason
+    # to treat them differently. (Measuring "5 minutes since it FAILED" separately would
+    # need a payment_failed_at column — orders has no updated_at and updateStatus only
+    # stamps paid_at/ready_at/completed_at — so it would be a migration for a distinction
+    # that does not earn one.)
+    #
     # Ten minutes was under the time a slow bank OTP or a reconnecting phone actually
-    # takes, so orders were expiring while the student was still paying. A late capture
-    # now revives the order rather than stranding the money (OrderService.confirmPayment),
-    # but not expiring it in the first place is the better outcome.
-    payment-timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:20}
+    # takes, so orders were expiring while the student was still paying. Fifteen keeps
+    # half again as much headroom as that, sits in the usual range for a payment session
+    # (Razorpay's own checkout window is about this), and clears the strip five minutes
+    # sooner than the 20 it replaces.
+    #
+    # Shortening this is safe in the way that matters: a capture that lands after the
+    # sweep revives the order rather than stranding the money — see the EXPIRED branch in
+    # OrderService.confirmPayment. So the cost of being slightly too eager is a revival,
+    # not a lost payment.
+    payment-timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:15}
   refund:
     # How long a refund may sit in REFUND_PENDING before the sweep asks Razorpay about it.
     # Long enough that the original HTTP call cannot still be in flight and the

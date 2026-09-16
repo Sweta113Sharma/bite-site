@@ -68,9 +68,21 @@ class TimestampRoundTripTest {
 
     /** Inserts an order whose created_at is set by the database, minutes into the past. */
     private void insertOrderMinutesAgo(String token, int minutesAgo) {
+        insertOrderMinutesAgo(token, minutesAgo, "AWAITING_PAYMENT");
+    }
+
+    private void insertOrderMinutesAgo(String token, int minutesAgo, String status) {
         jdbc.update("INSERT INTO orders (tenant_id, outlet_id, user_id, token_no, total_amount, status, created_at) "
-                        + "VALUES (?, ?, ?, ?, 10.00, 'AWAITING_PAYMENT', NOW() - INTERVAL ? MINUTE)",
-                tenantId, outletId, userId, token, minutesAgo);
+                        + "VALUES (?, ?, ?, ?, 10.00, ?, NOW() - INTERVAL ? MINUTE)",
+                tenantId, outletId, userId, token, status, minutesAgo);
+    }
+
+    private String statusOf(String token) {
+        return jdbc.queryForObject("SELECT status FROM orders WHERE token_no = ?", String.class, token);
+    }
+
+    private Long idOf(String token) {
+        return jdbc.queryForObject("SELECT id FROM orders WHERE token_no = ?", Long.class, token);
     }
 
     @Test
@@ -92,7 +104,7 @@ class TimestampRoundTripTest {
         insertOrderMinutesAgo(TOKEN_PREFIX + "FRESH", 5);
         insertOrderMinutesAgo(TOKEN_PREFIX + "STALE", 20);
 
-        List<String> expired = orderDao.findExpiredAwaitingPayment(10).stream()
+        List<String> expired = orderDao.findExpiredUnpaid(10).stream()
                 .map(Order::getTokenNo)
                 .filter(t -> t.startsWith(TOKEN_PREFIX))
                 .toList();
@@ -100,6 +112,50 @@ class TimestampRoundTripTest {
         // With a Java-side cutoff this returned neither: the comparison value landed hours
         // in the past, so a 10-minute timeout only caught orders older than ~5h40m.
         assertThat(expired).containsExactly(TOKEN_PREFIX + "STALE");
+    }
+
+    /**
+     * A failed payment must actually expire, not just be repeatedly selected for expiry.
+     *
+     * <p>This bug shipped twice. The sweep's SELECT was widened to cover PAYMENT_FAILED —
+     * with a comment explaining that leaving failures out left a permanent red banner on
+     * every customer page — but the conditional UPDATE it feeds still named only
+     * AWAITING_PAYMENT. So failures were read once a minute for ever and never written,
+     * and the banner the fix was for stayed exactly where it was.
+     *
+     * <p>Asserting on the SELECT alone is what let that through, so this drives both
+     * halves: find it, write it, and check the row actually moved.
+     */
+    @Test
+    void aFailedPaymentIsSweptAndNotJustRepeatedlyFound() {
+        insertOrderMinutesAgo(TOKEN_PREFIX + "FAILED", 30, "PAYMENT_FAILED");
+        insertOrderMinutesAgo(TOKEN_PREFIX + "PENDING", 30, "AWAITING_PAYMENT");
+
+        List<String> found = orderDao.findExpiredUnpaid(15).stream()
+                .map(Order::getTokenNo)
+                .filter(t -> t.startsWith(TOKEN_PREFIX))
+                .sorted()
+                .toList();
+        assertThat(found).containsExactly(TOKEN_PREFIX + "FAILED", TOKEN_PREFIX + "PENDING");
+
+        assertThat(orderDao.expireIfStillUnpaid(idOf(TOKEN_PREFIX + "FAILED"), tenantId)).isTrue();
+        assertThat(orderDao.expireIfStillUnpaid(idOf(TOKEN_PREFIX + "PENDING"), tenantId)).isTrue();
+
+        assertThat(statusOf(TOKEN_PREFIX + "FAILED")).isEqualTo("EXPIRED");
+        assertThat(statusOf(TOKEN_PREFIX + "PENDING")).isEqualTo("EXPIRED");
+    }
+
+    /**
+     * The other half of the same write: widening it must not have made it unconditional.
+     * A payment that confirmed between the sweep's read and its write has already made the
+     * order PAID, and expiring that would strand captured money on an EXPIRED order.
+     */
+    @Test
+    void theSweepStillRefusesToExpireAnOrderThatHasSincePaid() {
+        insertOrderMinutesAgo(TOKEN_PREFIX + "PAID", 30, "PAID");
+
+        assertThat(orderDao.expireIfStillUnpaid(idOf(TOKEN_PREFIX + "PAID"), tenantId)).isFalse();
+        assertThat(statusOf(TOKEN_PREFIX + "PAID")).isEqualTo("PAID");
     }
 
     @Test

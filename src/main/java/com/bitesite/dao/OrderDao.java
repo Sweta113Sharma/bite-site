@@ -198,11 +198,11 @@ public interface OrderDao {
      * expiry sweep. Takes the timeout rather than a cutoff instant for the same reason as
      * {@link #sumQuantitiesByMenuItemToday}: the comparison has to be made against the
      * database's own clock, since that is what wrote {@code created_at}. */
-    List<Order> findExpiredAwaitingPayment(int timeoutMinutes);
+    List<Order> findExpiredUnpaid(int timeoutMinutes);
 
     /** EXPIRED, but only if the order is still AWAITING_PAYMENT. False when a payment
      * landed between the sweep's read and this write. */
-    boolean expireIfStillAwaitingPayment(Long id, Long tenantId);
+    boolean expireIfStillUnpaid(Long id, Long tenantId);
 
     /** Non-terminal orders belonging to review accounts, created in the last day.
      * Used by the auto-advance scheduler so Play Store reviewers see the full lifecycle

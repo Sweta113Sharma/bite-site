@@ -278,7 +278,7 @@ public class OrderDaoImpl implements OrderDao {
     public List<DailySales> dailySales(Long tenantId, Long outletId, int days) {
         // token_day is the stored generated DATE(created_at). Grouping on it keeps the day
         // boundary in the database, where created_at is written — a Java-side date would be
-        // shifted by the server's UTC offset (see findExpiredAwaitingPayment).
+        // shifted by the server's UTC offset (see findExpiredUnpaid).
         return jdbcTemplate.query(
                 "SELECT token_day, COUNT(*) AS order_count, COALESCE(SUM(total_amount), 0) AS revenue "
                         + "FROM orders WHERE tenant_id = ? AND outlet_id = ? "
@@ -576,14 +576,24 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
-    public boolean expireIfStillAwaitingPayment(Long id, Long tenantId) {
+    public boolean expireIfStillUnpaid(Long id, Long tenantId) {
+        // Both unpaid states, matching the SELECT that feeds this. They did not match
+        // before: findExpiredUnpaid was widened to sweep PAYMENT_FAILED, this write was
+        // not, so every failed order was read once a minute and never written. The banner
+        // the widening was meant to clear stayed on screen for ever anyway.
+        //
+        // Still conditional, and that part must not be relaxed: a payment confirmed
+        // between the read and this write has already made the order PAID, and an
+        // unconditional write would set it back to EXPIRED with the money captured.
+        // PaymentExploitTest covers exactly that race.
         return jdbcTemplate.update(
-                "UPDATE orders SET status = 'EXPIRED' WHERE id = ? AND tenant_id = ? AND status = 'AWAITING_PAYMENT'",
+                "UPDATE orders SET status = 'EXPIRED' WHERE id = ? AND tenant_id = ? "
+                        + "AND status IN ('AWAITING_PAYMENT', 'PAYMENT_FAILED')",
                 id, tenantId) == 1;
     }
 
     @Override
-    public List<Order> findExpiredAwaitingPayment(int timeoutMinutes) {
+    public List<Order> findExpiredUnpaid(int timeoutMinutes) {
         // NOW() - INTERVAL rather than a cutoff computed in Java, for the same reason
         // sumQuantitiesByMenuItemToday() uses CURDATE(): created_at is written by the
         // database, so the value it is compared against has to come from there too. With a

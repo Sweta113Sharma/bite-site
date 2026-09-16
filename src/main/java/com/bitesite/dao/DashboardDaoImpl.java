@@ -15,7 +15,7 @@ import java.util.List;
  * <p>Every figure is a single aggregate, and the day boundary is resolved in the database
  * via {@code token_day} — the stored generated {@code DATE(created_at)} that the order
  * token's uniqueness constraint already sits on. Computing "today" in Java would shift the
- * boundary by the server's UTC offset, which is the same trap {@code findExpiredAwaitingPayment}
+ * boundary by the server's UTC offset, which is the same trap {@code findExpiredUnpaid}
  * documents.
  *
  * <p>These run on every admin page load, so they are counts over indexed predicates and

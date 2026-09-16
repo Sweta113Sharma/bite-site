@@ -972,13 +972,13 @@ public class OrderService {
     /** Sweeps unpaid orders past the payment timeout so they stop counting as pending
      * demand; call periodically (see {@link com.bitesite.config.OrderExpiryScheduler}). */
     public int expireStalePayments(int timeoutMinutes) {
-        List<Order> stale = orderDao.findExpiredAwaitingPayment(timeoutMinutes);
+        List<Order> stale = orderDao.findExpiredUnpaid(timeoutMinutes);
         int expired = 0;
         for (Order order : stale) {
             // Conditional: a payment confirmed between the read above and this write has
             // already made the order PAID, and an unconditional write turned it back to
             // EXPIRED, with the money captured and nothing flagged.
-            if (orderDao.expireIfStillAwaitingPayment(order.getId(), order.getTenantId())) {
+            if (orderDao.expireIfStillUnpaid(order.getId(), order.getTenantId())) {
                 expired++;
             }
         }
