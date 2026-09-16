@@ -84,7 +84,20 @@ function isOrderPage(pathname) {
 // How long a navigation waits for the network before falling back to a cached copy.
 // Not a timeout in the sense of giving up: the request carries on in the background and
 // still refreshes the cache. This is only about what the student LOOKS at meanwhile.
-const NAV_NETWORK_TIMEOUT_MS = 2500;
+//
+// Was 2500, which on campus wifi meant two and a half seconds of blank screen before
+// showing a page this worker already had in hand. 800 is under the point where a wait
+// starts reading as "nothing happened", and a healthy connection still answers well
+// inside it, so the cached copy is what a bad connection sees rather than what everyone
+// sees.
+//
+// What bounds the staleness this can show: the pages that must never be stale are already
+// excluded from page caching entirely (isNeverCachedPage — cart, checkout, canteen, admin,
+// api), order pages wait for the network however long it takes (isOrderPage), and an order
+// total is recalculated server-side at checkout regardless of what a menu was showing. So
+// the worst case here is a briefly out-of-date price or stock badge on the menu, corrected
+// on the next paint — not a wrong charge.
+const NAV_NETWORK_TIMEOUT_MS = 800;
 
 self.addEventListener('fetch', (event) => {
     const request = event.request;

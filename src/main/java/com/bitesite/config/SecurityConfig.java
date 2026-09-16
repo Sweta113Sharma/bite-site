@@ -213,7 +213,83 @@ public class SecurityConfig {
                     })
                     .permissionsPolicyHeader(permissions -> permissions.policy(
                             "camera=(), microphone=(), geolocation=(), usb=(), magnetometer=(), "
-                                    + "accelerometer=(), gyroscope=(), interest-cohort=()")))
+                                    + "accelerometer=(), gyroscope=(), interest-cohort=()"))
+                    /*
+                     * Spring Security's default is `no-cache, no-store, max-age=0,
+                     * must-revalidate` plus Pragma and Expires. The `no-store` in there is
+                     * the reason pressing Back felt like opening the app again: a response
+                     * carrying it is refused entry to the browser's back/forward cache, so
+                     * every Back was a full navigation — server round trip, re-render,
+                     * re-decode every photo — where a bfcache restore is near-instant and
+                     * keeps scroll position.
+                     *
+                     * What replaces it keeps the part that matters. `no-cache` does NOT mean
+                     * "do not cache"; it means "cache, but revalidate before reuse", so an
+                     * ordinary navigation still asks the server and a logged-out student
+                     * still gets the login page. `private` keeps shared proxies out of it.
+                     * Dropping only `no-store` is therefore the narrowest change that
+                     * unlocks the restore.
+                     *
+                     * The tradeoff this leaves is real and is handled elsewhere: a restored
+                     * page is served from memory WITHOUT asking the server, so on a shared
+                     * phone Back could show a screen belonging to someone who has since
+                     * logged out. app.js closes that by revalidating on pageshow when the
+                     * page came from bfcache — see the `pageshow` handler there, and
+                     * SessionApiController which it calls.
+                     *
+                     * Static assets are unaffected: they were taken out of this filter
+                     * chain entirely (see staticResources() above) and must stay out.
+                     */
+                    .cacheControl(cache -> cache.disable())
+                    .addHeaderWriter((request, response) -> {
+                        /*
+                         * Uploaded images are the one thing in this chain that is safe to
+                         * cache forever, and they were the most expensive thing in it not
+                         * to: every canteen logo, menu photo and category image was being
+                         * revalidated on every navigation.
+                         *
+                         * Safe because the URL is content-identity. Every write goes
+                         * through FileStorageService, which names files
+                         * `<prefix>-<random UUID>.webp` — replacing an item's photo calls
+                         * storeMenuItemPhoto again and produces a NEW name, and the page
+                         * then points at the new URL. An old URL can therefore never
+                         * return different bytes, so `immutable` cannot strand anyone on a
+                         * stale picture. (StaticResourceConfig used to say the opposite —
+                         * that staff replace photos too often to cache them. That reason
+                         * predates the UUID naming and no longer holds; the note there has
+                         * been corrected.)
+                         *
+                         * They stay INSIDE this filter chain rather than being moved out
+                         * alongside /css and /js, because the chain is what stamps
+                         * X-Content-Type-Options: nosniff — which matters more on bytes a
+                         * canteen uploaded than on our own stylesheets.
+                         *
+                         * `public` is honest here: these are already permitAll and shown
+                         * to anyone who opens a menu. Nothing user-private is served from
+                         * /uploads — it holds exactly two directories, logos and
+                         * menu-photos.
+                         */
+                        String path = request.getRequestURI();
+                        String context = request.getContextPath();
+                        if (context != null && !context.isEmpty() && path.startsWith(context)) {
+                            path = path.substring(context.length());
+                        }
+                        if (path.startsWith("/uploads/")) {
+                            response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+                            // Left over from the default writer otherwise, and a stale
+                            // Pragma/Expires beside a year-long max-age is the kind of
+                            // contradiction an intermediary resolves the cautious way.
+                            response.setHeader("Pragma", "");
+                            response.setHeader("Expires", "");
+                            return;
+                        }
+                        response.setHeader("Cache-Control", "no-cache, must-revalidate, private");
+                        // Pragma is HTTP/1.0 and only meaningful on requests, but Spring's
+                        // default writer sets it and some intermediaries still read it as
+                        // "do not store". Set explicitly rather than left to chance.
+                        response.setHeader("Pragma", "no-cache");
+                        response.setHeader("Expires", "0");
+                    }))
             .exceptionHandling(ex -> ex.accessDeniedPage("/access-denied"));
 
         return http.build();

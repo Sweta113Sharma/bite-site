@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavbarScroll();
     initNavDrawer();
     registerServiceWorker();
+    initBfcacheSessionGuard();
     initPushToggle();
     initPushInvite();
     initOrderStatusWatch();
@@ -2214,5 +2215,44 @@ function initTipPrompt() {
     dialog.addEventListener('cancel', (event) => {
         event.preventDefault();
         proceed(null);
+    });
+}
+
+/**
+ * Revalidates the session when a page comes back from the browser's back/forward cache.
+ *
+ * <p>Pages used to be sent with `Cache-Control: no-store`, which barred them from that
+ * cache entirely and made every Back press a full navigation — the reason returning to the
+ * menu felt like opening the app again. They are now sent with `no-cache` instead, so Back
+ * is an instant restore (see the cacheControl block in SecurityConfig for the full
+ * reasoning).
+ *
+ * <p>The catch is what makes it fast: a restore does not ask the server. On a shared phone
+ * that means Back could bring a screen belonging to someone who has since logged out. So
+ * when — and only when — a page arrives from the cache, ask whether the session is still
+ * good, and reload if it is not. The reload lands on the login page because the security
+ * chain sends it there.
+ *
+ * <p>`event.persisted` is what distinguishes a genuine restore from an ordinary load, so
+ * this costs one small request on Back and nothing at all the rest of the time. Anything
+ * other than 204 counts as gone: a dead session redirects to the login page, which fetch
+ * follows and reports as a 200 full of HTML.
+ */
+function initBfcacheSessionGuard() {
+    window.addEventListener('pageshow', (event) => {
+        if (!event.persisted) {
+            return;
+        }
+        fetch('/api/session', { credentials: 'same-origin', cache: 'no-store' })
+            .then((response) => {
+                if (response.status !== 204) {
+                    window.location.reload();
+                }
+            })
+            .catch(() => {
+                // Offline. Reloading would replace a page the student can still read with
+                // an error, and the service worker is already built to keep them going
+                // without a network — so leave the restored page alone.
+            });
     });
 }

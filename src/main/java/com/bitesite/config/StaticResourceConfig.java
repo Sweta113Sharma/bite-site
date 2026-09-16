@@ -36,9 +36,15 @@ import java.time.Duration;
  *       it would strand a changed asset on returning devices with no way to recover.
  * </ul>
  *
- * <p>{@code /uploads/**} is deliberately absent. Those are user-uploaded menu photos,
- * they stay inside the security filter chain, and outlet staff replace them often enough
- * that a long cache would show stale food.
+ * <p>{@code /uploads/**} is deliberately absent from THIS class: those files are served
+ * by the handler in {@link WebConfig} and stay inside the security filter chain, which is
+ * what stamps nosniff on bytes a canteen uploaded. Their caching is set there instead —
+ * see the header writer in {@code SecurityConfig}, which gives them an immutable year.
+ *
+ * <p>That is a correction. This note used to say a long cache would show stale food
+ * because staff replace photos often. It would not: {@code FileStorageService} names every
+ * upload with a fresh UUID, so replacing a photo produces a new URL and the old one is
+ * simply never requested again. The old reasoning predated that naming.
  */
 @Configuration
 public class StaticResourceConfig implements WebMvcConfigurer {
