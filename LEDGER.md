@@ -52,8 +52,30 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-17
 
+### Deployment — `a40de1c`, `e2aabd7`, `70910e5`
+**Date:** 2026-09-16 20:33 UTC · **Run:** 35146776926 · **Outcome:** success
+
+- CI (run 35146776941) green before the deploy landed: 621 tests, exit 0.
+- **V39 applied in production in 532ms**, no Flyway retries and no "Communications link
+  failure" — the Burstable-tier risk this migration was carrying did not materialise.
+  `Migrating schema bitesite_db to version "39 - category images"` → `now at version v39`.
+- App started in 158.4s. The site served the PREVIOUS build for ~165 seconds after the
+  workflow reported success, then swapped. That is the documented cold-start window, not a
+  failed deploy — worth knowing, because a check run immediately after a green workflow
+  reads as "shipped nothing".
+- Verified on the live host afterwards: `cache-control: no-cache, must-revalidate, private`
+  (no-store gone), favicon-48.png 200 at 799 bytes and referenced from the page, sw.js
+  serving `NAV_NETWORK_TIMEOUT_MS = 800`, `/api/session` 302→/login when unauthenticated,
+  outlet portal 200.
+- Not verified in production: an uploaded image's immutable cache header (discovering a
+  real upload URL needs a login, and nobody should be poking at a live canteen's data to
+  prove a header). The rule is path-based and was verified locally against the identical
+  config.
+- `bitesite-web` pushed to its own remote; www.bitesite.in unchanged and still serving.
+
+
 ### `70910e5` — Expire failed payments, which never expired at all
-**Date:** 2026-09-17 · **Scope:** 7 files · **Deployed:** no
+**Date:** 2026-09-17 · **Scope:** 7 files · **Deployed:** yes (2026-09-16 20:33 UTC, run 35146776926)
 
 **What changed**
 - A declined payment left a red "Payment failed — Pay now" bar on every customer page
@@ -93,7 +115,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - `PAYMENT_TIMEOUT_MINUTES` overrides 15 per environment if it proves wrong in practice.
 
 ### `e2aabd7` — Stop the app re-fetching things it already has
-**Date:** 2026-09-17 · **Scope:** 12 files · **Deployed:** no
+**Date:** 2026-09-17 · **Scope:** 12 files · **Deployed:** yes (2026-09-16 20:33 UTC, run 35146776926)
 
 **What changed**
 - Back is a bfcache restore instead of a full page rebuild: `no-store` → `no-cache,
@@ -137,7 +159,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
   and api are excluded from page caching entirely, so the money path is unaffected.
 
 ### `a40de1c` — Give categories and colleges their own artwork
-**Date:** 2026-09-17 · **Scope:** 23 files · **Deployed:** no
+**Date:** 2026-09-17 · **Scope:** 23 files · **Deployed:** yes (2026-09-16 20:33 UTC, run 35146776926)
 
 **What changed**
 - The canteen picker leads with the student's college crest instead of a storefront glyph.
