@@ -314,6 +314,75 @@
    PHOTO UPLOAD WIDGET (canteen menu item form)
    ============================================================ */
 
+/* ============================================================
+   CROP DIALOG
+
+   Lives here rather than in the console layer because it extends .photo-dropzone below,
+   and that is used from both the admin and the outlet portal.
+   ============================================================ */
+
+/* Sized to the frame it contains (260px + the padding either side), not left to the
+   longest line of prose to decide. Without this the hint stretched the dialog to ~550px
+   and the frame sat in the left third of it with dead space alongside. */
+.crop-dialog {
+    border: var(--border-w) solid var(--color-ink);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    padding: var(--stack-md);
+    width: min(calc(100vw - 2rem), 312px);
+    box-sizing: border-box;
+}
+
+.crop-dialog::backdrop {
+    background: rgba(20, 16, 13, 0.55);
+}
+
+.crop-dialog__title {
+    font-family: var(--font-display);
+    font-size: var(--text-headline-md);
+    line-height: var(--lh-headline-md);
+    margin: 0 0 var(--stack-xs);
+}
+
+.crop-dialog__hint {
+    font-size: var(--text-body-md);
+    color: var(--color-ink-muted);
+    margin: 0 0 var(--stack-sm);
+}
+
+/* The frame IS the crop. Its size is mirrored by FRAME_PX in image-crop.js, which does the
+   pan/zoom maths in these units — change one and the other has to follow. */
+.crop-dialog__frame {
+    position: relative;
+    margin: 0 auto var(--stack-sm);
+    border: var(--border-w) solid var(--color-ink);
+    background: var(--color-surface-deep);
+    overflow: hidden;
+}
+
+.crop-dialog__canvas {
+    display: block;
+    touch-action: none;   /* the canvas handles the drag itself; let it, rather than scrolling the page */
+    cursor: grab;
+}
+.crop-dialog__canvas:active { cursor: grabbing; }
+
+.crop-dialog__zoom {
+    display: flex;
+    align-items: center;
+    gap: var(--stack-sm);
+    margin-bottom: var(--stack-md);
+}
+.crop-dialog__zoom input[type="range"] { flex: 1; }
+
+.crop-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--stack-sm);
+}
+
 .photo-dropzone {
     position: relative;
     border: 1.5px dashed var(--color-border);

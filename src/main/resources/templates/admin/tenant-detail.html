@@ -51,9 +51,24 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <h5 class="card-title"><span class="material-symbols-outlined">image</span>Logo</h5>
-                    <form method="post" th:action="@{/admin/tenants/{id}/logo(id=${tenant.id})}" enctype="multipart/form-data" class="d-flex gap-2">
-                        <input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" class="form-control" required="required"/>
-                        <button type="submit" class="btn btn-outline-primary"><span class="material-symbols-outlined">upload</span>Upload</button>
+                    <!--/* Was a bare file input with no preview at all, so an admin picked a
+                         file and only found out what it looked like after saving. Now the
+                         same dropzone the canteen's own logo form uses, with the crop
+                         enabled — this crest is drawn as an 88px square at the top of the
+                         canteen picker and at 28px in the navbar, so framing matters. */-->
+                    <form method="post" th:action="@{/admin/tenants/{id}/logo(id=${tenant.id})}" enctype="multipart/form-data">
+                        <label class="photo-dropzone" data-crop>
+                            <input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"/>
+                            <span class="photo-dropzone-preview">
+                                <img th:if="${tenant.logoPath != null}" th:src="@{${tenant.logoPath}}" alt=""/>
+                                <span th:if="${tenant.logoPath == null}" class="material-symbols-outlined" aria-hidden="true">apartment</span>
+                            </span>
+                            <span class="photo-dropzone-text">
+                                <strong th:text="${tenant.logoPath != null} ? 'Replace logo' : 'Add a logo'">Add a logo</strong>
+                                <span>PNG, JPEG, GIF, BMP or WebP — under 5MB. You'll get to square it up before it saves. Students see it when they pick a canteen.</span>
+                            </span>
+                        </label>
+                        <button type="submit" class="btn btn-outline-primary mt-2"><span class="material-symbols-outlined">upload</span>Upload</button>
                     </form>
                 </div>
             </div>

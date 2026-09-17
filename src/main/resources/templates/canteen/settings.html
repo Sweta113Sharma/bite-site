@@ -19,7 +19,7 @@
              not sizes. */-->
         <div class="mb-3">
             <label class="form-label">Logo (optional)</label>
-            <label class="photo-dropzone">
+            <label class="photo-dropzone" data-crop>
                 <input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp"/>
                 <span class="photo-dropzone-preview">
                     <img th:if="${outlet.logoPath != null}" th:src="@{${outlet.logoPath}}" alt=""/>
@@ -27,7 +27,7 @@
                 </span>
                 <span class="photo-dropzone-text">
                     <strong th:text="${outlet.logoPath != null} ? 'Replace logo' : 'Add a logo'">Add a logo</strong>
-                    <span>PNG, JPEG, GIF, BMP or WebP — under 5MB. Students see it on the canteen picker and your menu.</span>
+                    <span>PNG, JPEG, GIF, BMP or WebP — under 5MB. You'll get to square it up before it saves. Students see it on the canteen picker and your menu.</span>
                 </span>
             </label>
             <div class="form-check mt-2" th:if="${outlet.logoPath != null}">

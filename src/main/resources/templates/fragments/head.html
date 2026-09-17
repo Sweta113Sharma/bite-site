@@ -122,6 +122,9 @@
          Bootstrap overrides), so a student page that skipped it would lose them. */-->
     <link rel="stylesheet" th:href="@{/css/app-bundle.css}"/>
     <script th:src="@{/js/app.js}" defer></script>
+    <!--/* Square crop for logo uploads. Inert on every page that has no
+         .photo-dropzone[data-crop], which is most of them. */-->
+    <script th:src="@{/js/image-crop.js}" defer></script>
     <script th:src="@{/js/active-order-strip.js}" defer></script>
     <meta name="_csrf" th:content="${_csrf?.token}"/>
     <meta name="_csrf_parameter" th:content="${_csrf?.parameterName}"/>
