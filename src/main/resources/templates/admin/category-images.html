@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head}"></head>
-<body class="console">
+<body class="console console--has-sidebar">
 <div th:replace="~{fragments/navbar :: navbar}"></div>
+<div class="console-layout">
+<div th:replace="~{fragments/navbar :: adminSidebar}"></div>
+<main class="console-main">
 <div class="container" style="max-width: 760px;">
     <div class="console-head">
         <h3 class="console-head__title">Category images</h3>
@@ -30,9 +33,11 @@
         </div>
         <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center"
               th:action="@{/admin/category-images}">
-            <!--/* The normalised key travels, not the prettified label, so the row written
-                 matches what the menu will look up. */-->
-            <input type="hidden" name="categoryName" th:value="${c.nameKey()}"/>
+            <!--/* The label as a canteen typed it, NOT the normalised key. The service
+                 normalises whatever it receives to build the match key, and keeps the raw
+                 string only for display — so posting the key here produced a correct lookup
+                 with a lowercase label ("meals"), which is what this list then showed. */-->
+            <input type="hidden" name="categoryName" th:value="${c.displayName()}"/>
             <input type="file" name="image" class="form-control form-control-sm"
                    accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"
                    th:aria-label="'Image for ' + ${c.displayName()}"/>
@@ -57,7 +62,9 @@
             </div>
             <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center"
                   th:action="@{/admin/category-images}">
-                <input type="hidden" name="categoryName" th:value="${d.nameKey}"/>
+                <!--/* Display name, same reason as above: a replace must not quietly
+                     lowercase the label it is replacing. */-->
+                <input type="hidden" name="categoryName" th:value="${d.displayName}"/>
                 <input type="file" name="image" class="form-control form-control-sm"
                        accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"
                        th:aria-label="'Replace image for ' + ${d.displayName}"/>
@@ -83,6 +90,8 @@
                aria-label="Image file"/>
         <button type="submit" class="btn btn-primary">Set image</button>
     </form>
+</div>
+</main>
 </div>
 </body>
 </html>

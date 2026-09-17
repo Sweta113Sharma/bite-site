@@ -176,7 +176,28 @@
                         <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
                         <tbody>
                         <tr th:each="s : ${staff}" th:if="${s.role.isOutletPortalRole()}">
-                            <td th:text="${s.name}">Name</td>
+                            <!--/* Which counter this person actually works at, under the name
+                                 rather than in a column of its own. This card is col-md-6 and its
+                                 table already overflowed by ~200px before anything was added to
+                                 it — a sixth column pushed Status and Actions off the edge
+                                 entirely. A subline answers the same question and makes the table
+                                 narrower than it was.
+
+                                 "Not assigned" is not cosmetic: a staff account with no outlet
+                                 cannot be scoped to one, and it was previously indistinguishable
+                                 from a working account here. Flagged, not left blank. */-->
+                            <td>
+                                <span th:text="${s.name}">Name</span>
+                                <span class="d-block small text-muted"
+                                      th:if="${s.outletId != null and outletNames[s.outletId] != null}"
+                                      th:text="${outletNames[s.outletId]}">Canteen</span>
+                                <span class="d-block" th:if="${s.outletId == null}">
+                                    <span class="badge bg-warning text-dark">No canteen</span>
+                                </span>
+                                <span class="d-block" th:if="${s.outletId != null and outletNames[s.outletId] == null}">
+                                    <span class="badge bg-danger">Unknown canteen</span>
+                                </span>
+                            </td>
                             <td th:text="${s.email}">email</td>
                             <td>
                                 <span class="badge"

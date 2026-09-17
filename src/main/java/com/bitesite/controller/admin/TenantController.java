@@ -25,6 +25,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
+
+import java.util.List;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -77,8 +79,20 @@ public class TenantController {
         PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
         Tenant tenant = tenantService.get(id);
         model.addAttribute("tenant", tenant);
-        model.addAttribute("outlets", outletService.listAll(id));
+        List<com.bitesite.model.Outlet> outlets = outletService.listAll(id);
+        model.addAttribute("outlets", outlets);
         model.addAttribute("staff", userService.findByTenantId(id));
+        // Which canteen each staff account belongs to. The staff table listed name, email
+        // and role but never the outlet, so a college with two canteens showed both sets of
+        // staff in one list with nothing to tell them apart — and an account assigned to no
+        // canteen at all looked exactly like a working one.
+        //
+        // Built from the outlets already loaded above rather than queried: the page needs
+        // that list anyway for the canteen cards and the add-staff dropdown.
+        model.addAttribute("outletNames", outlets.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.bitesite.model.Outlet::getId, com.bitesite.model.Outlet::getName,
+                        (a, b) -> a)));
         model.addAttribute("statuses", TenantStatus.values());
         if (!model.containsAttribute("outletForm")) {
             model.addAttribute("outletForm", new OutletForm());

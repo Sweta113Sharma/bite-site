@@ -511,6 +511,16 @@
             <a class="console-sidebar__link" th:href="@{/admin/outlets}"
                th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/outlets')} ? 'is-active'">
                 <span class="material-symbols-outlined">storefront</span>Canteens</a>
+            <!--/* Platform artwork for menu sections. Under Platform beside Canteens because
+                 it is about what canteens show, not about money or oversight.
+
+                 NOTE: this file carries TWO navigations — the `console-nav__link` list
+                 further up and this `console-sidebar__link` one. The admin console renders
+                 THIS one. A link added only to the other is reachable by URL and by nothing
+                 else, which is exactly what happened to this screen. */-->
+            <a class="console-sidebar__link" th:href="@{/admin/category-images}"
+               th:classappend="${currentPath != null and #strings.startsWith(currentPath, '/admin/category-images')} ? 'is-active'">
+                <span class="material-symbols-outlined">image</span>Category images</a>
         </div>
 
         <!--/* Money */-->
