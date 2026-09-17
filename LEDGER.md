@@ -52,8 +52,21 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-17
 
+### Deployment — `6e1b2cb`, `0c357ac`
+**Date:** 2026-09-17 09:32 UTC · **Run:** 35205213350 · **Outcome:** success
+
+- CI (run 35205213312) green before the deploy landed.
+- No migration in this batch, so none of the Burstable-tier startup risk applied. App
+  started in 162.4s.
+- Verified afterwards: all three portals 200, liveness UP, new boot present in the
+  container log at 09:32:46 UTC.
+- Same swap window as the previous deploy: the workflow reports success roughly two and a
+  half minutes before production actually serves the new build. Checking immediately after
+  a green tick reads as "shipped nothing" and is not.
+
+
 ### `0c357ac` — Let an admin put a staff account on a canteen
-**Date:** 2026-09-17 · **Scope:** 7 files · **Deployed:** no
+**Date:** 2026-09-17 · **Scope:** 7 files · **Deployed:** yes (2026-09-17 09:32 UTC, run 35205213350)
 
 **What changed**
 - A staff account's canteen can now be set, or changed, from the college screen — a select
@@ -90,7 +103,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
   manager mid-service.
 
 ### `6e1b2cb` — Make the category images screen reachable, and name the canteen on staff rows
-**Date:** 2026-09-17 · **Scope:** 4 files · **Deployed:** no
+**Date:** 2026-09-17 · **Scope:** 4 files · **Deployed:** yes (2026-09-17 09:32 UTC, run 35205213350)
 
 **What changed**
 - The Category images screen now has a sidebar link and the console layout. It previously
