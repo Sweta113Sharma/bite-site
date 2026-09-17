@@ -52,6 +52,95 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-17
 
+### `68f8062` — Let people square up a logo before it uploads
+**Date:** 2026-09-17 · **Scope:** 6 files · **Deployed:** no
+
+**What changed**
+- Picking a canteen or college logo now opens a square frame you can drag and zoom before
+  it saves.
+- The college logo form gains a preview and the shared `.photo-dropzone` treatment; it was a
+  bare file input before.
+- New `static/js/image-crop.js`, opt-in per dropzone via `data-crop`.
+
+**Why**
+- Both logos are drawn as small squares — 28px in the navbar, 56px on the canteen picker,
+  88px on the crest above it — so a wide or off-centre source was letterboxed and nobody had
+  a say in the framing. On the college form there was not even a preview: you picked a file
+  and found out after saving.
+- Hand-written rather than a cropping library because the CSP permits scripts from this
+  origin and Razorpay only, so a CDN is out, and this project has been removing vendored
+  frontend dependencies rather than adding them.
+
+**Verified by**
+- Driven in a browser on both forms. A 900x300 image in three colour bands, panned left and
+  zoomed to 1.4, stored as 512x512 showing the band it was moved toward and **none** of the
+  one it was moved away from — so position and zoom were both honoured rather than a centre
+  crop being assumed.
+- On the canteen form: Cancel then Save left the logo NULL; Apply then Save stored a cropped
+  one. Checked at phone width as well as desktop.
+- **The EXIF question is settled, not assumed.** A 200x100 JPEG with red on the LEFT carrying
+  EXIF orientation 6 ("rotate 90 clockwise") stored as a square with red on TOP — exactly one
+  rotation. The browser applies orientation when decoding, the canvas export carries no EXIF
+  tag, so the server's own rotation step is a no-op rather than a second rotation.
+- 624 tests, exit 0.
+
+**Watch out for**
+- **The server is deliberately untouched.** The crop is written back into the original file
+  input via `DataTransfer`, so the same multipart form posts as before. If `DataTransfer` is
+  ever unavailable the script bails out and the original file uploads uncropped.
+- Export is at exactly 512 to match `ImageUploadProcessor.Kind.LOGO`, so the server has no
+  downscaling left to do. Changing one without the other means the crop gets resized after
+  the fact.
+- `FRAME_PX` in `image-crop.js` and the `.crop-dialog__frame` size in `05-shared.css` are the
+  same number in two places; the pan/zoom maths is in those units.
+- Output is PNG, not JPEG, because logos are often transparent and JPEG would flatten that to
+  black.
+- Menu item photos and category images are unchanged — crop is only on the two logos.
+
+### `038a95b` — Add a public /install page for a QR code to point at
+**Date:** 2026-09-17 · **Scope:** 5 files · **Deployed:** no
+
+**What changed**
+- New public `GET /install`: an add-to-home-screen landing page, meant to be the target of a
+  printed QR code.
+- `hasRole('USER')` moved off the `installPrompt` fragment definition and onto its include in
+  the student navbar.
+- New `[data-install-have-it]` and `[data-install-fallback]` hooks in `updateInstallButtons()`.
+
+**Why**
+- The app has had a complete install mechanism for a while, and none of it was reachable
+  without signing in: the sheet is included from the student navbar and only four signed-in
+  pages carry `data-install-auto`. There was no URL to print on a poster, which is aimed at
+  exactly the person who has no account yet.
+- Almost nothing new was needed. `fragments/head.html` loads `app.js` on every page with no
+  security gate, so `initInstallPrompt()` already runs on public pages and wires the button,
+  the auto-open and the sheet.
+
+**Verified by**
+- `/install` returns 200 while signed out and the sheet renders for an anonymous visitor.
+- The gate move is a no-op elsewhere, checked both ways: the sheet is still present for a
+  student on `/student/menu` and still absent for a canteen manager on `/canteen/queue`.
+- With a simulated `beforeinstallprompt` the sheet auto-opens on the `prompt` variant and its
+  Install button calls `prompt()` and closes; with an iPhone user agent it auto-opens on the
+  `ios` variant; with localStorage marking it installed the button hides and the note shows;
+  with none of those the fallback appears.
+- 624 tests, exit 0.
+
+**Watch out for**
+- **The last mile cannot be verified from here and was not.** `beforeinstallprompt` does not
+  fire under Playwright/CDP, and iOS Safari has no install API at all. The Android install
+  dialog and the iPhone Share flow each need a real device scanning the code.
+- A fourth state had to be added during the work: a browser that is neither Android-installable
+  nor iPhone (Firefox on Android, say) was being shown a page about installing with no way to
+  install and no explanation. It now gets browser-menu instructions, armed on a delay so it
+  cannot flash before Android's event arrives.
+- Caught by screenshot, not by reasoning: `bolt` is not in the subsetted icon font, so it
+  rendered as the literal text "BOLT" on the page. Swapped for `home`. `IconGlyphCoverageTest`
+  covers this and would have caught it at build time.
+- The install sheet's subtitle lost "keeps you signed in", which is presumptuous for a reader
+  with no account. That copy shows on the student pages too.
+
+
 ### Deployment — `6e1b2cb`, `0c357ac`
 **Date:** 2026-09-17 09:32 UTC · **Run:** 35205213350 · **Outcome:** success
 
