@@ -52,6 +52,70 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-17
 
+### `e6e25e6` — Let a student fix the college they picked at signup
+**Date:** 2026-09-17 · **Scope:** 11 files · **Deployed:** no
+
+**What changed**
+- A student can change their college from `/account/profile`, until their first order.
+- An admin can change it from `/admin/accounts` with that guard lifted, and is told how
+  many past orders the move strands before they confirm.
+- New `UserDao.updateTenant`, `OrderDao.countByUserId`, and three methods on `UserService`.
+- `bootstrap.min.css` regenerated: the new markup uses `mt-5` and `pt-4`, which were not in
+  the subset.
+
+**Why**
+- Nothing verifies which college a student belongs to. `RegistrationController` only checks
+  the chosen college is ACTIVE, `rollNo` is free text with no validation, and there is no
+  email-domain or invite check anywhere. So the college is a self-declared guess.
+- `uq_users_email UNIQUE (email)` then makes that guess permanent: the same address cannot
+  register again at the right college. There was no self-service fix and no admin fix. Three
+  colleges now sit on that dropdown and two of them are engineering institutes, which is not
+  a hard mistake to make.
+- This is the small half of a larger question — whether students should be able to browse and
+  order across colleges at all. That was planned in full and **deliberately not built**: all
+  three live colleges are in different cities (Kanpur, Pune, Greater Noida), so a switcher has
+  no user today, while the change would run through 44 call sites in the money path. See the
+  plan file for the design if it becomes worth doing.
+
+**Verified by**
+- Driven end to end against a local server with two real students, not stubs.
+  `student@second.local` (0 orders) moved college 2 → 3: the row changed, the audit row
+  landed with before=2/after=3, the cart emptied, the session survived (200, not a bounce to
+  login), and the picker afterwards read "niet greater noida".
+- **The block is server-side, not just a hidden form.** `student@demo.local` (26 orders) has
+  no form on the page; posting to the endpoint anyway left `tenant_id` at 1 and returned the
+  refusal message.
+- **A staff account cannot be moved.** Posting `/admin/accounts/3/college` for a
+  CANTEEN_MANAGER left their tenant unchanged and returned "Only a student account's college
+  can be changed here." The Move control is not drawn on staff rows either, confirmed by
+  screenshot: it appears on the USER row and on neither of the two staff rows.
+- **The admin warning is true, not reassuring.** After moving a student with 26 orders, the
+  orders were still 26 rows in the database — so the canteen's queue, settlement and GST are
+  untouched — and 0 of them rendered on the student's own history page. That is exactly what
+  the confirmation says will happen.
+- Sessions behave as intended both ways: self-service left 1 of 3 sessions alive (their own);
+  the admin path left 0, and the student's old cookie then redirected to `/login`.
+- The two staff-guard tests were proven to fail: deleting the guard turned both red, and only
+  those two.
+- 631 tests, exit 0. Both screens screenshotted at their real widths.
+
+**Watch out for**
+- **The order count is the whole safety argument.** `orders.tenant_id` is what puts an order
+  in a canteen's queue, its daily settlement and its GST invoice (V29), so a move must never
+  carry orders with it. Every student-side history read is tenant-scoped, so anything left
+  behind is invisible to them afterwards. If history is ever made user-scoped, this guard
+  becomes unnecessary and should go, not be worked around.
+- `changeOwnCollege` spares the caller's session and revokes the rest; the admin path passes
+  null and revokes all. A session holds a snapshot of the account taken at sign-in and nothing
+  re-reads it per request, so a phone left signed in would otherwise keep ordering from the
+  old college.
+- The guards live in `UserService`, not in the two controllers, on purpose. A third caller
+  that forgot one would be a tenant-isolation hole rather than a missing validation message.
+- Audit rows are recorded against the college being **arrived at**, with both ids in the
+  payload. The old college's trail keeps every row it had.
+- No migration. Nothing was added to the schema.
+- Not yet checked on a real phone, only at phone viewport.
+
 ### `68f8062` — Let people square up a logo before it uploads
 **Date:** 2026-09-17 · **Scope:** 6 files · **Deployed:** yes (2026-09-17 11:40 UTC, run 35216371318)
 
