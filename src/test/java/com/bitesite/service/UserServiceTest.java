@@ -39,6 +39,8 @@ class UserServiceTest {
     @Mock private com.bitesite.dao.FcmTokenDao fcmTokenDao;
     @Mock private com.bitesite.config.UserSessionRegistry userSessionRegistry;
     @Mock private com.bitesite.dao.OutletDao outletDao;
+    @Mock private com.bitesite.tenant.TenantDao tenantDao;
+    @Mock private com.bitesite.dao.OrderDao orderDao;
 
     // A real encoder, not a mock — this is exactly the kind of "does the password actually
     // verify afterward" property a mock would silently paper over.
@@ -49,7 +51,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         userService = new UserService(userDao, rateLimiter, passwordEncoder, auditService, emailService, otpService,
-                smsService, pushNotificationService, fcmTokenDao, userSessionRegistry, outletDao);
+                smsService, pushNotificationService, fcmTokenDao, userSessionRegistry, outletDao, tenantDao, orderDao);
     }
 
     @Test
@@ -616,5 +618,131 @@ class UserServiceTest {
         userService.deleteOwnAccount(42L, 1L);
 
         verify(userSessionRegistry).revokeAllSessions("gone@demo.local");
+    }
+
+    // ---------- Changing a student's college ----------
+    //
+    // The college is picked from a dropdown at signup with nothing verifying it, and
+    // uq_users_email then makes that choice permanent because the same address cannot
+    // register anywhere else. These pin the two halves of the way back: what a student may
+    // do alone, and what only an admin may do.
+
+    private com.bitesite.tenant.Tenant college(Long id, com.bitesite.tenant.TenantStatus status) {
+        return com.bitesite.tenant.Tenant.builder().id(id).name("College " + id).status(status).build();
+    }
+
+    private User student(Long id, Long tenantId) {
+        return User.builder().id(id).tenantId(tenantId).email("s@demo.local").name("A Student")
+                .role(Role.USER).roles(EnumSet.of(Role.USER)).build();
+    }
+
+    @Test
+    void aStudentWhoHasNotOrderedCanCorrectTheirOwnCollege() {
+        when(userDao.findById(7L)).thenReturn(Optional.of(student(7L, 1L)));
+        when(orderDao.countByUserId(7L)).thenReturn(0);
+        when(tenantDao.findById(2L)).thenReturn(Optional.of(college(2L, com.bitesite.tenant.TenantStatus.ACTIVE)));
+
+        userService.changeOwnCollege(7L, 2L, "this-session");
+
+        verify(userDao).updateTenant(7L, 2L);
+        // Their own device is spared; anything else signed in on the account is not, because
+        // each of those holds a principal still pointing at the college they just left.
+        verify(userSessionRegistry).revokeOtherSessions("s@demo.local", "this-session");
+        verify(auditService).record(7L, 2L, "User", 7L, "CHANGE_COLLEGE", 1L, 2L);
+    }
+
+    /**
+     * The guard the whole design rests on. An order belongs to the canteen that cooked it —
+     * orders.tenant_id is what puts it in that canteen's queue, settlement and GST invoice —
+     * so moving the student must never move their orders. Every screen a student reads their
+     * own history through is tenant-scoped, so orders left behind stop being visible to them.
+     * Refusing is the honest answer; silently stranding them is not.
+     */
+    @Test
+    void aStudentWhoHasOrderedCannotMoveThemselves() {
+        when(userDao.findById(7L)).thenReturn(Optional.of(student(7L, 1L)));
+        when(orderDao.countByUserId(7L)).thenReturn(3);
+
+        assertThatThrownBy(() -> userService.changeOwnCollege(7L, 2L, "this-session"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("placed an order");
+
+        verify(userDao, never()).updateTenant(any(), any());
+        verify(userSessionRegistry, never()).revokeOtherSessions(anyString(), anyString());
+    }
+
+    /**
+     * The one that matters for security. A staff or platform account's tenant_id is not a
+     * preference, it is the authorisation boundary every canteen and admin screen scopes to.
+     * Moving one through here would hand somebody another college's console, so the check
+     * lives in the service rather than in the two controllers that call it.
+     */
+    @Test
+    void aStaffAccountCannotBeMovedBetweenColleges() {
+        User manager = User.builder().id(9L).tenantId(1L).email("m@demo.local").name("A Manager")
+                .role(Role.CANTEEN_MANAGER).roles(EnumSet.of(Role.CANTEEN_MANAGER)).build();
+        when(userDao.findById(9L)).thenReturn(Optional.of(manager));
+
+        assertThatThrownBy(() -> userService.changeCollegeForStudent(9L, 2L, 1L))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(userDao, never()).updateTenant(any(), any());
+    }
+
+    /** Holding USER alongside a staff role is still a staff account, and still refused. */
+    @Test
+    void anAccountThatAlsoHoldsAStaffRoleCannotBeMoved() {
+        User dual = User.builder().id(9L).tenantId(1L).email("d@demo.local").name("Both")
+                .role(Role.USER).roles(EnumSet.of(Role.USER, Role.CANTEEN_OPERATOR)).build();
+        when(userDao.findById(9L)).thenReturn(Optional.of(dual));
+
+        assertThatThrownBy(() -> userService.changeCollegeForStudent(9L, 2L, 1L))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(userDao, never()).updateTenant(any(), any());
+    }
+
+    @Test
+    void aCollegeThatIsNotTakingStudentsIsRefused() {
+        when(userDao.findById(7L)).thenReturn(Optional.of(student(7L, 1L)));
+        when(orderDao.countByUserId(7L)).thenReturn(0);
+        when(tenantDao.findById(2L)).thenReturn(Optional.of(college(2L, com.bitesite.tenant.TenantStatus.SUSPENDED)));
+
+        assertThatThrownBy(() -> userService.changeOwnCollege(7L, 2L, "this-session"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("not taking students");
+
+        verify(userDao, never()).updateTenant(any(), any());
+    }
+
+    @Test
+    void movingToTheCollegeTheyAreAlreadyAtIsRefused() {
+        when(userDao.findById(7L)).thenReturn(Optional.of(student(7L, 1L)));
+        when(orderDao.countByUserId(7L)).thenReturn(0);
+        when(tenantDao.findById(1L)).thenReturn(Optional.of(college(1L, com.bitesite.tenant.TenantStatus.ACTIVE)));
+
+        assertThatThrownBy(() -> userService.changeOwnCollege(7L, 1L, "this-session"))
+                .isInstanceOf(BusinessException.class);
+
+        verify(userDao, never()).updateTenant(any(), any());
+    }
+
+    /**
+     * The escape hatch, for the student who rang up after ordering. The order check is
+     * deliberately absent, and every device is signed out rather than one being spared —
+     * the admin doing it has no session on that account to keep.
+     */
+    @Test
+    void anAdminCanMoveAStudentWhoHasAlreadyOrdered() {
+        when(userDao.findById(7L)).thenReturn(Optional.of(student(7L, 1L)));
+        when(tenantDao.findById(2L)).thenReturn(Optional.of(college(2L, com.bitesite.tenant.TenantStatus.ACTIVE)));
+
+        userService.changeCollegeForStudent(7L, 2L, 99L);
+
+        verify(userDao).updateTenant(7L, 2L);
+        verify(userSessionRegistry).revokeOtherSessions("s@demo.local", null);
+        verify(auditService).record(99L, 2L, "User", 7L, "CHANGE_COLLEGE", 1L, 2L);
+        // The count is only read to tell the admin what it costs, never to block them.
+        verify(orderDao, never()).countByUserId(7L);
     }
 }

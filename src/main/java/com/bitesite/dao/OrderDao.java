@@ -168,6 +168,18 @@ public interface OrderDao {
     boolean existsTokenForTenantToday(Long tenantId, String token);
 
     /**
+     * How many orders this student has ever placed, across every college.
+     *
+     * <p>Deliberately not tenant-scoped, and that is the point of it: it answers "has this
+     * person any order history at all", which is what decides whether their college can
+     * still be corrected. A tenant-scoped count would read zero for the very orders that
+     * make the change unsafe, once the account has already been moved once.
+     *
+     * <p>Covered by idx_orders_user.
+     */
+    int countByUserId(Long userId);
+
+    /**
      * Platform-wide token lookup for the support desk. Deliberately not tenant-scoped:
      * a super admin holds no tenantId, and a student handing over a token does not know
      * which tenant they belong to. Callers must gate this on the admin role — every

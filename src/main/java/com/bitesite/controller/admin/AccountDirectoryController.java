@@ -12,6 +12,8 @@ import com.bitesite.model.User;
 import com.bitesite.dao.OutletDao;
 import com.bitesite.service.TenantService;
 import com.bitesite.service.UserService;
+import com.bitesite.tenant.TenantDao;
+import org.springframework.security.access.AccessDeniedException;
 import com.bitesite.tenant.Tenant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -59,6 +61,7 @@ public class AccountDirectoryController {
 
     private final UserService userService;
     private final TenantService tenantService;
+    private final TenantDao tenantDao;
     // Injected directly, the way PlatformOversightController does for the same listing.
     private final OutletDao outletDao;
 
@@ -91,6 +94,9 @@ public class AccountDirectoryController {
         model.addAttribute("paged", paged);
         model.addAttribute("accounts", paged.items());
         model.addAttribute("tenants", tenantService.listAll());
+        // Only colleges a student can actually be moved to. UserService refuses a
+        // suspended one anyway; offering it and then erroring is just a worse way to say so.
+        model.addAttribute("activeTenants", tenantDao.findActive());
         model.addAttribute("roles", Role.values());
         model.addAttribute("q", q);
         model.addAttribute("selectedRole", role);
@@ -153,6 +159,39 @@ public class AccountDirectoryController {
         }
         // Returns to the filtered page they acted from, rather than dumping them at the
         // top of an unfiltered directory after every click.
+        return "redirect:/admin/accounts" + (back == null || back.isBlank() ? "" : "?" + back);
+    }
+
+    /**
+     * Moves a student to a different college.
+     *
+     * <p>The support half of a fix students can mostly do themselves. A college is chosen
+     * from a dropdown at signup with nothing to verify it, and {@code uq_users_email} then
+     * makes that choice permanent because the same address cannot register again. Students
+     * can correct it on their own profile, but only until their first order — after that
+     * there is history that cannot follow them, and somebody has to decide that is
+     * acceptable. This is where that decision gets made, and audited.
+     *
+     * <p>Only a student account can be moved: a staff or platform account's college is the
+     * authorisation boundary its console scopes to, not a preference. That rule is enforced
+     * in {@code UserService}, not here, so a second screen cannot reintroduce the hole.
+     */
+    @PostMapping("/{userId}/college")
+    public String changeCollege(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long userId,
+            @RequestParam Long tenantId, @RequestParam(required = false) String back,
+            RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        try {
+            int stranded = userService.ordersLeftBehindBy(userId);
+            userService.changeCollegeForStudent(userId, tenantId, principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("notice", stranded == 0
+                    ? "College changed. They have been signed out and will land on the new one."
+                    : "College changed. Their " + stranded + " past order"
+                            + (stranded == 1 ? "" : "s") + " stay with the old college and are no"
+                            + " longer visible to them.");
+        } catch (BusinessException | AccessDeniedException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/admin/accounts" + (back == null || back.isBlank() ? "" : "?" + back);
     }
 }

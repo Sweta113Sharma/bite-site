@@ -12,6 +12,8 @@ import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Role;
 import com.bitesite.model.Outlet;
 import com.bitesite.model.User;
+import com.bitesite.tenant.Tenant;
+import com.bitesite.tenant.TenantStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -47,6 +49,8 @@ public class UserService {
     private final FcmTokenDao fcmTokenDao;
     private final UserSessionRegistry userSessionRegistry;
     private final com.bitesite.dao.OutletDao outletDao;
+    private final com.bitesite.tenant.TenantDao tenantDao;
+    private final com.bitesite.dao.OrderDao orderDao;
 
     public User registerStudent(Long tenantId, String name, String rawEmail, String rawPassword,
             String phone, String rollNo) {
@@ -361,6 +365,111 @@ public class UserService {
         userDao.assignToOutlet(userId, outletId);
         endSessionsOf(target);
         auditService.record(actorUserId, tenantId, "User", userId, "ASSIGN_STAFF_OUTLET", previous, outletId);
+    }
+
+    // ---------- College ----------
+
+    /**
+     * Whether this student can still correct their own college.
+     *
+     * <p>Only before their first order, ever. An order belongs to the canteen that cooked
+     * it: {@code orders.tenant_id} is what puts it in that canteen's queue, its daily
+     * settlement and its GST invoice (see V29), so moving the student must never move their
+     * orders. But every screen a student reads their own history through is tenant-scoped,
+     * so orders left behind at the old college stop being visible <em>to them</em> while
+     * staying correct for everyone else.
+     *
+     * <p>Rather than half-fix that with a history rewrite, the change is simply refused once
+     * there is history to strand. That covers the case this exists for — someone who picked
+     * the wrong name off the signup dropdown and noticed — and sends the rarer, messier case
+     * to an admin who can be shown what it will cost.
+     */
+    public boolean canChangeOwnCollege(Long userId) {
+        return orderDao.countByUserId(userId) == 0;
+    }
+
+    /**
+     * A student correcting the college they chose at signup.
+     *
+     * <p>This existed nowhere. The college is picked from a dropdown during registration
+     * with nothing to verify it — {@code RegistrationController} only checks the college is
+     * active — and {@code uq_users_email} then makes the choice permanent, because the same
+     * address cannot register again anywhere else. Someone who tapped the wrong name had no
+     * way back and no way to ask for one.
+     */
+    public void changeOwnCollege(Long userId, Long newTenantId, String keepSessionId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!canChangeOwnCollege(userId)) {
+            throw new BusinessException(
+                    "Your college cannot be changed once you have placed an order. Contact support and we will move it for you.");
+        }
+        applyCollegeChange(target, newTenantId, userId, keepSessionId);
+    }
+
+    /**
+     * An admin moving a student, including one who has already ordered.
+     *
+     * <p>The order check is deliberately absent here rather than duplicated: this is the
+     * escape hatch for exactly the case self-service refuses. The caller is responsible for
+     * showing what it costs first, which is why {@link #ordersLeftBehindBy} exists.
+     */
+    public void changeCollegeForStudent(Long userId, Long newTenantId, Long actorUserId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+        applyCollegeChange(target, newTenantId, actorUserId, null);
+    }
+
+    /** How much history this move would strand, so an admin is told before they do it. */
+    public int ordersLeftBehindBy(Long userId) {
+        return orderDao.countByUserId(userId);
+    }
+
+    /**
+     * The guards, in one place, for both ways in.
+     *
+     * <p>They are here rather than in the two controllers for the same reason
+     * {@link #grantRole}'s are: this is the method that moves an account across a tenant
+     * boundary, so a future caller that forgot a check would be an isolation hole rather
+     * than a missing validation message.
+     *
+     * <p>Students only. A staff or platform account's {@code tenant_id} is not a preference,
+     * it is the authorisation boundary every canteen and admin screen scopes to, and moving
+     * one through here would hand somebody another college's console.
+     *
+     * <p>Sessions end for the same reason {@link #assignStaffToOutlet} ends them: the session
+     * holds a snapshot of the account taken at sign-in and nothing re-reads it per request,
+     * so a phone left signed in would keep browsing, and ordering from, the college this
+     * account just left.
+     *
+     * <p>{@code keepSessionId} spares the one doing it. A student correcting their own
+     * college should stay where they are and see it worked; an admin moving somebody has no
+     * session of theirs to keep, passes null, and every device that account is signed in on
+     * is ended.
+     */
+    private void applyCollegeChange(User target, Long newTenantId, Long actorUserId, String keepSessionId) {
+        if (!target.getRole().isAppPortalRole() || target.getRoles().stream().anyMatch(r -> !r.isAppPortalRole())) {
+            throw new AccessDeniedException("Only a student account's college can be changed here.");
+        }
+        Tenant tenant = tenantDao.findById(newTenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("College not found"));
+        if (tenant.getStatus() != TenantStatus.ACTIVE) {
+            throw new BusinessException(tenant.getName() + " is not taking students right now.");
+        }
+        Long previous = target.getTenantId();
+        if (newTenantId.equals(previous)) {
+            throw new BusinessException("That is already your college.");
+        }
+
+        userDao.updateTenant(target.getId(), newTenantId);
+        userSessionRegistry.revokeOtherSessions(target.getEmail(), keepSessionId);
+        // Recorded against the college they are arriving at, with both ids in the payload:
+        // the old college's audit trail keeps every row it already had, and the new one
+        // gains a row explaining where this account came from.
+        auditService.record(actorUserId, newTenantId, "User", target.getId(), "CHANGE_COLLEGE",
+                previous, newTenantId);
+        log.info("College changed: user={} from={} to={} by={}",
+                target.getEmail(), previous, newTenantId, actorUserId);
     }
 
     // ---------- Profile ----------

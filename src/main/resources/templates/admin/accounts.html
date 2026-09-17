@@ -94,6 +94,31 @@
                     <span th:if="${u.tenantId == null}">Platform</span>
                     <span th:if="${u.tenantId != null}" th:text="${collegeNames.get(u.tenantId)} ?: '(deleted)'">College</span>
                     <div th:if="${u.outletId != null}" th:text="${outletNames.get(u.outletId)} ?: ''">Canteen</div>
+
+                    <!--/* Sits in the cell it edits rather than in the actions column, because
+                         it is a correction to this value, not an action on the account.
+
+                         Students only. A staff account's college is the boundary its console
+                         scopes to, so moving one here would hand somebody another college's
+                         canteen; UserService refuses it, and this simply does not offer it.
+
+                         Students can do this themselves on their own profile — but only
+                         before their first order, because orders stay with the canteen that
+                         cooked them. This is the same change with that guard lifted, for the
+                         student who rang up after ordering. */-->
+                    <form method="post" class="m-0 mt-2 d-flex gap-1"
+                          th:if="${u.tenantId != null and u.role != null and u.role.appPortalRole
+                                   and manageable.get(u.id)}"
+                          th:action="@{/admin/accounts/{id}/college(id=${u.id})}"
+                          onsubmit="return confirm('Move this student to another college? Any past orders stay with their current college and stop being visible to them. They will be signed out of every device.');">
+                        <input type="hidden" name="back" th:value="${backQuery}"/>
+                        <select name="tenantId" class="form-select form-select-sm" style="width:auto;"
+                                th:aria-label="'Move ' + ${u.name} + ' to another college'">
+                            <option th:each="t : ${activeTenants}" th:value="${t.id}" th:text="${t.name}"
+                                    th:selected="${t.id == u.tenantId}">College</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Move</button>
+                    </form>
                 </td>
                 <td>
                     <span class="badge" th:classappend="${u.active} ? 'bg-success' : 'bg-secondary'"

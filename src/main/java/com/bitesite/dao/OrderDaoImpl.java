@@ -565,6 +565,13 @@ public class OrderDaoImpl implements OrderDao {
     }
 
     @Override
+    public int countByUserId(Long userId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM orders WHERE user_id = ?", Integer.class, userId);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public boolean existsTokenForTenantToday(Long tenantId, String token) {
         // token_day is the generated DATE(created_at) the uniqueness constraint sits on, so
         // the check and the constraint agree by construction, and both are resolved by the

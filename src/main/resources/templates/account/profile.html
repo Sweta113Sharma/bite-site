@@ -62,6 +62,54 @@
         </button>
     </form>
 
+    <!--/* Its own form, outside the one above, and not only because HTML forbids nesting
+         them. The fields above are a text box each and getting one wrong is a typo; this
+         moves the account to a different college's menus and empties the cart, so it should
+         not be reachable by someone who came here to fix their phone number. */-->
+    <div th:if="${currentCollege != null}" class="mt-5 pt-4" style="border-top: var(--rule-w) solid var(--rule-color);">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="material-symbols-outlined">apartment</span>
+            <h6 class="m-0">Your college</h6>
+        </div>
+
+        <div class="alert alert-success" th:if="${collegeChanged}">
+            College updated. You are now ordering at <strong th:text="${currentCollege.name}">College</strong>.
+        </div>
+        <div class="alert alert-danger" th:if="${collegeError}" th:text="${collegeError}"></div>
+
+        <!--/* Locked once there is history. An order belongs to the canteen that cooked it,
+             so moving the student cannot move their orders, and orders left at the old
+             college stop being visible to them. Rather than strand them silently, the
+             change is refused and a person is offered instead. */-->
+        <div th:unless="${canChangeCollege}">
+            <p class="mb-1"><strong th:text="${currentCollege.name}">College</strong></p>
+            <p class="text-muted small mb-0">
+                This cannot be changed here now that you have ordered — your past orders stay
+                with the canteen that made them. Email
+                <a href="mailto:support@bitesite.in">support@bitesite.in</a> and we will move it for you.
+            </p>
+        </div>
+
+        <form th:if="${canChangeCollege}" method="post" th:action="@{/account/profile/college}"
+              onsubmit="return confirm('Change your college? Anything in your cart will be removed.');">
+            <p class="text-muted small">
+                Picked the wrong one when you signed up? You can change it until you place your
+                first order.
+            </p>
+            <div class="mb-3">
+                <label class="form-label" for="profile-college">College</label>
+                <select name="tenantId" id="profile-college" class="form-select" required="required">
+                    <option th:each="c : ${colleges}" th:value="${c.id}" th:text="${c.name}"
+                            th:selected="${c.id == currentCollege.id}">College</option>
+                </select>
+                <div class="form-text">Your canteens, menus and prices all come from this.</div>
+            </div>
+            <button type="submit" class="btn btn-outline-secondary w-100 py-2">
+                <span class="material-symbols-outlined">check</span>Change college
+            </button>
+        </form>
+    </div>
+
     <p class="text-muted text-center mt-4 mb-5" style="font-size:0.88rem;">
         Looking for your password? <a th:href="@{/account/password}">Change it here</a>.
     </p>

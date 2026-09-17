@@ -57,6 +57,10 @@ public interface UserDao {
      * {@code UserService.assignStaffToOutlet}, which is the only intended caller. */
     void assignToOutlet(Long id, Long outletId);
 
+    /** Moves a student to a different college. Only ever called through
+     * {@code UserService}, which holds the guards that make it safe. */
+    void updateTenant(Long id, Long tenantId);
+
     /** Replaces the stored bcrypt hash. The caller is responsible for having established
      * that the request is legitimate — either the current password was checked, or a
      * single-use reset code was consumed. */
