@@ -41,6 +41,24 @@ public class SiteController {
                 .body(new ClassPathResource("static/offline.html"));
     }
 
+    /**
+     * The page a QR code points at: "add BiteSite to your home screen".
+     *
+     * <p>Public, which is the whole point. Every other route to the install sheet is behind
+     * a student login — it is included from the student navbar and opens by itself only on
+     * four signed-in pages — so there was no URL that could be printed on a poster or a
+     * table tent and scanned by someone who does not have an account yet.
+     *
+     * <p>No model attributes: which of the three states the page shows (installable,
+     * iPhone, already installed) is a property of the visitor's browser, not of the server,
+     * and app.js already works it out.
+     */
+    @GetMapping("/install")
+    public String install(Model model) {
+        model.addAttribute("pageTitle", "Add to home screen");
+        return "install";
+    }
+
     @GetMapping("/tenant-unavailable")
     public String tenantUnavailable(Model model) {
         model.addAttribute("pageTitle", "Site unavailable");

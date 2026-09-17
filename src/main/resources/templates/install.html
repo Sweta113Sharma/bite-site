@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<!--/* ============================================================
+     ADD TO HOME SCREEN — the page a QR code points at.
+
+     Public on purpose. Every other way into the install sheet is behind a student login
+     (the sheet is included from the student navbar, and only four "calm" pages carry
+     data-install-auto), which is no use at all for the thing this is for: a code printed
+     on a poster or a table tent, scanned by someone who may not have an account yet.
+
+     There is deliberately no new install machinery here. app.js is loaded on every page
+     by fragments/head.html with no security gate, so initInstallPrompt() already runs
+     here and wires everything below:
+       - [data-install-trigger]  the button, which bypasses the 14-day "Not now" snooze
+       - [data-install-auto]     opens the sheet by itself ~1.5s after paint
+       - the installPrompt fragment, which handles Android and iOS separately
+     ============================================================ */-->
+<div hidden data-install-auto></div>
+
+<div class="auth-shell">
+<main class="auth-main auth-main--flush">
+    <div class="auth-card welcome">
+
+        <div class="welcome-hero">
+            <div class="welcome-hero__copy">
+                <span class="welcome-hero__mark">BiteSite</span>
+                <h1 class="welcome-hero__title">Put BiteSite on your&nbsp;home screen.</h1>
+                <p class="welcome-hero__sub">Order ahead from your campus canteen. Opens full screen, like an app.</p>
+            </div>
+            <img class="welcome-hero__mascot" th:src="@{/img/mascot/bito-hero.png}"
+                 width="600" height="623" alt=""/>
+        </div>
+
+        <!--/* Three states, and app.js already knows which one applies. The install button
+             is shown by updateInstallButtons() only where a tap can actually do something
+             — Android once the browser reports the site installable, and iPhone always,
+             since Safari never reports it. The "already have it" note is the inverse, and
+             is what someone scanning the code a second time sees. */-->
+        <div class="welcome-actions">
+            <a href="#" role="button" class="btn btn-auth d-none"
+               id="install-page-button" data-install-trigger="data-install-trigger">
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>Add to home screen
+            </a>
+            <p class="text-muted small d-none" data-install-have-it>
+                Looks like you already have BiteSite installed. Open it from your home screen.
+            </p>
+            <!--/* Shown only when neither of the two above applies: a browser with no
+                 install API that is not an iPhone either. Without it this page would be
+                 about installing and offer no way to do it. */-->
+            <p class="text-muted small d-none" data-install-fallback>
+                Your browser doesn't offer this directly. Open the browser menu and look for
+                <strong>Add to Home screen</strong> or <strong>Install app</strong> — or open
+                this page in Chrome.
+            </p>
+            <a th:href="@{/login}" class="btn btn-auth btn-auth--ghost">Sign in</a>
+        </div>
+
+        <h2 class="welcome-section">Why bother</h2>
+        <ol class="welcome-steps">
+            <li class="welcome-steps__item">
+                <!--/* `home`, not `bolt`: the icon font is subsetted to what the app already
+                     draws (static/fonts/material-symbols.glyphs.txt), and an absent name
+                     renders as its own literal text — "BOLT" sat in the page until a
+                     screenshot showed it. IconGlyphCoverageTest fails the build on this. */-->
+                <span class="welcome-steps__icon"><span class="material-symbols-outlined">home</span></span>
+                <span class="welcome-steps__text"><strong>One tap to open</strong>No typing an address, no
+                    browser bars taking up the screen.</span>
+            </li>
+            <li class="welcome-steps__item">
+                <span class="welcome-steps__icon"><span class="material-symbols-outlined">notifications_active</span></span>
+                <span class="welcome-steps__text"><strong>Get a ping when it's ready</strong>Walk up and collect
+                    instead of watching the counter.</span>
+            </li>
+            <li class="welcome-steps__item">
+                <span class="welcome-steps__icon"><span class="material-symbols-outlined">storefront</span></span>
+                <span class="welcome-steps__text"><strong>Your canteen, ready when you get there</strong>Browse
+                    today's menu and prices before you walk over.</span>
+            </li>
+        </ol>
+
+        <p class="auth-foot">Available at colleges using BiteSite. You'll need an account at a participating campus.</p>
+        <p class="auth-legal text-muted mb-0">
+            <a th:href="@{/privacy-policy}" class="text-muted">Privacy policy</a> ·
+            <a th:href="@{/terms}" class="text-muted">Terms</a> ·
+            <a th:href="@{/refund-policy}" class="text-muted">Refund policy</a>
+        </p>
+    </div>
+</main>
+</div>
+
+<!--/* The same sheet the student pages use. Ungated here; see the note on its include in
+     fragments/navbar.html for why the role check lives there and not on the fragment. */-->
+<dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>
+</body>
+</html>

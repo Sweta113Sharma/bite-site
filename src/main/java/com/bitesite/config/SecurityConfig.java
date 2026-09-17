@@ -134,7 +134,10 @@ public class SecurityConfig {
                             // Second half of a platform sign-in. Reachable without being
                             // authenticated, because by definition you are not yet.
                             "/login/verify",
-                            "/manifest.webmanifest", "/sw.js", "/offline.html").permitAll()
+                            "/manifest.webmanifest", "/sw.js", "/offline.html",
+                            // The QR-code landing page. Public by design: the person it is
+                            // aimed at is standing at a canteen counter without an account.
+                            "/install").permitAll()
                     // Admin portal routes — any admin-portal role
                     .requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECH_MANAGER")
                     .requestMatchers("/techmgr/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "TECH_MANAGER")

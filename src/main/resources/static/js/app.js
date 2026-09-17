@@ -1369,6 +1369,11 @@ const INSTALL_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
 const INSTALL_DELAY_MS = 1500;
 
 let deferredInstallPrompt = null;
+/* Whether the "do it from the browser menu" fallback may show yet. Held back for a moment
+   after load: on Android, beforeinstallprompt arrives slightly AFTER first paint, so a
+   fallback that rendered immediately would flash and then be replaced by the real button.
+   Armed by initInstallPrompt, and only on a page that actually carries the element. */
+let installFallbackArmed = false;
 
 /** The site is already installed here, or is the Android app itself, so there is nothing
  * left to offer. */
@@ -1389,6 +1394,22 @@ function updateInstallButtons() {
     document.querySelectorAll('[data-install-trigger]').forEach(btn => {
         btn.classList.toggle('d-none', !isAvailable);
     });
+    /* The inverse, for the /install landing page: someone who scans the QR code a second
+       time, or who already has the app, should be told that rather than shown a button
+       that cannot do anything. Toggled from here so it tracks the same three moments the
+       buttons do — first paint, beforeinstallprompt, and appinstalled. */
+    document.querySelectorAll('[data-install-have-it]').forEach(el => {
+        el.classList.toggle('d-none', !alreadyInstalled());
+    });
+    /* Last resort for the /install page: a browser that has no install API and is not
+       iPhone (Firefox on Android, say) would otherwise be shown a page about installing
+       with no way to install and nothing explaining why. Hidden again if the event turns
+       up late, since this runs on every beforeinstallprompt. */
+    if (installFallbackArmed) {
+        document.querySelectorAll('[data-install-fallback]').forEach(el => {
+            el.classList.toggle('d-none', isAvailable || alreadyInstalled());
+        });
+    }
 }
 
 /* Registered at the top level, not in initInstallPrompt: Chrome can decide the site is
@@ -1446,6 +1467,15 @@ function installPromptWanted() {
 function initInstallPrompt() {
     updateInstallButtons();
     const sheet = document.getElementById('install-prompt');
+
+    // Twice INSTALL_DELAY_MS, so the sheet gets its chance to open first and Android's
+    // beforeinstallprompt gets time to arrive before we conclude it never will.
+    if (document.querySelector('[data-install-fallback]')) {
+        setTimeout(() => {
+            installFallbackArmed = true;
+            updateInstallButtons();
+        }, INSTALL_DELAY_MS * 2);
+    }
 
     const snooze = () => rememberInstall(INSTALL_DISMISSED_KEY, String(Date.now()));
 

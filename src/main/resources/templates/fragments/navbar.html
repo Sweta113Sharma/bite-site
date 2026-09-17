@@ -320,8 +320,16 @@
     </div>
     <!--/* The install sheet is in the DOM on every student page so the "Install app"
          entries in this drawer and on Account can open it anywhere. Whether it opens by
-         itself is decided per page: see data-install-auto. */-->
-    <dialog th:replace="~{fragments/navbar :: installPrompt}"></dialog>
+         itself is decided per page: see data-install-auto.
+
+         The hasRole('USER') gate is HERE rather than on the fragment itself, so that the
+         public /install page can render the same sheet to a visitor who has no account
+         yet. Putting it on the fragment made the sheet unreachable to anyone signed out,
+         which is exactly the person a QR code on a poster is aimed at. This include is
+         inside the student navbar either way, so nothing changes for the pages that
+         already had it. */-->
+    <dialog sec:authorize="hasRole('USER')"
+            th:replace="~{fragments/navbar :: installPrompt}"></dialog>
 </div>
 
 <!--/* ============================================================
@@ -360,13 +368,13 @@
      The share glyph is inline SVG because the icon font is subset to the icons the app
      already draws (see material-symbols.glyphs.txt) and ios_share is not one of them.
      ============================================================ */-->
-<dialog th:fragment="installPrompt" sec:authorize="hasRole('USER')"
+<dialog th:fragment="installPrompt"
         id="install-prompt" class="install-sheet" aria-labelledby="install-prompt-title">
     <div class="install-sheet__head">
         <img class="install-sheet__icon" th:src="@{/img/icons/icon-192.png}" alt="" width="56" height="56"/>
         <div>
             <h2 class="install-sheet__title" id="install-prompt-title">Get the BiteSite app</h2>
-            <p class="install-sheet__sub">Add it to your home screen. It opens full screen and keeps you signed in.</p>
+            <p class="install-sheet__sub">Add it to your home screen. It opens full screen and remembers you.</p>
         </div>
         <button type="button" class="install-sheet__close" data-install-dismiss aria-label="Close">
             <span class="material-symbols-outlined" aria-hidden="true">close</span>
