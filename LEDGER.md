@@ -53,7 +53,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 ## 2026-09-17
 
 ### `e6e25e6` — Let a student fix the college they picked at signup
-**Date:** 2026-09-17 · **Scope:** 11 files · **Deployed:** no
+**Date:** 2026-09-17 · **Scope:** 11 files · **Deployed:** yes (2026-09-17 16:09 UTC, run 35244055838)
 
 **What changed**
 - A student can change their college from `/account/profile`, until their first order.
@@ -115,6 +115,33 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
   payload. The old college's trail keeps every row it had.
 - No migration. Nothing was added to the schema.
 - Not yet checked on a real phone, only at phone viewport.
+
+
+### Deployment — `e6e25e6`
+**Date:** 2026-09-17 16:09 UTC · **Run:** 35244055838 · **Outcome:** success
+
+- CI (run 35244055892) green. Both workflows exit 0. No migration in this batch.
+- **A better swap signal than a new route.** This change added no public URL, so the
+  content hash on the vendored stylesheet was used instead: production emitted
+  `bootstrap.min-8823397266bc3ee2c4205343c12d47fb.css` (the md5 of the file at HEAD~2) until
+  the swap, then `ac55d472bfae3e84b7999ca5ea706817` (the md5 of the regenerated one). Exact,
+  and it needs nothing added to the app to make it observable. Worth reusing.
+- **Mid-swap the hashed stylesheet 404s, and briefly reads as 500.** During the window the
+  page still emitted the old hash while that file was already gone, so every page on
+  production was linking a stylesheet that did not resolve. It cleared on its own the moment
+  the swap finished. Alarming to walk into and not a fault: do not go looking for a resource
+  handler bug over it, and do not check a static asset for a minute or two after a green tick.
+- Verified on the live host afterwards:
+  - The hashed stylesheet serves 200, 49,474 bytes, **byte-identical** to the local file, and
+    contains the `.mt-5` and `.pt-4` rules the regeneration was for.
+  - `/account/profile` and `/account/profile/college` both 302 to `/login` while signed out,
+    which is the correct answer for an authenticated route and proves the mapping exists.
+  - All three portals 200, `/actuator/health/liveness` UP.
+- **Not verified in production, deliberately.** The two screens are behind a student and an
+  admin login, and checking them live would mean signing in as a real person's account. Both
+  were driven end to end locally against real accounts instead, including the
+  post-anyway bypass attempt and the staff-account refusal. What production confirms is that
+  the code shipped and routes; what confirms the behaviour is the local run and 631 tests.
 
 ### `68f8062` — Let people square up a logo before it uploads
 **Date:** 2026-09-17 · **Scope:** 6 files · **Deployed:** yes (2026-09-17 11:40 UTC, run 35216371318)
