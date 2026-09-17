@@ -52,6 +52,79 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-17
 
+### `0c357ac` — Let an admin put a staff account on a canteen
+**Date:** 2026-09-17 · **Scope:** 7 files · **Deployed:** no
+
+**What changed**
+- A staff account's canteen can now be set, or changed, from the college screen — a select
+  and an Assign/Move button under the person's name in Canteen staff accounts.
+- New: `UserDao.assignToOutlet`, `UserService.assignStaffToOutlet`, and
+  `POST /admin/tenants/{id}/staff/{userId}/outlet` (FULL_ADMIN).
+
+**Why**
+- An account could exist with no canteen — created that way, or left that way when its
+  outlet was deleted (`detachFromOutlet`). The screen could switch such an account off or
+  reset its password but not give it the one thing it lacked, so the only repair was
+  editing the database by hand. There is such an account in real data
+  (a CANTEEN_MANAGER on a live college with `outlet_id = NULL`).
+
+**Verified by**
+- Driven against the running app: the real unassigned account went from NULL to a canteen
+  and the action was audited as `ASSIGN_STAFF_OUTLET` with the previous value.
+- **Session revocation confirmed live**: a manager signed in and sitting on
+  `/canteen/categories` was bounced to the login page the moment they were moved. This
+  matters because every canteen screen reads `principal.getUser().getOutletId()`, which is
+  fixed at login — without revoking, the move would not take effect until their next
+  sign-in and they would keep working on the canteen they were moved OFF.
+- Two forged cross-college POSTs (wrong outlet, and wrong tenant on the path) changed
+  nothing. `TenantIsolationSecurityTest` now covers both directions plus the legitimate
+  move, because two passing negatives prove nothing on their own.
+- 624 tests, exit 0.
+
+**Watch out for**
+- The outlet id is a form value, so the service re-reads the outlet scoped to the college
+  being acted on. That check is the tenant-isolation boundary here — do not remove it.
+- Adding `OutletDao` to `UserService` broke `UserServiceTest`'s hand-built constructor; it
+  takes the dependency as a mock now. Any future constructor change breaks it the same way.
+- Moving someone signs them out. That is deliberate and worth knowing before doing it to a
+  manager mid-service.
+
+### `6e1b2cb` — Make the category images screen reachable, and name the canteen on staff rows
+**Date:** 2026-09-17 · **Scope:** 4 files · **Deployed:** no
+
+**What changed**
+- The Category images screen now has a sidebar link and the console layout. It previously
+  had neither.
+- Canteen staff rows show which canteen the account belongs to, with "No canteen" flagged.
+- Admin category-image uploads no longer lowercase the label they set.
+
+**Why**
+- `navbar.html` carries TWO navigations — a `console-nav__link` list and the
+  `console-sidebar__link` one — and the admin console renders the second. The link had been
+  added to the first, so the screen existed, worked, and was reachable only by typing the
+  URL. The page also included only the navbar and not `adminSidebar`, so landing on it
+  dropped the console navigation entirely. A note now sits in `navbar.html` so the next
+  person does not repeat it.
+- A college with two canteens listed all their staff in one table with nothing to tell them
+  apart, and an unassigned account looked identical to a working one.
+- The upload forms posted the normalised key as the category name, and the service keeps
+  whatever it receives as the display label — so setting an image for "Meals" relabelled it
+  "meals".
+
+**Verified by**
+- Driven in a browser: the sidebar link renders, clicking it navigates and marks the page
+  active exactly as neighbouring pages do; staff rows show the canteen for assigned
+  accounts and "No canteen" for the unassigned one; no page errors.
+- 621 tests at the time, exit 0.
+
+**Watch out for**
+- The staff table sits in a `col-md-6` card and **already overflowed its container by
+  ~200px** before any of this. The canteen went under the name rather than into a sixth
+  column for that reason — a column pushed Status and Actions off the edge entirely. The
+  pre-existing overflow is still there and was not addressed.
+- Two navigations still exist in `navbar.html`. Only one is rendered on the admin console.
+
+
 ### Infrastructure — close the HTTP login path, add a probe and two alerts
 **Date:** 2026-09-16 · **Scope:** Azure config only, no commit · **Deployed:** n-a (applied directly)
 
