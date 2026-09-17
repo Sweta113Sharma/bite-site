@@ -53,7 +53,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 ## 2026-09-17
 
 ### `68f8062` — Let people square up a logo before it uploads
-**Date:** 2026-09-17 · **Scope:** 6 files · **Deployed:** no
+**Date:** 2026-09-17 · **Scope:** 6 files · **Deployed:** yes (2026-09-17 11:40 UTC, run 35216371318)
 
 **What changed**
 - Picking a canteen or college logo now opens a square frame you can drag and zoom before
@@ -98,7 +98,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - Menu item photos and category images are unchanged — crop is only on the two logos.
 
 ### `038a95b` — Add a public /install page for a QR code to point at
-**Date:** 2026-09-17 · **Scope:** 5 files · **Deployed:** no
+**Date:** 2026-09-17 · **Scope:** 5 files · **Deployed:** yes (2026-09-17 11:40 UTC, run 35216371318)
 
 **What changed**
 - New public `GET /install`: an add-to-home-screen landing page, meant to be the target of a
@@ -140,6 +140,35 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - The install sheet's subtitle lost "keeps you signed in", which is presumptuous for a reader
   with no account. That copy shows on the student pages too.
 
+
+### Deployment — `038a95b`, `68f8062`
+**Date:** 2026-09-17 11:40 UTC · **Run:** 35216371318 · **Outcome:** success
+
+- CI (run 35216371319) green. Both workflows exit 0. The push carried three commits; the
+  ledger commit `42c706a` is only the head, and `paths-ignore` is evaluated across the whole
+  push, which is why a `.md` head commit still shows as the deploy's title.
+- No migration in this batch. V39 was already applied on the 20:32 UTC deploy the day before,
+  so none of the Burstable-tier startup risk applied here.
+- The swap window held for a third time: the workflow reported success at 11:36:47 UTC and
+  production did not serve the new build until roughly 165s later. `/install` is a route that
+  did not exist before, so it was a clean signal — 302 to `/login` on the old build, 200 on
+  the new one, with no ambiguity about whether a cached page was being read.
+- Verified on the live host afterwards:
+  - `/install` returns **200 while signed out**, 9,212 bytes, and carries all five hooks the
+    page depends on (`data-install-auto`, `data-install-trigger`, `data-install-have-it`,
+    `data-install-fallback`, `id="install-prompt"`).
+  - The gate move did not leak the sheet: `id="install-prompt"` appears **0 times** on
+    `/login` for all three portals and on `/register`.
+  - `/js/image-crop.js` serves 8,898 bytes as `text/javascript`, and `crop-dialog__frame` is
+    present in the deployed `app-bundle.css` — so the bundle regeneration shipped, not just
+    the parts.
+  - Cache headers are as intended either side of the split: `/install` is
+    `no-cache, must-revalidate, private`, `image-crop.js` is `max-age=31536000, immutable`.
+  - All three portals 200, `/actuator/health/liveness` UP.
+- **Still unverified, and only a phone can settle it.** `beforeinstallprompt` does not fire
+  under Playwright/CDP and iOS Safari has no install API, so the Android install dialog and
+  the iPhone Share flow each need a real device scanning the code. Everything up to the point
+  where the browser takes over is confirmed; the browser's own dialog is not.
 
 ### Deployment — `6e1b2cb`, `0c357ac`
 **Date:** 2026-09-17 09:32 UTC · **Run:** 35205213350 · **Outcome:** success
