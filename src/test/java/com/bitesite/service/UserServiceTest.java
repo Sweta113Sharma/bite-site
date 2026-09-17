@@ -38,6 +38,7 @@ class UserServiceTest {
     @Mock private OtpService otpService;
     @Mock private com.bitesite.dao.FcmTokenDao fcmTokenDao;
     @Mock private com.bitesite.config.UserSessionRegistry userSessionRegistry;
+    @Mock private com.bitesite.dao.OutletDao outletDao;
 
     // A real encoder, not a mock — this is exactly the kind of "does the password actually
     // verify afterward" property a mock would silently paper over.
@@ -48,7 +49,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         userService = new UserService(userDao, rateLimiter, passwordEncoder, auditService, emailService, otpService,
-                smsService, pushNotificationService, fcmTokenDao, userSessionRegistry);
+                smsService, pushNotificationService, fcmTokenDao, userSessionRegistry, outletDao);
     }
 
     @Test

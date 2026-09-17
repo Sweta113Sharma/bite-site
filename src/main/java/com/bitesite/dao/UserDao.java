@@ -52,6 +52,11 @@ public interface UserDao {
      * still resolve to a person. */
     void detachFromOutlet(Long id);
 
+    /** Points a staff account at an outlet. The caller is responsible for having checked
+     * that the outlet belongs to the same college — see
+     * {@code UserService.assignStaffToOutlet}, which is the only intended caller. */
+    void assignToOutlet(Long id, Long outletId);
+
     /** Replaces the stored bcrypt hash. The caller is responsible for having established
      * that the request is legitimate — either the current password was checked, or a
      * single-use reset code was consumed. */

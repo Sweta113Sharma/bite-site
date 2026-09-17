@@ -10,6 +10,7 @@ import com.bitesite.exception.BusinessException;
 import com.bitesite.exception.DuplicateEmailException;
 import com.bitesite.exception.ResourceNotFoundException;
 import com.bitesite.model.Role;
+import com.bitesite.model.Outlet;
 import com.bitesite.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,7 @@ public class UserService {
     private final PushNotificationService pushNotificationService;
     private final FcmTokenDao fcmTokenDao;
     private final UserSessionRegistry userSessionRegistry;
+    private final com.bitesite.dao.OutletDao outletDao;
 
     public User registerStudent(Long tenantId, String name, String rawEmail, String rawPassword,
             String phone, String rollNo) {
@@ -320,6 +322,45 @@ public class UserService {
         }
         auditService.record(actorUserId, tenantId, "User", userId,
                 active ? "REACTIVATE_STAFF" : "DEACTIVATE_STAFF", !active, active);
+    }
+
+    /**
+     * Points a canteen staff account at a canteen — or moves it to a different one.
+     *
+     * <p>Exists because an account could be created, or left by a deleted outlet, with no
+     * outlet at all, and there was no way to repair it from the console: the college screen
+     * could switch such an account off or reset its password, but not give it the one thing
+     * it was missing. A staff account with no outlet cannot be scoped to anything.
+     *
+     * <p>Guards mirror {@link #setTenantStaffActive}: the target must belong to this college
+     * and hold an outlet-portal role, so a crafted id cannot reach a platform account
+     * through this screen. The outlet is re-read scoped to the same college as well — an
+     * outlet id is a form value, and without that check one college's staff could be
+     * pointed at another college's canteen, which is a tenant-isolation hole rather than a
+     * mistake.
+     *
+     * <p>Sessions are revoked deliberately. Every canteen screen reads
+     * {@code principal.getUser().getOutletId()}, which is fixed at login — so without this
+     * the move would not take effect until they happened to sign in again, and until then
+     * they would keep working on the canteen they were moved OFF. Making them sign in again
+     * is the cheap way to be sure the old scope is gone.
+     */
+    public void assignStaffToOutlet(Long userId, Long outletId, Long tenantId, Long actorUserId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff account not found"));
+        if (!tenantId.equals(target.getTenantId()) || !target.getRole().isOutletPortalRole()) {
+            throw new ResourceNotFoundException("Staff account not found");
+        }
+        Outlet outlet = outletDao.findByIdAndTenantId(outletId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Canteen not found"));
+        if (outletId.equals(target.getOutletId())) {
+            throw new BusinessException(target.getName() + " is already at " + outlet.getName() + ".");
+        }
+
+        Long previous = target.getOutletId();
+        userDao.assignToOutlet(userId, outletId);
+        endSessionsOf(target);
+        auditService.record(actorUserId, tenantId, "User", userId, "ASSIGN_STAFF_OUTLET", previous, outletId);
     }
 
     // ---------- Profile ----------

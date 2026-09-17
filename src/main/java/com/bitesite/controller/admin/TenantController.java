@@ -268,6 +268,28 @@ public class TenantController {
     }
 
     /**
+     * Points a staff account at a canteen, or moves it to a different one.
+     *
+     * <p>FULL_ADMIN like its neighbours: which canteen someone can run is a permission, not
+     * a detail. The service re-checks that both the account and the canteen belong to this
+     * college before writing, and revokes the account's sessions so the move takes effect
+     * rather than waiting for their next sign-in.
+     */
+    @PostMapping("/{id}/staff/{userId}/outlet")
+    public String assignStaffOutlet(@AuthenticationPrincipal AppUserPrincipal principal, @PathVariable Long id,
+            @PathVariable Long userId, @RequestParam Long outletId, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.FULL_ADMIN);
+        try {
+            userService.assignStaffToOutlet(userId, outletId, id, principal.getUser().getId());
+            redirectAttributes.addFlashAttribute("staffNotice",
+                    "Canteen updated. They will be asked to sign in again, so the change takes effect straight away.");
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("staffError", e.getMessage());
+        }
+        return "redirect:/admin/tenants/" + id;
+    }
+
+    /**
      * Bulk menu upload. Onboarding a canteen otherwise means typing its whole menu in one
      * item at a time, which is the slowest part of getting a college live.
      *

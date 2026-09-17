@@ -173,6 +173,11 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
+    public void assignToOutlet(Long id, Long outletId) {
+        jdbcTemplate.update("UPDATE users SET outlet_id = ? WHERE id = ?", outletId, id);
+    }
+
+    @Override
     public void updateProfile(Long id, String name, String phone, String rollNo, boolean phoneVerified) {
         jdbcTemplate.update(
                 "UPDATE users SET name = ?, phone = ?, roll_no = ?, phone_verified = ? WHERE id = ?",

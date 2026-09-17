@@ -188,15 +188,32 @@
                                  from a working account here. Flagged, not left blank. */-->
                             <td>
                                 <span th:text="${s.name}">Name</span>
-                                <span class="d-block small text-muted"
-                                      th:if="${s.outletId != null and outletNames[s.outletId] != null}"
-                                      th:text="${outletNames[s.outletId]}">Canteen</span>
                                 <span class="d-block" th:if="${s.outletId == null}">
                                     <span class="badge bg-warning text-dark">No canteen</span>
                                 </span>
                                 <span class="d-block" th:if="${s.outletId != null and outletNames[s.outletId] == null}">
                                     <span class="badge bg-danger">Unknown canteen</span>
                                 </span>
+                                <!--/* Assigning is how an account with no canteen gets repaired, and
+                                     moving one is the same operation — so it is one control rather
+                                     than two. It lives under the name because that is where the
+                                     canteen was already shown and because this table has no
+                                     horizontal room to spare.
+
+                                     Offered only when the college actually has a canteen to point
+                                     at; with none, the fix is to add one first. */-->
+                                <form method="post" class="d-flex gap-1 mt-1"
+                                      th:if="${!#lists.isEmpty(outlets)}"
+                                      th:action="@{/admin/tenants/{id}/staff/{userId}/outlet(id=${tenant.id},userId=${s.id})}">
+                                    <select name="outletId" class="form-select form-select-sm"
+                                            th:aria-label="'Canteen for ' + ${s.name}">
+                                        <option th:each="o : ${outlets}" th:value="${o.id}"
+                                                th:text="${o.name}"
+                                                th:selected="${o.id == s.outletId}">Canteen</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                            th:text="${s.outletId == null} ? 'Assign' : 'Move'">Assign</button>
+                                </form>
                             </td>
                             <td th:text="${s.email}">email</td>
                             <td>

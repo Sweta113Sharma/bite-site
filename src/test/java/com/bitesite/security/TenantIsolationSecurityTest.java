@@ -19,6 +19,10 @@ import com.bitesite.tenant.TenantStatus;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import com.bitesite.exception.ResourceNotFoundException;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -53,11 +57,15 @@ class TenantIsolationSecurityTest {
     @Autowired private CategoryDao categoryDao;
     @Autowired private OrderDao orderDao;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private com.bitesite.service.UserService userService;
 
     private User studentA;
     private User studentB;
     private Order orderBelongingToStudentA;
     private MenuItem menuItemInCollegeB;
+    private User staffInCollegeA;
+    private Outlet canteenInCollegeA;
+    private Outlet canteenInCollegeB;
 
     @BeforeAll
     void seedTwoIndependentColleges() {
@@ -72,6 +80,14 @@ class TenantIsolationSecurityTest {
 
         Outlet outletA = outletDao.save(Outlet.builder().tenantId(collegeA.getId()).name("Canteen A").active(true).build());
         Outlet outletB = outletDao.save(Outlet.builder().tenantId(collegeB.getId()).name("Canteen B").active(true).build());
+        canteenInCollegeA = outletA;
+        canteenInCollegeB = outletB;
+
+        staffInCollegeA = userDao.save(User.builder()
+                .tenantId(collegeA.getId()).outletId(outletA.getId()).name("Manager A")
+                .email("isolation-manager-a-" + runId + "@test.local")
+                .passwordHash(passwordEncoder.encode("irrelevant"))
+                .role(Role.CANTEEN_MANAGER).activeRole(Role.CANTEEN_MANAGER).active(true).build());
 
         studentA = userDao.save(User.builder()
                 .tenantId(collegeA.getId()).name("Student A").email("isolation-student-a-" + runId + "@test.local")
@@ -95,6 +111,60 @@ class TenantIsolationSecurityTest {
                 .items(List.of())
                 .build();
         orderBelongingToStudentA = orderDao.createOrder(order);
+    }
+
+    /**
+     * Moving a staff account between canteens is a permission change, and the outlet id
+     * arrives as a form value — so the college it belongs to has to be re-checked on the
+     * server. Without that, an admin acting on one college's page could point that
+     * college's manager at another college's canteen, which is a tenant-isolation hole
+     * rather than a mistake.
+     */
+    @Test
+    void staffCannotBeAssignedToACanteenBelongingToAnotherCollege() {
+        Long originalOutlet = staffInCollegeA.getOutletId();
+
+        assertThatThrownBy(() -> userService.assignStaffToOutlet(
+                staffInCollegeA.getId(), canteenInCollegeB.getId(),
+                staffInCollegeA.getTenantId(), staffInCollegeA.getId()))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        assertThat(userDao.findById(staffInCollegeA.getId()).orElseThrow().getOutletId())
+                .isEqualTo(originalOutlet);
+    }
+
+    /**
+     * The mirror of the above: naming the OTHER college on the path does not help either,
+     * because the staff account is re-read scoped to the tenant being acted on.
+     */
+    @Test
+    void staffCannotBeReachedThroughAnotherCollegesTenantId() {
+        Long originalOutlet = staffInCollegeA.getOutletId();
+
+        assertThatThrownBy(() -> userService.assignStaffToOutlet(
+                staffInCollegeA.getId(), canteenInCollegeB.getId(),
+                canteenInCollegeB.getTenantId(), staffInCollegeA.getId()))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        assertThat(userDao.findById(staffInCollegeA.getId()).orElseThrow().getOutletId())
+                .isEqualTo(originalOutlet);
+    }
+
+    /** The legitimate move still works, or the guards above would be proving nothing. */
+    @Test
+    void staffCanBeMovedBetweenCanteensOfTheirOwnCollege() {
+        Outlet second = outletDao.save(Outlet.builder()
+                .tenantId(staffInCollegeA.getTenantId()).name("Canteen A2").active(true).build());
+
+        userService.assignStaffToOutlet(staffInCollegeA.getId(), second.getId(),
+                staffInCollegeA.getTenantId(), staffInCollegeA.getId());
+
+        assertThat(userDao.findById(staffInCollegeA.getId()).orElseThrow().getOutletId())
+                .isEqualTo(second.getId());
+
+        // Put it back so ordering between tests cannot matter.
+        userService.assignStaffToOutlet(staffInCollegeA.getId(), canteenInCollegeA.getId(),
+                staffInCollegeA.getTenantId(), staffInCollegeA.getId());
     }
 
     @Test
