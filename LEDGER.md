@@ -52,6 +52,66 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ## 2026-09-18
 
+### `4ac6a4e` — Add a long-running soak test of a whole lunch service over real HTTP
+**Date:** 2026-09-18 · **Scope:** 2 files · **Deployed:** n-a (test only)
+
+**What changed**
+- `LongRunningOrderSoakTest` (opt-in, `-Dstress=true`, ~17 min). Students, staff and an
+  admin over real HTTP; every Razorpay confirmation ordering; cancellations, item removals,
+  promo and daily caps; audit of every order and rupee; MySQL snapshot when the pool queues.
+- One line in `CLAUDE.md` on how to run it.
+
+**Why**
+- The existing stress test is a seconds-long service-layer burst. Nothing exercised sessions
+  in MySQL, the pool over time, CSRF under load, webhook/callback races or staff collisions.
+
+**Verified by**
+- Three full runs (1,170 arrivals each, 3 colleges × 3 canteens) plus a smoke run, reports in
+  `target/stress-reports/`. Across ~125k requests: 0 5xx, 0 403, refunds sent = refunds owed,
+  promo caps exact at 40, daily caps exact at 30, no duplicate tokens or live pickup codes, no
+  cross-college rows. Run 3: 110–119 completed per canteen, p95 23–40ms, pool peak 4/10.
+- Normal suite unaffected: the test skips without `-Dstress=true` (641 run, 0 failures, 5 skipped at the time).
+
+**Watch out for**
+- **It fails today, on purpose:** 11 (run 2) and 6 (run 3) orders reached READY_FOR_PICKUP
+  twice. `OrderService.advanceStatus` checks then updates with no status predicate, so two staff
+  taps both win and the pickup code is re-issued. Not fixed.
+- Also found, not fixed: READY is committed before the pickup code (5s gap seen under load; a
+  failure there strands the order with no code), and `SavedCartDaoImpl.save` deadlocks
+  (19 and 10 per run: DELETE-then-INSERT gap locks under REPEATABLE READ).
+- One 30s pool exhaustion in run 2 (165 waiting, 18.4s max). Cause not found; the session-cleanup
+  theory was tested in run 3 (500 sessions deleted under peak load) and refuted.
+- Leaves its rows in `bitesite_test_db`, like the other stress tests. Local only; never point it at production.
+
+### `c3aa66b` — Count only wrong passwords toward the login limit
+**Date:** 2026-09-18 · **Scope:** 4 files · **Deployed:** no
+
+**What changed**
+- `LoginRateLimitFilter` now refuses only when a budget of *failures* is spent: address +
+  account (10 per 5 min, email SHA-256-hashed in the key) or address alone (100 per 5 min).
+- `LoginFailureHandler` records a failure only for `BadCredentialsException`.
+- `RateLimiter.isBlocked`: read-only check, for limits that count some outcomes only.
+- New `LoginRateLimitTest` (3 cases).
+
+**Why**
+- Every POST /login counted, successes included, at 10 per 5 min per IP. The 11th student on
+  one campus network inside 5 minutes was refused with the right password (reproduced locally).
+- Unverified: whether production sees real client IPs at all. The read-only query on
+  `rate_limit_window` could not run (Azure MySQL firewall refuses this machine; the session's
+  permission rules also blocked it). Locally, with Azure detection env vars, Spring did honour
+  `X-Forwarded-For` from a private-range peer. If production does not, the old limit was
+  10 logins per 5 min for the whole platform; the new one is 100 failures.
+
+**Verified by**
+- `LoginRateLimitTest`: 25 correct logins from one address all pass; 10 wrong passwords block
+  that account from that address only (other students there, and the victim elsewhere, get in);
+  100 failures from one address block it. Run against the old code: fails at student 11.
+- `mvn test` on JDK 21: 644 run, 0 failures, 5 skipped.
+
+**Watch out for**
+- Existing `login:<ip>` rows in production go unused and age out via `evictStale`.
+- Registration and password reset are still counted per IP on every attempt; same NAT exposure, lower traffic. Not changed.
+
 ### `73bebcb` — Let canteens picture the All Dishes chip, and crop every upload first
 **Date:** 2026-09-18 · **Scope:** 20 files · **Deployed:** no
 
