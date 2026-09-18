@@ -50,6 +50,78 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 
 ---
 
+## 2026-09-18
+
+### `73bebcb` — Let canteens picture the All Dishes chip, and crop every upload first
+**Date:** 2026-09-18 · **Scope:** 20 files · **Deployed:** no
+
+**What changed**
+- **All Dishes chip gets a picture.** `/canteen/categories` has an "All Dishes" card at the
+  top (upload / remove). `/admin/category-images` has an "All Dishes" section setting the
+  platform default. Students see the canteen's own, else the platform's, else the bundled
+  ramen, exactly as before for anyone who uploads nothing.
+- **Cropper on every image upload.** Category images (canteen and admin), menu item photos
+  and both logo forms open `image-crop.js` when a file is picked. Square for chips and logos,
+  4:3 for menu photos. Drag, pinch, wheel, −/+ buttons, slider or arrow keys; Rotate, Fit
+  whole (leaves see-through edges), Reset; a preview at the size the app draws it. On
+  category rows "Save image" submits at once; Cancel/Escape leaves the current picture alone.
+- **Compression before upload.** The crop is encoded at exactly the server's kept size as
+  lossy WebP (JPEG, or PNG only if transparent, where the browser cannot encode WebP).
+  Menu form shows the saving, e.g. "Cropped: 1.4MB → 154KB".
+- **Category images stored smaller:** `ImageUploadProcessor.Kind.CATEGORY_IMAGE` 400px /
+  0.85 → 256px / 0.75.
+- New migration `V40__all_dishes_image.sql` (nullable `outlets.all_dishes_image_path`); new
+  platform_settings key `category_image.all_dishes`.
+
+**Why**
+- The user could not set a graphic for "All Dishes": it is not a category, so the V39 tables
+  had nowhere to store it and the template hard-coded `/img/food/food_ramen.png`.
+- Pictures are drawn in fixed shapes (58px square chips, 4:3 dish cards), so any other shape
+  was centre-cropped by `object-fit` with no say from the uploader. The logo cropper
+  (68f8062) existed but only logos used it, and it had no pinch, no context outside the
+  frame, and a canvas that rendered at 1x on retina screens.
+- A phone photo was being posted whole (2–8MB on a campus connection) and thrown away
+  server-side, and anything over 5MB was refused outright.
+
+**Verified by**
+- `mvn test` on JDK 21: 640 run, 0 failures, 4 skipped (the opt-in stress/profile tests).
+  Includes 9 new `CategoryImageServiceTest` cases (fallback order, blank setting = unset,
+  cache invalidated on set/clear, cross-tenant outlet id → not found and nothing stored) and
+  the DB-backed security tests, which applied V40 to `bitesite_test_db` cleanly.
+- V40 applied to local `bitesite_db` on boot (v39 → v40).
+- Driven in Playwright's Chromium against the local app, desktop 1280×900 and phone 390×844
+  (DPR 3, touch): All Dishes crop + save stored a 256×256 WebP of 11,136 bytes; wheel zoom,
+  drag, −/+ buttons, Fit whole, Reset all moved the slider as expected; Escape cleared the
+  input and restored the row preview, and re-picking reopened the cropper; menu photo came
+  out 1600×1200 WebP, 1.4MB → 154KB, form not auto-submitted; on the phone the dialog fit
+  with nothing overflowing and a CDP two-finger pinch took the slider 152 → 731; admin
+  "All Dishes" default set via the cropper.
+- Fallback chain driven through the UI: own set → student chip showed it; canteen removed
+  it → chip showed the platform default and the card said "Using the platform image"; admin
+  removed that → chip showed `/img/food/food_ramen.png`.
+- Server compression measured with the real `scaleToFit` + WebP writer: ramen illustration
+  24,212 → 15,558 bytes, a photo 10,088 → 4,440 bytes (400/0.85 → 256/0.75); both inspected
+  by eye, no visible ringing or blocking.
+- Local dev data restored afterwards: test uploads removed through the UI, the leftover
+  NULL settings row and the four orphaned test files deleted.
+
+**Watch out for**
+- **Migration V40** runs on the next deploy. Additive and nullable; nothing reads the column
+  until this code is live, so order does not matter.
+- **Only Chromium was driven.** Safari (no WebP encoding from canvas: falls to JPEG/PNG path,
+  never exercised) and a real Android device / the Capacitor WebView are unverified.
+- On production, students already receive a Cloudinary-derived 160px chip
+  (`c_limit,f_auto,q_auto`), so the stored-size cut mostly saves storage and upload time,
+  not student bandwidth. On local disk storage it is also what students download.
+- Replacing an image still leaves the old file in storage (pre-existing, same as V39).
+- In the Playwright runs the crop stage showed a focus ring on open, because the file was
+  set without a click. After a real tap it should not match `:focus-visible`; not confirmed
+  on a device.
+- One Playwright run timed out loading the student menu before any change was made; two
+  reruns and a standalone probe passed. Cause not found.
+- Static files are served under a content hash computed at startup, so editing JS/CSS in
+  `target/classes` of a running app changes nothing the browser sees. Restart to test.
+
 ## 2026-09-17
 
 ### `e6e25e6` — Let a student fix the college they picked at signup
