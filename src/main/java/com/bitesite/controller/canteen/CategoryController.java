@@ -41,6 +41,8 @@ public class CategoryController {
                 categoryImageService.resolveForCategories(categories, user.getOutletId(), user.getTenantId()));
         model.addAttribute("ownImageCategoryIds",
                 categoryImageService.outletOwnedCategoryIds(user.getOutletId(), user.getTenantId()));
+        model.addAttribute("allDishesImage",
+                categoryImageService.allDishesImageForOutlet(user.getOutletId(), user.getTenantId()));
         model.addAttribute("pageTitle", "Categories");
         return "canteen/categories";
     }
@@ -134,6 +136,38 @@ public class CategoryController {
         User user = principal.getUser();
         categoryImageService.clearOutletImage(id, user.getTenantId());
         redirectAttributes.addFlashAttribute("categoryNotice", "Category image removed.");
+        return "redirect:/canteen/categories";
+    }
+
+    /**
+     * Sets this canteen's picture for the "All Dishes" chip. That chip is not a category,
+     * so it has its own route; the outlet comes from the signed-in user, never the form.
+     */
+    @PostMapping("/all-dishes/image")
+    public String setAllDishesImage(@AuthenticationPrincipal AppUserPrincipal principal,
+            @RequestParam("image") MultipartFile image, RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
+        User user = principal.getUser();
+        if (image == null || image.isEmpty()) {
+            redirectAttributes.addFlashAttribute("categoryError", "Choose an image first.");
+            return "redirect:/canteen/categories";
+        }
+        try {
+            categoryImageService.setOutletAllDishesImage(user.getOutletId(), user.getTenantId(), image);
+            redirectAttributes.addFlashAttribute("categoryNotice", "\"All Dishes\" image updated.");
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("categoryError", e.getMessage());
+        }
+        return "redirect:/canteen/categories";
+    }
+
+    @PostMapping("/all-dishes/image/remove")
+    public String removeAllDishesImage(@AuthenticationPrincipal AppUserPrincipal principal,
+            RedirectAttributes redirectAttributes) {
+        PortalGuard.requireScope(principal.getUser(), StaffScope.OUTLET_MANAGE);
+        User user = principal.getUser();
+        categoryImageService.clearOutletAllDishesImage(user.getOutletId(), user.getTenantId());
+        redirectAttributes.addFlashAttribute("categoryNotice", "\"All Dishes\" image removed.");
         return "redirect:/canteen/categories";
     }
 }

@@ -12,6 +12,47 @@
     <div class="alert alert-success" th:if="${categoryNotice}" th:text="${categoryNotice}"></div>
     <div class="alert alert-danger" th:if="${categoryError}" th:text="${categoryError}"></div>
 
+    <!--/* The "All Dishes" chip: first on the menu, clears the filter, and is not a category,
+         so it cannot be renamed, reordered or deleted. Only its picture is the canteen's
+         to choose. Same three states as a real category below, except that "nothing set"
+         means the bundled bowl illustration rather than a borrowed dish photo. */-->
+    <div class="outlet-admin-card">
+        <div class="outlet-admin-card__head">
+            <span class="outlet-admin-card__name">All Dishes</span>
+            <span class="badge bg-secondary">First chip</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <span class="category-image-preview" id="cat-preview-all">
+                <img th:src="${allDishesImage.path() != null} ? @{${allDishesImage.path()}} : @{/img/food/food_ramen.png}" alt=""/>
+            </span>
+            <div class="flex-grow-1">
+                <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center"
+                      th:action="@{/canteen/categories/all-dishes/image}">
+                    <input type="file" name="image" class="form-control form-control-sm"
+                           accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"
+                           aria-label="Image for All Dishes"
+                           data-crop data-crop-submit data-crop-size="256" data-crop-preview="#cat-preview-all"
+                           data-crop-title="Frame the All Dishes image"/>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Upload</button>
+                </form>
+                <div class="small text-muted mt-1">
+                    <span th:if="${allDishesImage.outletOwned()}">Your own image.</span>
+                    <span th:if="${!allDishesImage.outletOwned() and allDishesImage.path() != null}">
+                        Using the platform image — upload one to override it here.
+                    </span>
+                    <span th:if="${allDishesImage.path() == null}">
+                        No image yet — students see the default bowl illustration.
+                    </span>
+                </div>
+            </div>
+            <form method="post" th:if="${allDishesImage.outletOwned()}"
+                  th:action="@{/canteen/categories/all-dishes/image/remove}"
+                  onsubmit="return confirm('Remove your image for All Dishes?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+            </form>
+        </div>
+    </div>
+
     <div class="outlet-admin-card" th:each="c : ${categories}">
         <div class="outlet-admin-card__head">
             <span class="outlet-admin-card__name" th:text="${c.name}">Category</span>
@@ -35,16 +76,22 @@
              has, and nothing here is broken. Only an image this outlet uploaded can be
              removed. */-->
         <div class="d-flex align-items-center gap-3 mb-2">
-            <span class="category-image-preview">
+            <span class="category-image-preview" th:id="'cat-preview-' + ${c.id}">
                 <img th:if="${categoryImages[c.id] != null}" th:src="@{${categoryImages[c.id]}}" alt=""/>
                 <span th:if="${categoryImages[c.id] == null}" class="material-symbols-outlined">restaurant</span>
             </span>
             <div class="flex-grow-1">
+                <!--/* data-crop: picking a file opens the square cropper, and data-crop-submit
+                     saves as soon as the crop is accepted. Without JavaScript the plain
+                     input and the Upload button still work, uncropped. */-->
                 <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center"
                       th:action="@{/canteen/categories/{id}/image(id=${c.id})}">
                     <input type="file" name="image" class="form-control form-control-sm"
                            accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"
-                           th:aria-label="'Image for ' + ${c.name}"/>
+                           th:aria-label="'Image for ' + ${c.name}"
+                           data-crop data-crop-submit data-crop-size="256"
+                           th:data-crop-preview="'#cat-preview-' + ${c.id}"
+                           th:data-crop-title="'Frame the image for ' + ${c.name}"/>
                     <button type="submit" class="btn btn-sm btn-outline-secondary">Upload</button>
                 </form>
                 <div class="small text-muted mt-1">

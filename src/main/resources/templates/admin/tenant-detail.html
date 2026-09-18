@@ -57,7 +57,7 @@
                          enabled — this crest is drawn as an 88px square at the top of the
                          canteen picker and at 28px in the navbar, so framing matters. */-->
                     <form method="post" th:action="@{/admin/tenants/{id}/logo(id=${tenant.id})}" enctype="multipart/form-data">
-                        <label class="photo-dropzone" data-crop>
+                        <label class="photo-dropzone" data-crop data-crop-quality="0.95" data-crop-title="Position the college logo">
                             <input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required="required"/>
                             <span class="photo-dropzone-preview">
                                 <img th:if="${tenant.logoPath != null}" th:src="@{${tenant.logoPath}}" alt=""/>

@@ -53,6 +53,11 @@ public class Outlet {
      * or an absolute CDN URL, rendered as-is. Null falls back to the storefront glyph. */
     private String logoPath;
 
+    /** This canteen's own picture for the "All Dishes" chip on the student menu. Null
+     * falls back to the platform default, then the bundled illustration — see
+     * {@link com.bitesite.service.CategoryImageService#allDishesChipImage}. */
+    private String allDishesImagePath;
+
     // ---- commercial terms ----
     /** This canteen's negotiated cut. Null inherits the platform default, so moving the
      *  default moves everyone who never negotiated and nobody who did. */

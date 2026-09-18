@@ -10,7 +10,12 @@
           th:action="${itemId != null} ? @{/canteen/menu/{id}(id=${itemId})} : @{/canteen/menu}">
         <div class="mb-3">
             <label class="form-label">Photo (optional)</label>
-            <label class="photo-dropzone">
+            <!--/* 4:3 because every place a student sees this photo is 4:3: the menu card,
+                 the deals rail and the dish page. The cart and this console's list take a
+                 centre square of it. 1600 wide is ImageUploadProcessor.Kind.MENU_PHOTO's
+                 limit, so the server has no resizing left to do. */-->
+            <label class="photo-dropzone" data-crop data-crop-aspect="4:3" data-crop-size="1600"
+                   data-crop-title="Frame the dish photo">
                 <input type="file" name="photo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp"/>
                 <span class="photo-dropzone-preview">
                     <img th:if="${currentPhotoPath != null}" th:src="@{${currentPhotoPath}}" alt=""/>
@@ -18,7 +23,8 @@
                 </span>
                 <span class="photo-dropzone-text">
                     <strong th:text="${currentPhotoPath != null} ? 'Replace photo' : 'Add a photo'">Add a photo</strong>
-                    <span>PNG, JPEG, GIF, BMP or WebP — under 5MB</span>
+                    <span>PNG, JPEG, GIF, BMP or WebP. You'll frame it before it saves, and it is compressed on the way up.</span>
+                    <span class="small" data-crop-note></span>
                 </span>
             </label>
             <!--/* Only offered when there is a photo to remove. Falling back to the generated

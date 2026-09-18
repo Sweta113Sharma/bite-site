@@ -103,6 +103,8 @@ public class MenuBrowseController {
         model.addAttribute("itemsByCategory", byCategory);
         model.addAttribute("categoryImages", categoryImageService.chipImages(
                 selected.getId(), user.getTenantId(), categoryIdByName, byCategory));
+        // Null means the bundled illustration, which the template supplies.
+        model.addAttribute("allDishesImage", categoryImageService.allDishesChipImage(selected));
         model.addAttribute("dealItems", dealItems);
         model.addAttribute("reorderItems", reorderRail(user, selected, items));
         // Drives the Add-vs-stepper swap on each card: a card only shows a quantity

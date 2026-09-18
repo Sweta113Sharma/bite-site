@@ -17,11 +17,16 @@ document.addEventListener('DOMContentLoaded', function () {
         reader.readAsDataURL(file);
     }
 
-    input.addEventListener('change', function () {
-        if (input.files && input.files[0]) {
-            showPreview(input.files[0]);
-        }
-    });
+    // A cropping dropzone owns its preview: image-crop.js shows the crop once it is
+    // accepted and restores the old preview on cancel. Previewing the raw file here as
+    // well would race it, and after a cancel leave a picture showing that won't upload.
+    if (!dropzone.hasAttribute('data-crop')) {
+        input.addEventListener('change', function () {
+            if (input.files && input.files[0]) {
+                showPreview(input.files[0]);
+            }
+        });
+    }
 
     ['dragenter', 'dragover'].forEach(function (evt) {
         dropzone.addEventListener(evt, function () {

@@ -44,6 +44,9 @@ public interface OutletDao {
      * are kept apart: a logo change must not be able to blank a field it never showed. */
     void updateLogoPath(Long id, Long tenantId, String logoPath);
 
+    /** The "All Dishes" chip picture. Its own method for the same reason as the logo. */
+    void updateAllDishesImagePath(Long id, Long tenantId, String path);
+
     /** Orders ever placed at this outlet. Deleting one with history would orphan financial
      * records, so callers check this first and offer deactivation instead. */
     int countOrders(Long id);

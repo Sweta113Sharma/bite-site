@@ -1,9 +1,12 @@
 package com.bitesite.service;
 
 import com.bitesite.dao.CategoryImageDao;
+import com.bitesite.dao.OutletDao;
+import com.bitesite.dao.PlatformSettingsDao;
 import com.bitesite.model.Category;
 import com.bitesite.model.CategoryDefaultImage;
 import com.bitesite.model.CategoryImage;
+import com.bitesite.model.Outlet;
 import com.bitesite.dao.CategoryDao;
 import com.bitesite.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -48,13 +51,23 @@ public class CategoryImageService {
     /** A chip is a ~56px circle; 160 covers it on a 3x-DPR phone with a little headroom. */
     private static final int CHIP_EDGE_PX = 160;
 
+    /**
+     * The platform_settings key for the platform's "All Dishes" picture. "All Dishes" is
+     * not a category name, so it cannot live in category_default_images without reserving
+     * a name no canteen may use; a setting has no such collision.
+     */
+    static final String ALL_DISHES_DEFAULT_KEY = "category_image.all_dishes";
+
     private final CategoryImageDao categoryImageDao;
     private final CategoryDao categoryDao;
+    private final OutletDao outletDao;
+    private final PlatformSettingsDao platformSettingsDao;
     private final FileStorageService fileStorageService;
 
     private final AtomicReference<DefaultsSnapshot> defaults = new AtomicReference<>();
 
-    private record DefaultsSnapshot(Map<String, String> byNameKey, long expiresAtMillis) {
+    /** {@code allDishes} is null when no admin has set one. */
+    private record DefaultsSnapshot(Map<String, String> byNameKey, String allDishes, long expiresAtMillis) {
         boolean isFresh() {
             return System.currentTimeMillis() < expiresAtMillis;
         }
@@ -204,16 +217,99 @@ public class CategoryImageService {
 
     /** The platform defaults as a name-key → path map, from memory unless stale. */
     private Map<String, String> defaults() {
+        return snapshot().byNameKey();
+    }
+
+    private DefaultsSnapshot snapshot() {
         DefaultsSnapshot current = defaults.get();
         if (current != null && current.isFresh()) {
-            return current.byNameKey();
+            return current;
         }
         Map<String, String> loaded = new HashMap<>();
         for (CategoryDefaultImage image : categoryImageDao.findAllDefaults()) {
             loaded.put(image.getNameKey(), image.getImagePath());
         }
-        defaults.set(new DefaultsSnapshot(Map.copyOf(loaded), System.currentTimeMillis() + DEFAULTS_TTL.toMillis()));
-        return loaded;
+        // Blank is treated as unset: clearing writes NULL, but a hand-edited row should not
+        // turn into an <img> with an empty src.
+        String allDishes = platformSettingsDao.findAll().get(ALL_DISHES_DEFAULT_KEY);
+        DefaultsSnapshot fresh = new DefaultsSnapshot(Map.copyOf(loaded),
+                allDishes == null || allDishes.isBlank() ? null : allDishes,
+                System.currentTimeMillis() + DEFAULTS_TTL.toMillis());
+        defaults.set(fresh);
+        return fresh;
+    }
+
+    // ── The "All Dishes" chip ─────────────────────────────────────────────────
+
+    /**
+     * What the "All Dishes" chip shows and where that came from, for the management screen.
+     *
+     * @param path        the image students see, or null for the bundled illustration
+     * @param outletOwned true when the outlet uploaded it, so the screen offers Remove
+     */
+    public record AllDishesImage(String path, boolean outletOwned) {
+    }
+
+    /**
+     * The "All Dishes" picture for the student menu, sized for a chip, or null for the
+     * bundled illustration. Same order as a real category: the outlet's own, then the
+     * platform default. Costs no query: the outlet row is already loaded, and the default
+     * comes from the same in-memory snapshot as the category defaults.
+     */
+    public String allDishesChipImage(Outlet outlet) {
+        String path = outlet.getAllDishesImagePath();
+        if (path == null) {
+            path = snapshot().allDishes();
+        }
+        return path == null ? null : fileStorageService.thumbnailUrl(path, CHIP_EDGE_PX);
+    }
+
+    public AllDishesImage allDishesImageForOutlet(Long outletId, Long tenantId) {
+        String own = outletDao.findByIdAndTenantId(outletId, tenantId)
+                .map(Outlet::getAllDishesImagePath)
+                .orElse(null);
+        if (own != null) {
+            return new AllDishesImage(own, true);
+        }
+        return new AllDishesImage(snapshot().allDishes(), false);
+    }
+
+    /**
+     * Stores an outlet's own "All Dishes" picture. The outlet is re-read scoped to the
+     * tenant first, same as {@link #setOutletImage}, so an id from another college is a
+     * not-found rather than a write.
+     */
+    @Transactional
+    public void setOutletAllDishesImage(Long outletId, Long tenantId, MultipartFile file) {
+        Outlet outlet = outletDao.findByIdAndTenantId(outletId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Outlet not found"));
+        String path = fileStorageService.storeCategoryImage(tenantId, file);
+        outletDao.updateAllDishesImagePath(outlet.getId(), tenantId, path);
+    }
+
+    /** Drops the outlet's own, falling back to the platform default or the illustration. */
+    @Transactional
+    public void clearOutletAllDishesImage(Long outletId, Long tenantId) {
+        outletDao.updateAllDishesImagePath(outletId, tenantId, null);
+    }
+
+    /** The platform's "All Dishes" picture, or null. For the admin screen. */
+    public String defaultAllDishesImage() {
+        return snapshot().allDishes();
+    }
+
+    /** Sets the platform's "All Dishes" picture. Admin console only, tenant-less by design. */
+    @Transactional
+    public void setDefaultAllDishesImage(MultipartFile file) {
+        String path = fileStorageService.storeCategoryImage(null, file);
+        platformSettingsDao.upsert(ALL_DISHES_DEFAULT_KEY, path);
+        invalidateDefaults();
+    }
+
+    @Transactional
+    public void clearDefaultAllDishesImage() {
+        platformSettingsDao.upsert(ALL_DISHES_DEFAULT_KEY, null);
+        invalidateDefaults();
     }
 
     // ── An outlet setting its own ─────────────────────────────────────────────

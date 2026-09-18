@@ -64,12 +64,14 @@ final class ImageUploadProcessor {
         /** Full-width on a phone at most: 1600 covers a 3x-DPR screen on a 500px-wide
          * card, and the item page shows nothing wider. */
         MENU_PHOTO("Photo", 1600, 0.80f),
-        /** A category chip is a ~56px circle and the widest this is ever drawn is the
-         * management list at ~120px. 400 covers that at 3x DPR with headroom and nothing
-         * more — deliberately NOT MENU_PHOTO's 1600, because several of these load at once
-         * on the menu screen and the whole point of the feature is the rail looking right,
-         * not it costing four times as much to do so. */
-        CATEGORY_IMAGE("Category image", 400, 0.85f);
+        /** A category chip is a 58px square, and nothing draws one larger: the management
+         * preview is 56px. 256 covers the chip on a 3x-DPR phone (174px) with headroom.
+         * Quality is lower than a logo's because a dozen of these load at once on the
+         * menu screen and at chip size loss does not show; measured against 400 @ 0.85,
+         * this stores the bundled ramen illustration at 15.6KB instead of 24.2KB and a
+         * photo at 4.4KB instead of 10.1KB, with no visible ringing on either. The crop
+         * dialog sends exactly this size, so no resizing is left to do here. */
+        CATEGORY_IMAGE("Category image", 256, 0.75f);
 
         final String label;
         final int maxEdge;

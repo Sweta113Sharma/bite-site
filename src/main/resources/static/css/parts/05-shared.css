@@ -321,9 +321,10 @@
    and that is used from both the admin and the outlet portal.
    ============================================================ */
 
-/* Sized to the frame it contains (260px + the padding either side), not left to the
-   longest line of prose to decide. Without this the hint stretched the dialog to ~550px
-   and the frame sat in the left third of it with dead space alongside. */
+/* Sized to the stage it contains (at most 360px + the padding either side), not left to
+   the longest line of prose to decide. Without a width the hint stretched the dialog to
+   ~550px and the frame sat in the left third of it with dead space alongside. The stage
+   itself is sized by image-crop.js from this width, so a phone gets a stage that fits. */
 .crop-dialog {
     border: var(--border-w) solid var(--color-ink);
     border-radius: var(--radius-md);
@@ -331,7 +332,9 @@
     background: var(--color-surface);
     color: var(--color-ink);
     padding: var(--stack-md);
-    width: min(calc(100vw - 2rem), 312px);
+    width: min(calc(100vw - 1rem), 408px);
+    max-height: calc(100dvh - 1rem);
+    overflow-y: auto;
     box-sizing: border-box;
 }
 
@@ -352,35 +355,123 @@
     margin: 0 0 var(--stack-sm);
 }
 
-/* The frame IS the crop. Its size is mirrored by FRAME_PX in image-crop.js, which does the
-   pan/zoom maths in these units — change one and the other has to follow. */
-.crop-dialog__frame {
-    position: relative;
-    margin: 0 auto var(--stack-sm);
-    border: var(--border-w) solid var(--color-ink);
-    background: var(--color-surface-deep);
-    overflow: hidden;
-}
-
-.crop-dialog__canvas {
+/* The stage shows the whole photo, dimmed outside the frame, so what is being cut away
+   stays in view. Geometry is JS-owned (image-crop.js sets its size to match the dialog
+   and the requested aspect); this only dresses it. */
+.crop-dialog__stage {
     display: block;
-    touch-action: none;   /* the canvas handles the drag itself; let it, rather than scrolling the page */
+    margin: 0 auto var(--stack-sm);
+    background: var(--color-ink);
+    border: var(--border-w) solid var(--color-ink);
+    touch-action: none;   /* the stage handles drag and pinch itself; do not scroll the page */
     cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
 }
-.crop-dialog__canvas:active { cursor: grabbing; }
+.crop-dialog__stage:active { cursor: grabbing; }
+.crop-dialog__stage:focus { outline: none; }
+.crop-dialog__stage:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 .crop-dialog__zoom {
     display: flex;
     align-items: center;
-    gap: var(--stack-sm);
-    margin-bottom: var(--stack-md);
+    gap: var(--stack-xs);
+    margin-bottom: var(--stack-sm);
 }
-.crop-dialog__zoom input[type="range"] { flex: 1; }
+.crop-dialog__zoom input[type="range"] {
+    flex: 1;
+    accent-color: var(--color-primary);
+    min-width: 0;
+}
+
+/* Square hit areas for − and +. The slider alone is fiddly on a phone, and a tap is the
+   quickest way to nudge a crop that is nearly right. */
+.crop-dialog__icon-btn {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: var(--border-w) solid var(--color-ink);
+    background: var(--color-field);
+    color: var(--color-ink);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-xs);
+    padding: 0;
+}
+.crop-dialog__icon-btn:active { transform: translate(1px, 1px); box-shadow: none; }
+.crop-dialog__icon-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* Three equal buttons in one row, so none of them wraps onto a line of its own. */
+.crop-dialog__tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--stack-xs);
+    margin-bottom: var(--stack-sm);
+}
+.crop-dialog__tools .btn {
+    padding-inline: 4px;
+    white-space: nowrap;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+}
+
+.crop-dialog__status {
+    margin: 0;
+    font-size: var(--text-body-md);
+    color: var(--color-danger);
+}
+.crop-dialog__status:not(:empty) { margin-bottom: var(--stack-sm); }
+
+/* The preview sits beside the button that commits it: "this, at this size, is what you
+   are about to save". On a narrow phone the buttons wrap under it, right-aligned. */
+.crop-dialog__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--stack-sm);
+}
+
+/* What the crop looks like at the size the app draws it, bordered like a chip. */
+.crop-dialog__preview {
+    flex: none;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+.crop-dialog__preview-canvas {
+    display: block;
+    border: var(--border-w) solid var(--color-ink);
+    box-shadow: var(--shadow-sm);
+}
+.crop-dialog__preview figcaption {
+    font-size: var(--text-label-sm);
+    line-height: var(--lh-label-sm);
+    color: var(--color-ink-muted);
+}
 
 .crop-dialog__actions {
     display: flex;
     justify-content: flex-end;
-    gap: var(--stack-sm);
+    gap: var(--stack-xs);
+    margin-left: auto;
+}
+
+@media (max-width: 480px) {
+    .crop-dialog { padding: var(--stack-sm); }
+    .crop-dialog__title { font-size: 18px; line-height: 24px; }
+}
+
+/* The "1.4MB → 154KB" line under a dropzone's hint, once a crop has been accepted. */
+.photo-dropzone-text [data-crop-note]:not(:empty) {
+    display: block;
+    margin-top: var(--stack-xs);
+    color: var(--color-ink);
+    font-weight: 600;
 }
 
 .photo-dropzone {

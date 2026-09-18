@@ -40,6 +40,7 @@ public class CategoryImageController {
         // that uses it).
         model.addAttribute("needsImage", categoryImageService.listCategoriesNeedingImage());
         model.addAttribute("defaults", categoryImageService.listDefaults());
+        model.addAttribute("allDishesDefault", categoryImageService.defaultAllDishesImage());
         model.addAttribute("pageTitle", "Category images");
         return "admin/category-images";
     }
@@ -64,6 +65,34 @@ public class CategoryImageController {
         } catch (BusinessException e) {
             redirectAttributes.addFlashAttribute("imageError", e.getMessage());
         }
+        return "redirect:/admin/category-images";
+    }
+
+    /**
+     * The platform's picture for the "All Dishes" chip, which every canteen shows first on
+     * its menu. Not a category name, so it has its own route rather than a reserved name.
+     */
+    @PostMapping("/all-dishes")
+    public String uploadAllDishes(@RequestParam("image") MultipartFile image,
+            RedirectAttributes redirectAttributes) {
+        if (image == null || image.isEmpty()) {
+            redirectAttributes.addFlashAttribute("imageError", "Choose an image first.");
+            return "redirect:/admin/category-images";
+        }
+        try {
+            categoryImageService.setDefaultAllDishesImage(image);
+            redirectAttributes.addFlashAttribute("imageNotice", "Default image set for \"All Dishes\".");
+        } catch (BusinessException e) {
+            redirectAttributes.addFlashAttribute("imageError", e.getMessage());
+        }
+        return "redirect:/admin/category-images";
+    }
+
+    @PostMapping("/all-dishes/remove")
+    public String removeAllDishes(RedirectAttributes redirectAttributes) {
+        categoryImageService.clearDefaultAllDishesImage();
+        redirectAttributes.addFlashAttribute("imageNotice",
+                "Default image removed for \"All Dishes\". Canteens without their own show the bowl illustration.");
         return "redirect:/admin/category-images";
     }
 

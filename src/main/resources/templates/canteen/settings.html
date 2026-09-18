@@ -19,7 +19,7 @@
              not sizes. */-->
         <div class="mb-3">
             <label class="form-label">Logo (optional)</label>
-            <label class="photo-dropzone" data-crop>
+            <label class="photo-dropzone" data-crop data-crop-quality="0.95" data-crop-title="Position your logo">
                 <input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp"/>
                 <span class="photo-dropzone-preview">
                     <img th:if="${outlet.logoPath != null}" th:src="@{${outlet.logoPath}}" alt=""/>

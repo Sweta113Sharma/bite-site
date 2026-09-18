@@ -81,9 +81,12 @@
             <!--/* Foochi-style Circular Category Chips */-->
             <div class="category-chips-wrapper">
                 <div class="category-chips" id="category-chips">
+                    <!--/* The canteen's own picture, else the platform's, else the bundled
+                         bowl. The controller has already walked that chain; null is the bowl. */-->
                     <a class="category-chip active" data-category="all">
                         <div class="cat-chip-icon">
-                            <img th:src="@{/img/food/food_ramen.png}" alt="All" class="cat-icon-img"/>
+                            <img th:src="${allDishesImage != null} ? @{${allDishesImage}} : @{/img/food/food_ramen.png}"
+                                 alt="All" class="cat-icon-img"/>
                         </div>
                         <span class="cat-chip-label">All Dishes</span>
                     </a>
