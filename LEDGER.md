@@ -118,7 +118,11 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
   set without a click. After a real tap it should not match `:focus-visible`; not confirmed
   on a device.
 - One Playwright run timed out loading the student menu before any change was made; two
-  reruns and a standalone probe passed. Cause not found.
+  reruns and a standalone probe passed. Most likely the login rate limiter (10 POSTs per
+  5 min per IP, `LoginRateLimitFilter`): later in the same session repeated test logins
+  landed on `/login?error=ratelimit`, and a blocked student login leaves the menu request
+  on the login page with no chips. Not confirmed for that run, which did not log its URL.
+  Scripted checks should log in once and reuse the session.
 - Static files are served under a content hash computed at startup, so editing JS/CSS in
   `target/classes` of a running app changes nothing the browser sees. Restart to test.
 
