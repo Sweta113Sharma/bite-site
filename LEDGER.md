@@ -84,7 +84,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - Leaves its rows in `bitesite_test_db`, like the other stress tests. Local only; never point it at production.
 
 ### `c3aa66b` — Count only wrong passwords toward the login limit
-**Date:** 2026-09-18 · **Scope:** 4 files · **Deployed:** no
+**Date:** 2026-09-18 · **Scope:** 4 files · **Deployed:** yes (2026-09-18, run 35325215254; new cropper confirmed served from app.bitesite.in)
 
 **What changed**
 - `LoginRateLimitFilter` now refuses only when a budget of *failures* is spent: address +
@@ -113,7 +113,7 @@ and *what it might have broken*. A commit with no entry is work nobody can audit
 - Registration and password reset are still counted per IP on every attempt; same NAT exposure, lower traffic. Not changed.
 
 ### `73bebcb` — Let canteens picture the All Dishes chip, and crop every upload first
-**Date:** 2026-09-18 · **Scope:** 20 files · **Deployed:** no
+**Date:** 2026-09-18 · **Scope:** 20 files · **Deployed:** yes (2026-09-18, run 35325215254; new cropper confirmed served from app.bitesite.in)
 
 **What changed**
 - **All Dishes chip gets a picture.** `/canteen/categories` has an "All Dishes" card at the
