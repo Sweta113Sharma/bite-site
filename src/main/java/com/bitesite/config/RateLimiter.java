@@ -61,6 +61,19 @@ public class RateLimiter {
     }
 
     /**
+     * Read-only: true when {@code key} has already used {@code maxAttempts} inside the
+     * window. For limits that should count only some outcomes (failed logins), where the
+     * gate is checked before the attempt and the count is taken after it.
+     */
+    public boolean isBlocked(String key, int maxAttempts, Duration window) {
+        Integer count = jdbcTemplate.query(
+                "SELECT attempt_count FROM rate_limit_window WHERE rate_key = ? AND window_start > ?",
+                rs -> rs.next() ? rs.getInt(1) : 0,
+                key, Timestamp.from(Instant.now().minus(window)));
+        return count != null && count >= maxAttempts;
+    }
+
+    /**
      * The longest window this limiter supports. Eviction is measured against it, never
      * against the shorter windows callers actually pass.
      *
