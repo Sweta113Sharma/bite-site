@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run all tests: `mvn test`
 - Run specific test: `mvn -Dtest=ClassName#methodName test`
 - Security tests require separate database: `mysql -u root -e "CREATE DATABASE bitesite_test_db CHARACTER SET utf8mb4;"`
+- Soak test (opt-in, ~20 min, local only): `mvn -Dstress=true -Dtest=LongRunningOrderSoakTest test`. Dials are `-Dstress.soak.*` (see the class Javadoc); the report lands in `target/stress-reports/`
 
 ### Docker
 - Build and run: `export DB_PASSWORD=$(openssl rand -base64 24) && docker compose up --build`
